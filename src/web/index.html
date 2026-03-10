@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Draft Agent — Dashboard</title>
+  <style>
+    :root { --bg: #0f0f12; --surface: #18181c; --border: #2a2a30; --text: #e4e4e7; --muted: #71717a; --accent: #22c55e; --danger: #ef4444; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    section h2 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
+    button { padding: 0.5rem 1rem; border-radius: 8px; border: none; background: var(--accent); color: #000; cursor: pointer; font-weight: 500; }
+    button:hover { opacity: 0.9; }
+    button.danger { background: var(--danger); color: white; }
+    .result-box { margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    textarea { width: 100%; min-height: 80px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: monospace; margin-bottom: 0.5rem; }
+    .cron-item { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+    .interaction { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .interaction-meta { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.5rem; }
+    .empty { color: var(--muted); text-align: center; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>Email Draft Agent</h1>
+  <p class="subtitle">Local Appier email assistant</p>
+  <section>
+    <h2>Run Agent</h2>
+    <button onclick="runProbe()">Probe Inbox Now</button>
+    <button onclick="runCustom()">Run Custom</button>
+    <textarea id="customInput" placeholder="Custom prompt..."></textarea>
+    <div id="runResult" class="result-box" style="display:none;"></div>
+  </section>
+  <section>
+    <h2>Cron Jobs</h2>
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+      <input type="text" id="cronName" placeholder="Job name">
+      <input type="text" id="cronExpr" placeholder="0 * * * *">
+      <button onclick="addCron()">Add</button>
+    </div>
+    <div id="cronList"></div>
+  </section>
+  <section>
+    <h2>Interactions</h2>
+    <div id="interactions"><div class="empty">Loading...</div></div>
+  </section>
+  <script>
+    async function fetchJson(path, opts = {}) {
+      const r = await fetch(path, opts);
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+    async function runProbe() {
+      const el = document.getElementById('runResult');
+      el.style.display = 'block';
+      el.textContent = 'Running...';
+      try {
+        const res = await fetchJson('/agent/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ probe: true }) });
+        el.textContent = res.output || 'Done.';
+        loadInteractions();
+      } catch (e) { el.textContent = 'Error: ' + e.message; }
+    }
+    async function runCustom() {
+      const el = document.getElementById('runResult');
+      el.style.display = 'block';
+      el.textContent = 'Running...';
+      try {
+        const res = await fetchJson('/agent/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: document.getElementById('customInput').value || 'Hello' }) });
+        el.textContent = res.output || 'Done.';
+        loadInteractions();
+      } catch (e) { el.textContent = 'Error: ' + e.message; }
+    }
+    async function addCron() {
+      const name = document.getElementById('cronName').value.trim();
+      const expr = document.getElementById('cronExpr').value.trim();
+      if (!name || !expr) { alert('Name and cron expression required'); return; }
+      try {
+        await fetchJson('/cron', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, cron_expression: expr, timezone: 'Asia/Seoul' }) });
+        loadCronJobs();
+        document.getElementById('cronName').value = '';
+        document.getElementById('cronExpr').value = '';
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+    async function toggleCron(name, enabled) {
+      await fetchJson(`/cron/${encodeURIComponent(name)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
+      loadCronJobs();
+    }
+    async function deleteCron(name) {
+      if (!confirm('Delete ' + name + '?')) return;
+      await fetchJson(`/cron/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      loadCronJobs();
+    }
+    async function loadCronJobs() {
+      const jobs = await fetchJson('/cron');
+      const el = document.getElementById('cronList');
+      if (!jobs.length) { el.innerHTML = '<div class="empty">No cron jobs.</div>'; return; }
+      el.innerHTML = jobs.map(j => `<div class="cron-item"><span style="flex:1">${j.name}</span><code>${j.cron_expression}</code><label><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron('${j.name}', this.checked)"> Enabled</label><button class="danger" onclick="deleteCron('${j.name}')">Delete</button></div>`).join('');
+    }
+    async function loadInteractions() {
+      const data = await fetchJson('/interactions');
+      const el = document.getElementById('interactions');
+      if (!data.length) { el.innerHTML = '<div class="empty">No interactions yet.</div>'; return; }
+      el.innerHTML = data.map(i => `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.85rem">${(i.output_text || i.error_message || '').slice(0, 1000)}</pre></div>`).join('');
+    }
+    loadCronJobs();
+    loadInteractions();
+  </script>
+</body>
+</html>

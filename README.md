@@ -1,0 +1,30 @@
+# Email Draft Agent
+
+Local Appier email assistant with **grep-based document search**. No OpenClaw, no VPS, no 24/7 heartbeat.
+
+## Features
+
+- **Grep-based search**: LLM analyzes query → extracts search terms → ripgrep through knowledge base
+- **Gmail probe**: Fetches inbox via gog CLI (shares credentials with openclaw_project)
+- **Cron control**: UI to add/edit/disable cron jobs
+- **Dashboard**: View agent interactions
+
+## Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # Edit with your keys
+brew install ripgrep   # For doc search
+```
+
+See `docs/GMAIL_SETUP.md` for Gmail OAuth.
+
+## Run
+
+```bash
+python run.py
+```
+
+Open http://127.0.0.1:8000
