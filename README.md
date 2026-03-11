@@ -9,6 +9,10 @@ Local Appier email assistant with **grep-based document search**. No OpenClaw, n
 - **Cron control**: UI to add/edit/disable cron jobs
 - **Dashboard**: View agent interactions
 
+## Roadmap
+
+- **Search Agent** — Smarter retrieval: re-rank results, optional refined search when insufficient. See [docs/SEARCH_AGENT_ROADMAP.md](docs/SEARCH_AGENT_ROADMAP.md).
+
 ## Setup
 
 ```bash

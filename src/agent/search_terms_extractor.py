@@ -9,12 +9,14 @@ from src.config import settings
 
 SYSTEM_PROMPT = """You analyze emails or questions about Appier products and extract search terms for document search.
 
-Given an email body or question, output a JSON array of 3-8 search terms or short phrases that would help find relevant content in Appier documentation. Include:
+Given an email body or question, output a JSON array of 3-8 search terms or short PHRASES that would help find relevant content in Appier documentation. Prefer 2-4 word phrases over single generic words.
+
+Include:
 - Product names: AIRIS, AIQUA, BotBonnie, AI Agent, AIXON, AiDeal
 - Technical terms: API, SDK, integration, data warehouse, recommendation
-- Feature names, acronyms, or specific phrases from the question
+- Feature names, acronyms, or specific phrases from the question (e.g. "user schema formula", "create user schema", "AIRIS formula")
 
-Output ONLY a valid JSON array of strings, e.g. ["AIRIS", "API", "data warehouse"]. No other text."""
+Output ONLY a valid JSON array of strings, e.g. ["AIRIS", "user schema formula", "create user schema"]. No other text."""
 
 
 def get_extractor_llm():

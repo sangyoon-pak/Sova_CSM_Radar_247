@@ -1,4 +1,6 @@
 """Local email draft agent using LangChain."""
+import os
+
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage, HumanMessage
@@ -6,7 +8,14 @@ from langchain.agents import create_agent
 
 from src.config import settings
 from src.agent.prompts import EMAIL_AGENT_SYSTEM
-from src.agent.search_terms_extractor import extract_search_terms
+
+
+def _ensure_langsmith_env():
+    """Set LangSmith env vars from settings so tracing works in uvicorn workers."""
+    if settings.langsmith_api_key:
+        os.environ["LANGSMITH_TRACING"] = "true"
+        os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
+        os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
 
 
 def _get_llm():
@@ -37,9 +46,8 @@ def fetch_inbox_emails(search: str = "in:inbox category:primary newer_than:2d", 
 @tool
 def search_appier_docs(query: str) -> str:
     """Search Appier documentation for relevant context. Use when the email asks about Appier products (AIRIS, AIQUA, BotBonnie, etc.)."""
-    from src.agent.tools.doc_search import search_documents as _search, format_matches_for_context
-    matches = _search(query=query, search_terms=None, llm_extract=extract_search_terms, max_results_per_term=10)
-    return format_matches_for_context(matches)
+    from src.agent.tools.search_agent import search_with_agent
+    return search_with_agent(query=query, max_context_chars=8000)
 
 
 def create_agent_executor():
@@ -50,6 +58,7 @@ def create_agent_executor():
 
 
 def run_agent(input_text: str) -> str:
+    _ensure_langsmith_env()
     agent = create_agent_executor()
     result = agent.invoke({"messages": [HumanMessage(content=input_text)]})
     messages = result.get("messages", [])

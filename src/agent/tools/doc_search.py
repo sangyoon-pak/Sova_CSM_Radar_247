@@ -7,19 +7,28 @@ from pathlib import Path
 from src.config import settings
 
 
-def run_grep(pattern: str, base_path: Path, max_results: int = 20) -> list[dict]:
+def run_grep(pattern: str, base_path: Path, max_results: int = 20, fixed: bool = False) -> list[dict]:
+    """Run ripgrep. Use fixed=True for phrase search (literal match, no regex)."""
     base_path = Path(base_path)
     if not base_path.exists():
         return []
+    base_args = ["--max-count", str(max_results), "--line-number", "--no-heading", "--color", "never", "-S"]
     try:
+        args = ["rg"] + base_args + (["-F", pattern] if fixed else [pattern]) + [str(base_path)]
         result = subprocess.run(
-            ["rg", "--max-count", str(max_results), "--line-number", "--no-heading", "--color", "never", "-S", pattern, str(base_path)],
+            args,
             capture_output=True, text=True, timeout=30,
         )
     except FileNotFoundError:
         try:
+            grep_args = ["grep", "-r", "-n", "-i", "-m", str(max_results)]
+            if fixed:
+                grep_args.extend(["-F", pattern])
+            else:
+                grep_args.append(pattern)
+            grep_args.append(str(base_path))
             result = subprocess.run(
-                ["grep", "-r", "-n", "-i", "-m", str(max_results), pattern, str(base_path)],
+                grep_args,
                 capture_output=True, text=True, timeout=30,
             )
         except FileNotFoundError:
@@ -49,7 +58,8 @@ def search_documents(query: str, search_terms: list[str] | None = None, llm_extr
     for term in search_terms[:5]:
         if not term or len(term) < 2:
             continue
-        matches = run_grep(term, kb, max_results=max_results_per_term)
+        use_phrase = " " in term.strip()
+        matches = run_grep(term, kb, max_results=max_results_per_term, fixed=use_phrase)
         for m in matches:
             key = (m["file"], m["line_num"])
             if key not in seen:
