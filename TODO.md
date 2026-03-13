@@ -8,3 +8,4 @@
 - **tmr-6**: Validate the current search agent architecture and tool wiring (which Python files are invoked as tools and how they interact).
 - on the UI, UI should show the tool calls ideally in real-time processing
 - also even if it is not a cron job, when users query, it should be able to look up the docs same as cron jobs
+- build a notification pipeline and come up with how !
