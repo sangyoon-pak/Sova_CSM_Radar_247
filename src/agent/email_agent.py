@@ -53,7 +53,7 @@ def search_appier_docs(query: str) -> str:
 def create_agent_executor():
     llm = _get_llm()
     tools = [fetch_inbox_emails, search_appier_docs]
-    system_prompt = EMAIL_AGENT_SYSTEM.format(client_domains=", ".join(settings.allowlist))
+    system_prompt = EMAIL_AGENT_SYSTEM
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
 
 

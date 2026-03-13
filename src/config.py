@@ -33,11 +33,6 @@ class Settings(BaseSettings):
     host: str = Field("127.0.0.1", validation_alias="HOST")
     port: int = Field(8000, validation_alias="PORT")
 
-    # Allowlisted client domains
-    client_domains: str = Field(
-        "@client1.com,@client2.com", validation_alias="CLIENT_DOMAINS"
-    )
-
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")
 
@@ -72,10 +67,5 @@ class Settings(BaseSettings):
             root = Path(__file__).parent.parent
             p = (root / p).resolve()
         return p if p.exists() else None
-
-    @property
-    def allowlist(self) -> list[str]:
-        return [d.strip() for d in self.client_domains.split(",") if d.strip()]
-
 
 settings = Settings()

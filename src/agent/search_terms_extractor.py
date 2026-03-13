@@ -13,8 +13,12 @@ Given an email body or question, output a JSON array of 3-8 search terms or shor
 
 Include:
 - Product names: AIRIS, AIQUA, BotBonnie, AI Agent, AIXON, AiDeal
-- Technical terms: API, SDK, integration, data warehouse, recommendation
+- Technical terms (for example): API, SDK, integration, data warehouse, recommendation
 - Feature names, acronyms, or specific phrases from the question (e.g. "user schema formula", "create user schema", "AIRIS formula")
+
+Guidance:
+- Prefer combinations of product + feature (e.g. "AIRIS user schema", "AIQUA event schema") when possible.
+- Avoid generic single words like "work", "create", "how" by themselves.
 
 Output ONLY a valid JSON array of strings, e.g. ["AIRIS", "user schema formula", "create user schema"]. No other text."""
 
