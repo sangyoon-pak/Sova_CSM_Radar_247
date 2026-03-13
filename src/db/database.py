@@ -1,7 +1,9 @@
 """SQLite database for interactions and cron jobs."""
 import json
 import sqlite3
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from src.config import settings
 
@@ -51,6 +53,65 @@ def get_interactions(limit: int = 50, offset: int = 0):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_interactions_before(before: datetime, limit: int = 200):
+    """Fetch interactions created before the given datetime, newest first."""
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """SELECT id, created_at, trigger_type, input_text, output_text, status, error_message, metadata
+           FROM agent_interactions
+           WHERE created_at < ?
+           ORDER BY created_at DESC
+           LIMIT ?""",
+        (before, limit),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_interactions(before: Optional[datetime] = None) -> int:
+    """
+    Delete interaction history.
+    - If `before` is provided, delete rows with created_at < before.
+    - If `before` is None, delete all rows.
+    Returns the number of deleted rows.
+    """
+    conn = _conn()
+    if before is None:
+        cur = conn.execute("DELETE FROM agent_interactions")
+    else:
+        cur = conn.execute("DELETE FROM agent_interactions WHERE created_at < ?", (before,))
+    conn.commit()
+    deleted = cur.rowcount or 0
+    conn.close()
+    return deleted
+
+
+def delete_interactions_by_ids(ids: list[int]) -> int:
+    """Delete specific interactions by id."""
+    if not ids:
+        return 0
+    conn = _conn()
+    placeholders = ",".join("?" for _ in ids)
+    cur = conn.execute(f"DELETE FROM agent_interactions WHERE id IN ({placeholders})", ids)
+    conn.commit()
+    deleted = cur.rowcount or 0
+    conn.close()
+    return deleted
+
+
+def insert_memory(summary: str, interaction_ids: list[int] | None = None):
+    """Insert a summarized memory note referencing the original interaction IDs."""
+    conn = _conn()
+    conn.execute(
+        """INSERT INTO agent_memory (summary, source_interaction_ids)
+           VALUES (?, ?)""",
+        (summary, json.dumps(interaction_ids or [])),
+    )
+    conn.commit()
+    conn.close()
 
 
 def add_cron_job(name: str, cron_expression: str, timezone: str = "Asia/Seoul"):

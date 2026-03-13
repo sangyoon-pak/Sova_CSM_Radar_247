@@ -5,7 +5,10 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from datetime import datetime
+
 from src.agent.email_agent import run_agent
+from src.agent.memory import compact_memory
 from src.agent.prompts import PROBE_TRIGGER_MESSAGE
 from src.db import database
 
@@ -43,6 +46,45 @@ def run_agent_endpoint(req: RunAgentRequest):
 @router.get("/interactions")
 def list_interactions(limit: int = 50, offset: int = 0):
     return database.get_interactions(limit=limit, offset=offset)
+
+
+@router.delete("/interactions")
+def delete_interactions(before: str | None = None):
+    """
+    Delete interaction history.
+    - If `before` is provided (ISO datetime string), delete rows with created_at < before.
+    - If not provided, delete all interactions.
+    """
+    dt = None
+    if before:
+        try:
+            dt = datetime.fromisoformat(before)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid 'before' datetime format. Use ISO 8601.")
+    deleted = database.delete_interactions(before=dt)
+    return {"deleted": deleted}
+
+
+class CompactMemoryRequest(BaseModel):
+    before: str | None = None
+    max_interactions: int = 200
+
+
+@router.post("/memory/compact")
+def memory_compact(req: CompactMemoryRequest):
+    """
+    Summarize and delete older interactions into a compact memory note.
+    - `before`: ISO datetime string; if omitted, uses now().
+    - `max_interactions`: how many interactions to summarize in one call.
+    """
+    dt = None
+    if req.before:
+        try:
+            dt = datetime.fromisoformat(req.before)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid 'before' datetime format. Use ISO 8601.")
+    result = compact_memory(before=dt, max_interactions=req.max_interactions)
+    return result
 
 
 @router.get("/")

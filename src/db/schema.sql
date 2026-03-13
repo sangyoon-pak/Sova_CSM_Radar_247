@@ -9,6 +9,13 @@ CREATE TABLE IF NOT EXISTS agent_interactions (
     metadata JSON
 );
 
+CREATE TABLE IF NOT EXISTS agent_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    summary TEXT NOT NULL,
+    source_interaction_ids TEXT
+);
+
 CREATE TABLE IF NOT EXISTS cron_jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

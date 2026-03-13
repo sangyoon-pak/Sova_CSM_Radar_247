@@ -34,6 +34,14 @@
     <div id="runResult" class="result-box" style="display:none;"></div>
   </section>
   <section>
+    <h2>Chat Test</h2>
+    <div id="chatWindow" class="result-box" style="height:220px;overflow-y:auto;display:block;"></div>
+    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+      <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button onclick="sendChat()">Send</button>
+    </div>
+  </section>
+  <section>
     <h2>Cron Jobs</h2>
     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
       <input type="text" id="cronName" placeholder="Job name">
@@ -44,6 +52,13 @@
   </section>
   <section>
     <h2>Interactions</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
+      <span style="font-size:0.8rem;color:var(--muted);">Recent runs</span>
+      <div style="display:flex;gap:0.5rem;">
+        <button onclick="compactHistory()">Summarize older</button>
+        <button class="danger" onclick="clearHistory()">Clear history</button>
+      </div>
+    </div>
     <div id="interactions"><div class="empty">Loading...</div></div>
   </section>
   <script>
@@ -71,6 +86,46 @@
         el.textContent = res.output || 'Done.';
         loadInteractions();
       } catch (e) { el.textContent = 'Error: ' + e.message; }
+    }
+    const chatMessages = [];
+    function renderChat() {
+      const el = document.getElementById('chatWindow');
+      if (!chatMessages.length) {
+        el.textContent = 'No messages yet.';
+        return;
+      }
+      el.innerHTML = chatMessages.map(m => {
+        const who = m.role === 'user' ? 'You' : 'Agent';
+        return `<div><strong>${who}:</strong> ${m.content}</div>`;
+      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">');
+      el.scrollTop = el.scrollHeight;
+    }
+    async function sendChat() {
+      const inputEl = document.getElementById('chatInput');
+      const text = inputEl.value.trim();
+      if (!text) return;
+      chatMessages.push({ role: 'user', content: text });
+      renderChat();
+      inputEl.value = '';
+      try {
+        // Build a single prompt that includes prior conversation turns.
+        const history = chatMessages.map(m => {
+          const who = m.role === 'user' ? 'User' : 'Agent';
+          return `${who}: ${m.content}`;
+        }).join('\\n');
+        const prompt = `Here is the prior conversation between the user and you:\\n${history}\\n\\nPlease respond to the last user message based on this context.`;
+        const res = await fetchJson('/agent/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: prompt })
+        });
+        chatMessages.push({ role: 'assistant', content: res.output || '' });
+        renderChat();
+        loadInteractions();
+      } catch (e) {
+        chatMessages.push({ role: 'assistant', content: 'Error: ' + e.message });
+        renderChat();
+      }
     }
     async function addCron() {
       const name = document.getElementById('cronName').value.trim();
@@ -103,6 +158,36 @@
       const el = document.getElementById('interactions');
       if (!data.length) { el.innerHTML = '<div class="empty">No interactions yet.</div>'; return; }
       el.innerHTML = data.map(i => `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.85rem">${(i.output_text || i.error_message || '').slice(0, 1000)}</pre></div>`).join('');
+    }
+    async function clearHistory() {
+      if (!confirm('Delete all interaction history?')) return;
+      try {
+        await fetchJson('/interactions', { method: 'DELETE' });
+        loadInteractions();
+      } catch (e) {
+        alert('Error clearing history: ' + e.message);
+      }
+    }
+    async function compactHistory() {
+      // Summarize and trim interactions older than 7 days
+      if (!confirm('Summarize and trim interactions older than 7 days?')) return;
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      try {
+        const body = {
+          before: cutoff.toISOString(),
+          max_interactions: 200
+        };
+        const res = await fetchJson('/memory/compact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        alert(`Summarized ${res.summarized || 0} interactions and deleted ${res.deleted || 0}.`);
+        loadInteractions();
+      } catch (e) {
+        alert('Error compacting history: ' + e.message);
+      }
     }
     loadCronJobs();
     loadInteractions();
