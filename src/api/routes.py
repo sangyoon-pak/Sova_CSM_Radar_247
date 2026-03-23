@@ -1,16 +1,21 @@
 """API routes for agent and dashboard."""
 from pathlib import Path
+from threading import Thread
 
-from fastapi import HTTPException
+from fastapi import HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
 
 from src.agent.email_agent import run_agent
 from src.agent.memory import compact_memory
 from src.agent.prompts import PROBE_TRIGGER_MESSAGE
+from src.agent.tools.doc_upload import ingest_upload
+from src.config import settings
 from src.db import database
+from src.api import run_state
 
 from fastapi import APIRouter
 router = APIRouter()
@@ -24,6 +29,42 @@ class RunAgentRequest(BaseModel):
 class RunAgentResponse(BaseModel):
     output: str
     status: str
+
+
+class RunAgentAsyncResponse(BaseModel):
+    run_id: str
+    status: str
+
+
+class _UITraceCallback(BaseCallbackHandler):
+    def __init__(self, run_id: str):
+        self.run_id = run_id
+
+    def on_chat_model_start(self, serialized, messages, **kwargs):
+        run_state.add_event(self.run_id, "model_start", "LLM call started")
+
+    def on_chat_model_end(self, response, **kwargs):
+        text = ""
+        try:
+            if response.generations and response.generations[0]:
+                text = str(response.generations[0][0].message.content)[:1000]
+        except Exception:
+            text = ""
+        run_state.add_event(self.run_id, "model_end", "LLM call finished", text)
+
+    def on_tool_start(self, serialized, input_str, **kwargs):
+        name = serialized.get("name", "tool") if isinstance(serialized, dict) else "tool"
+        run_state.add_event(self.run_id, "tool_start", f"Tool start: {name}", str(input_str)[:1000])
+
+    def on_tool_end(self, output, **kwargs):
+        run_state.add_event(self.run_id, "tool_end", "Tool output", str(output)[:1500])
+
+    def on_chain_start(self, serialized, inputs, **kwargs):
+        name = serialized.get("name", "chain") if isinstance(serialized, dict) else "chain"
+        run_state.add_event(self.run_id, "chain_start", f"Chain start: {name}")
+
+    def on_chain_end(self, outputs, **kwargs):
+        run_state.add_event(self.run_id, "chain_end", "Chain end", str(outputs)[:1000])
 
 
 @router.post("/agent/run", response_model=RunAgentResponse)
@@ -41,6 +82,49 @@ def run_agent_endpoint(req: RunAgentRequest):
     except Exception as e:
         database.log_interaction("manual", req.input or "", "", "error", error_message=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/agent/run_async", response_model=RunAgentAsyncResponse)
+def run_agent_async_endpoint(req: RunAgentRequest):
+    input_text = PROBE_TRIGGER_MESSAGE if req.probe else (req.input or "Hello, what can you do?")
+    trigger_type = "manual_probe" if req.probe else "manual"
+    run_id = run_state.create_run(trigger_type=trigger_type, input_text=input_text[:500])
+
+    def _worker():
+        cb = _UITraceCallback(run_id)
+        try:
+            output = run_agent(input_text, callbacks=[cb])
+            database.log_interaction(trigger_type, input_text[:500], output, "completed")
+            run_state.complete_run(run_id, output)
+        except Exception as e:
+            database.log_interaction(trigger_type, input_text[:500], "", "error", error_message=str(e))
+            run_state.fail_run(run_id, str(e))
+
+    Thread(target=_worker, daemon=True).start()
+    return RunAgentAsyncResponse(run_id=run_id, status="running")
+
+
+@router.get("/agent/runs/{run_id}")
+def get_agent_run(run_id: str):
+    run = run_state.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
+
+
+@router.post("/docs/upload")
+async def docs_upload(file: UploadFile = File(...)):
+    """
+    Upload a document and ingest it into the grep-based knowledge base.
+
+    Current support:
+    - .md / .txt (and other extensions are wrapped as markdown as a best-effort fallback)
+    """
+    try:
+        result = await ingest_upload(file=file, kb_path=settings.kb_path_resolved)  # type: ignore[name-defined]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return result
 
 
 @router.get("/interactions")

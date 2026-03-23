@@ -9,14 +9,14 @@ from src.db import database
 _scheduler: BackgroundScheduler | None = None
 
 
-def _run_probe_job():
+def _run_probe_job(name: str = "default"):
     from src.agent.prompts import PROBE_TRIGGER_MESSAGE
     from src.agent.email_agent import run_agent
     try:
         output = run_agent(PROBE_TRIGGER_MESSAGE)
-        database.log_interaction("cron", PROBE_TRIGGER_MESSAGE, output, "completed")
+        database.log_interaction(f"cron:{name}", PROBE_TRIGGER_MESSAGE, output, "completed")
     except Exception as e:
-        database.log_interaction("cron", PROBE_TRIGGER_MESSAGE, "", "error", str(e))
+        database.log_interaction(f"cron:{name}", PROBE_TRIGGER_MESSAGE, "", "error", str(e))
 
 
 def get_scheduler() -> BackgroundScheduler:
@@ -46,7 +46,7 @@ def _add_job_to_scheduler(name: str, cron_expr: str, tz: str):
     if len(parts) != 5:
         parts = ["0", "*", "*", "*", "*"]
     trigger = CronTrigger(minute=parts[0], hour=parts[1], day=parts[2], month=parts[3], day_of_week=parts[4], timezone=tz)
-    sched.add_job(_run_probe_job, trigger=trigger, id=job_id, name=name)
+    sched.add_job(_run_probe_job, trigger=trigger, id=job_id, name=name, args=[name])
 
 
 def add_job(name: str, cron_expression: str, timezone: str = "Asia/Seoul"):

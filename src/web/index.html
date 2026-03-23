@@ -32,6 +32,10 @@
     <button onclick="runCustom()">Run Custom</button>
     <textarea id="customInput" placeholder="Custom prompt..."></textarea>
     <div id="runResult" class="result-box" style="display:none;"></div>
+    <details style="margin-top:0.5rem;">
+      <summary style="cursor:pointer;color:var(--muted);">Run trace (tools/reasoning)</summary>
+      <div id="runTrace" class="result-box" style="display:block;max-height:260px;"></div>
+    </details>
   </section>
   <section>
     <h2>Chat Test</h2>
@@ -49,6 +53,18 @@
       <button onclick="addCron()">Add</button>
     </div>
     <div id="cronList"></div>
+    <details style="margin-top:0.75rem;">
+      <summary style="cursor:pointer;color:var(--muted);">Recent cron summaries</summary>
+      <div id="cronSummary" class="result-box" style="display:block;max-height:220px;"></div>
+    </details>
+  </section>
+  <section>
+    <h2>Document Upload</h2>
+    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+      <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" />
+      <button onclick="uploadDoc()">Upload</button>
+    </div>
+    <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
   </section>
   <section>
     <h2>Interactions</h2>
@@ -71,18 +87,23 @@
       const el = document.getElementById('runResult');
       el.style.display = 'block';
       el.textContent = 'Running...';
+      document.getElementById('runTrace').textContent = 'Starting...';
       try {
-        const res = await fetchJson('/agent/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ probe: true }) });
+        const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ probe: true }) });
+        const res = await pollRun(started.run_id);
         el.textContent = res.output || 'Done.';
         loadInteractions();
+        loadCronSummary();
       } catch (e) { el.textContent = 'Error: ' + e.message; }
     }
     async function runCustom() {
       const el = document.getElementById('runResult');
       el.style.display = 'block';
       el.textContent = 'Running...';
+      document.getElementById('runTrace').textContent = 'Starting...';
       try {
-        const res = await fetchJson('/agent/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: document.getElementById('customInput').value || 'Hello' }) });
+        const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: document.getElementById('customInput').value || 'Hello' }) });
+        const res = await pollRun(started.run_id);
         el.textContent = res.output || 'Done.';
         loadInteractions();
       } catch (e) { el.textContent = 'Error: ' + e.message; }
@@ -114,17 +135,40 @@
           return `${who}: ${m.content}`;
         }).join('\\n');
         const prompt = `Here is the prior conversation between the user and you:\\n${history}\\n\\nPlease respond to the last user message based on this context.`;
-        const res = await fetchJson('/agent/run', {
+        const started = await fetchJson('/agent/run_async', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ input: prompt })
         });
+        const res = await pollRun(started.run_id);
         chatMessages.push({ role: 'assistant', content: res.output || '' });
         renderChat();
         loadInteractions();
       } catch (e) {
         chatMessages.push({ role: 'assistant', content: 'Error: ' + e.message });
         renderChat();
+      }
+    }
+    async function uploadDoc() {
+      const fileInput = document.getElementById('uploadFile');
+      const file = fileInput.files[0];
+      if (!file) { alert('Select a file to upload.'); return; }
+
+      const form = new FormData();
+      form.append('file', file);
+
+      const el = document.getElementById('uploadResult');
+      el.style.display = 'block';
+      el.textContent = 'Uploading...';
+
+      try {
+        const res = await fetch('/docs/upload', { method: 'POST', body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+        el.textContent = `Uploaded and saved as: ${data.filename}\nChars: ${data.chars}`;
+        fileInput.value = '';
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
       }
     }
     async function addCron() {
@@ -152,6 +196,42 @@
       const el = document.getElementById('cronList');
       if (!jobs.length) { el.innerHTML = '<div class="empty">No cron jobs.</div>'; return; }
       el.innerHTML = jobs.map(j => `<div class="cron-item"><span style="flex:1">${j.name}</span><code>${j.cron_expression}</code><label><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron('${j.name}', this.checked)"> Enabled</label><button class="danger" onclick="deleteCron('${j.name}')">Delete</button></div>`).join('');
+    }
+    async function loadCronSummary() {
+      const data = await fetchJson('/cron/summary?limit=20');
+      const el = document.getElementById('cronSummary');
+      if (!data.length) { el.innerHTML = '<div class="empty">No cron runs yet.</div>'; return; }
+      el.innerHTML = data.map(i => {
+        const msg = (i.output_text || i.error_message || '').slice(0, 500);
+        return `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
+      }).join('');
+    }
+    function renderRunTrace(events) {
+      const el = document.getElementById('runTrace');
+      if (!events || !events.length) {
+        el.textContent = 'No trace events yet.';
+        return;
+      }
+      el.innerHTML = events.map((e, idx) => {
+        const detail = e.detail ? `<details><summary>details</summary><pre style="white-space:pre-wrap;">${escapeHtml(e.detail)}</pre></details>` : '';
+        return `<div><strong>${idx + 1}. [${e.type}]</strong> ${escapeHtml(e.title)} <span style="color:var(--muted)">(${new Date(e.ts).toLocaleTimeString()})</span>${detail}</div>`;
+      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">');
+      el.scrollTop = el.scrollHeight;
+    }
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+    }
+    async function pollRun(runId) {
+      while (true) {
+        const run = await fetchJson(`/agent/runs/${encodeURIComponent(runId)}`);
+        renderRunTrace(run.events || []);
+        if (run.status === 'completed') return run;
+        if (run.status === 'error') throw new Error(run.error || 'Run failed');
+        await new Promise(r => setTimeout(r, 700));
+      }
     }
     async function loadInteractions() {
       const data = await fetchJson('/interactions');
@@ -190,6 +270,7 @@
       }
     }
     loadCronJobs();
+    loadCronSummary();
     loadInteractions();
   </script>
 </body>

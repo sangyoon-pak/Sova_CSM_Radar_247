@@ -1,5 +1,6 @@
 """Local email draft agent using LangChain."""
 import os
+from collections.abc import Sequence
 
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
@@ -57,10 +58,11 @@ def create_agent_executor():
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
 
 
-def run_agent(input_text: str) -> str:
+def run_agent(input_text: str, callbacks: Sequence | None = None) -> str:
     _ensure_langsmith_env()
     agent = create_agent_executor()
-    result = agent.invoke({"messages": [HumanMessage(content=input_text)]})
+    config = {"callbacks": list(callbacks)} if callbacks else None
+    result = agent.invoke({"messages": [HumanMessage(content=input_text)]}, config=config)
     messages = result.get("messages", [])
     for m in reversed(messages):
         if isinstance(m, AIMessage) and m.content:

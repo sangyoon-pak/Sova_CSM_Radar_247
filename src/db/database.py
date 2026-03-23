@@ -138,6 +138,26 @@ def get_cron_jobs():
     return [dict(r) for r in rows]
 
 
+def get_cron_run_summary(limit: int = 20):
+    """
+    Return recent cron execution summaries by trigger_type (e.g., cron:daily_probe).
+    """
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT trigger_type, status, created_at, output_text, error_message
+        FROM agent_interactions
+        WHERE trigger_type LIKE 'cron%'
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def set_cron_enabled(name: str, enabled: bool):
     conn = _conn()
     conn.execute("UPDATE cron_jobs SET enabled = ? WHERE name = ?", (1 if enabled else 0, name))
