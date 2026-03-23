@@ -19,6 +19,7 @@ Include:
 Guidance:
 - Prefer combinations of product + feature (e.g. "AIRIS user schema", "AIQUA event schema") when possible.
 - Avoid generic single words like "work", "create", "how" by themselves.
+- Expand shorthand when obvious (e.g. "AQ" -> "AIQUA", "RC" -> "reference card").
 
 Output ONLY a valid JSON array of strings, e.g. ["AIRIS", "user schema formula", "create user schema"]. No other text."""
 
