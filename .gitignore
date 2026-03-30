@@ -8,3 +8,7 @@ venv/
 *.sqlite
 chroma_data/
 .DS_Store
+
+# Local runtime artifacts (keep deployment-safe)
+data/
+scripts/.local/
