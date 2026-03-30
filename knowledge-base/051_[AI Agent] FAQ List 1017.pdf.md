@@ -30,7 +30,7 @@ The key advantages of Appier Agent are: 1. Performance powered by your own marke
 General question What are the prerequisites for using Appier AI? 
 Appier AI is built on top of Appier’s core products: Segment Agent is powered by AR (Appier’s CDP) — the industry-leading customer data platform. Campaign Agent is powered by AQ (Appier’s MA platform) — the industry-leading marketing automation system.
 General question Will the AI learn from user interactions? (For the Insight/Audience/Campaign Agent) 
-Although the current version does not yet support AI memory, it is already included in our Q4 product roadmap. We will introduce Agent Memory, enabling the agent to learn your preferences over time — such as your preferred KPIs, channels, and tactics (for example, “don’t send campaigns on Mondays”). 
+Agent Memory is planned for a future release, enabling the agent to learn your preferences over time — such as your preferred KPIs, channels, and tactics (for example, “don’t send campaigns on Mondays”). 
 With memory, the agent will continuously adapt to your style and operating rules, becoming a truly personalized assistant that understands how you work and proactively supports you with the best recommendations. 
 Pricing Can Agents be purchased as standalone products? 
 No, the Agents are not sold as standalone products. Each Agent requires a foundational Appier solution to function, as this provides the necessary unified data source. For example, the Audience Agent requires AIRIS, and the Campaign Agent requires AIQUA. This integration is key to their power. 

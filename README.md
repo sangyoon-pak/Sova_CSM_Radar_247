@@ -5,7 +5,7 @@ Local Appier email assistant with **grep-based document search**. No OpenClaw, n
 ## Features
 
 - **Grep-based search**: LLM analyzes query → extracts search terms → ripgrep through knowledge base
-- **Gmail probe**: Fetches inbox via gog CLI (shares credentials with openclaw_project)
+- **Gmail probe**: Fetches inbox via gog CLI using local gog keyring (GOG_HOME)
 - **Cron control**: UI to add/edit/disable cron jobs
 - **Dashboard**: View agent interactions, run probes/custom prompts, and test chat
 

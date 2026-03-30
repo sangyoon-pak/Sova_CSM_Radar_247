@@ -51,23 +51,7 @@ Customer Notification
 Appier communicates with customers via email, voice/video calls, or with in-person meetings (where applicable). 
 Customer Escalation 
 The Appier Customer Success organization is the single point of contact for all incidents to be reported to Appier. Please report any ticket or service issues to your designated Appier Customer Success Manager as the first line of support. 
-If a ticket or a service issue needs to be escalated, please reach out to the following respective Regional Customer Success Leads, in accordance with your subscribed products/services with Appier. 
-Product Lines: AIQUA, AIXON, AIXPERT, AIRIS, RMN 
-Region Name / Designation Contact 
-Greater China Region 
-Ted Wu Director of Customer Success 
-ted.wu@appier.com 
-Japan Toshi Komiyama Associate Director of Customer Success 
-toshihiro.komiyama@appier.com
-South Korea Steven Liu Associate Director of Customer Success 
-steven.liu@appier.com 
-South East Asia / India 
-Steven Liu Associate Director of Customer Success 
-steven.liu@appier.com 
-Product Line: BotBonnie 
-Region Name / Designation Contact 
-Global Yvonne Lee Senior Manager of Customer Success 
-yvonne.yf.lee@appier.com 
+If a ticket or a service issue needs to be escalated, please reach out to your designated Appier Customer Success Manager as the first line of support. They will direct you to the appropriate Regional Customer Success Lead for your region and product line (AIQUA, AIXON, AIXPERT, AIRIS, RMN, BotBonnie).
 5. Root Cause Analysis 
 For incident(P0) issues, Appier will perform internal postmortems for critical incidents within 48 hours of an incident being detected. The Root Cause Analysis report will be available upon request by the customer within 7 days after resolution of the Incident. 
 6. Exclusions 

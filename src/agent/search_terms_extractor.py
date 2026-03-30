@@ -20,6 +20,11 @@ Guidance:
 - Prefer combinations of product + feature (e.g. "AIRIS user schema", "AIQUA event schema") when possible.
 - Avoid generic single words like "work", "create", "how" by themselves.
 - Expand shorthand when obvious (e.g. "AQ" -> "AIQUA", "RC" -> "reference card").
+- If the query includes any of the following, ALWAYS include them as exact search terms:
+  - URLs / endpoint paths (e.g. "/qga/clients-data/", "https://...")
+  - event names (e.g. "tier_price_dropped")
+  - parameter / field names (e.g. "appId", "appSecret", "identifier_value")
+  - UI menu paths mentioned by the user (e.g. "설정 > 최근 활동", "Trigger rule dropdown")
 
 Output ONLY a valid JSON array of strings, e.g. ["AIRIS", "user schema formula", "create user schema"]. No other text."""
 

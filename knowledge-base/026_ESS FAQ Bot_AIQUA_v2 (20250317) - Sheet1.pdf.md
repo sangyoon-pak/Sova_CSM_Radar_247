@@ -12,7 +12,7 @@ guide_keywords: "AIQUA Integrations, Pricing and Tiers, AI Capabilities, Marketi
 
 # 026 ESS FAQ Bot AIQUA v2 (20250317) - Sheet1.pdf
 
-Question_PMM_EN Answer_PMM_EN Which vendors is AIQUA compatible with for integration? AIQUA offers extensive application integration capabilities.  Beyond seamless 
+Question Answer Which vendors is AIQUA compatible with for integration? AIQUA offers extensive application integration capabilities.  Beyond seamless 
 integration with Appier's own enterprise solutions, AIQUA also supports a variety of well-known services, including data platforms like Treasure Data, instant messaging platforms such as LINE and Kakao, and advertising platforms like Meta Ads. Furthermore, we can provide custom integrations to accommodate your unique requirements. 
 Where can a pre-header be added in an email using AIQUA? yes, AIQUA does support preheader using Drag-and-Drop editor: https://docs.aiqua. appier.com/docs/aiqua-release-notes-august-2024#email-drag--drop-editor-preheader-support 
 Does AIQUA support custom audience targeting for Google Ads and TikTok Ads? No, currently AIQUA only support custom audience sync for Meta, using journey map. Google Ads & Tiktok Ads support is in our roadmap though. 
@@ -21,7 +21,7 @@ Email and Phone number are required to run certain types of campaigns, e.g. EDM,
 Inweb / inapp campaigns are effective approach to collect contact information like email and phone number. For e-commerce site, it is common to collect these contact info during checkout, encouraging customer to register as new member. Conversation commerence using chatbot is another approach to collect user's preference (zero-party data) and contact info. 
 Is existing CRM data required to leverage AIQUA? It is not a mandatory to upload CRM data to AIQUA, but CRM data can enrich user profiles so that martker can use CRM data for segmentation and personalized campaign creatives 
 Do you have case studies available? Yes, I can refer you to examples of case studies that are available. Is there a smaller Monthly Active User (MAU) tier, such as for web traffic of 100,000 MAU, suitable for startup companies? 
-No. Our entry-level tiers are Web 500,000 MAU and App 200,000 MAU. 
+Please contact your Appier representative for details on entry-level tiers. 
 What marketing channels does AIQUA support? Yes, AiQUA supports Web push, in-web, app push, in-app, email, sms and instant messaging (including LINE, Kakao). If bundle with BotBonnie, more social media channels are also supported (including Zalo, Viber, Facebook messenger, Instagram, Whatsapp). 
 How does AIQUA integrate with existing CRM systems? AIQUA offers flexible APIs and Webhooks to ensure seamless integration with various CRM systems. These integrations enable the synchronization of customer data and facilitate the execution of more precise marketing campaigns. 
 Why is AIQUA positioned as a higher-priced solution? AIQUA is designed to serve enterprise-level clients who require advanced flexibility and customization. We are willing to discuss pricing adjustments based on your specific budget. 
@@ -57,8 +57,8 @@ Our experienced Customer Success Manager (CSM) team will collaborate with your m
 What is the logic behind journey map purchase attribution? 
 Journey map purchase attribution logic follows the attribution models configured within AIQUA. These models determine how conversions are attributed to specific campaign channels based on user interactions such as 'last click' or 'last view' within the campaigns. 
 What is the logic of journey deduplication within AIQUA? 
-Please refer to the following Atlassian Confluence page for detailed information on journey deduplication logic: https://appier.atlassian. net/wiki/spaces/PHX/pages/3189964830/How+to+deal+with+duplicated+users+in+Jou rney+Map 
-What is the price for EDM/SMS/MMS services through AIQUA? Please refer to the price list available from the Sales department for specific pricing information regarding EDM, SMS, and MMS services. 
+For detailed information on journey deduplication logic, please contact your Appier Customer Success Manager or Appier Support (ess_support@appier.com). 
+What is the price for EDM/SMS/MMS services through AIQUA? Please contact your Appier representative for specific pricing information regarding EDM, SMS, and MMS services. 
 What kind of audience should I choose for a specific campaign in AIQUA? 
 To recommend the most suitable audience for your campaign, please provide more details about the campaign objectives. Alternatively, you can identify relevant target audiences or request the client to upload user lists from their Customer Relationship Management (CRM) system for precise targeting.
 What can MA (Marketing Automation) achieve? [Translated from Chinese] 
@@ -79,7 +79,7 @@ Comparing AIQUA and Insider's User Interface (UI), which UI is easier to operate
 A direct comparison of UI operational ease between AIQUA and Insider is subjective and can depend on individual user preferences and familiarity.  A user-specific evaluation or trial of both platforms is recommended to determine UI preference. 
 When sending EDM, Web Push, APP Push, LINE, SMS and other messages via AIQUA, the open rates or click-through rates are lower than expected. How can this be improved? [Translated from Chinese] 
 To improve open and click-through rates for messages sent via AIQUA (EDM, Web Push, APP Push, LINE, SMS), consider A/B testing various elements, such as: Different subject lines, variations in message content and copy, and optimized sending times to identify the most effective strategies. 
-Does AIQUA have a generative AI tool integrated? It is currently under development. 
+Does AIQUA have a generative AI tool integrated? Please contact your Appier representative for the latest information. 
 How is pricing for AIQUA charged? 
 AIQUA's pricing structure is tiered, and the specific tier is determined primarily by your Monthly Active User (MAU) volume. To provide a precise quotation, we will first need to ascertain your MAU and evaluate if any bespoke integrations are required. 
 What are the key differentiators and strengths of AIQUA when compared to competitors?   
@@ -91,7 +91,7 @@ Is it possible to configure campaigns for different device types separately, for
 yes. It is common for customer to create different campaign for different campaign types. AIQUA allow customer to select their targeted device type when creating campaigns. 
 How can I create customer segments within AIQUA for targeted marketing initiatives? To create customer segments in AIQUA for targeted marketing: 1. Navigate to the "Audience" or "Segmentation" module within the AIQUA platform. 2. Select "Create New Segment." 3. Define segment conditions based on various criteria, including user behaviors, demographics, or stated preferences. 4. Save the newly defined segment. 5. When creating marketing campaigns, choose the saved segment to target specific customer groups, enabling delivery of highly relevant and personalized messages. 
 What is the rationale behind the user interface (UI) design, which may be perceived as dated? 
-We acknowledge feedback regarding the user interface design. A comprehensive revamp of the AIQUA user interface is currently planned for implementation in the first half of this year, aiming to provide a more modern and intuitive user experience. 
+We acknowledge feedback regarding the user interface design. A comprehensive revamp of the AIQUA user interface is planned, aiming to provide a more modern and intuitive user experience. 
 What are the prerequisites that customers need to complete before implementing AIQUA? Also, how long does it take from setup to go-live? 
 To enable AIQUA to collect customer information and behavioral data, the existing web/app must integrate the SDK. Additionally, code tagging is required to send important customer data to Appier based on their behavior. 
 This process can take anywhere from one week to several months, depending on the complexity. For web-only implementations using GTM, it can sometimes be completed within a week. 
@@ -110,7 +110,7 @@ What makes AIQUA product recommendation different from others? Appier's product 
 Additionally, we offer an exclusive Autopilot mode, which allows users to optimize recommendations effortlessly without manually selecting models. AIQUA automatically allocates traffic to the best-performing models to maximize results. This unique feature is not available from other providers in the market. 
 How is AIQUA billed? AIQUA charges based on the Monthly Active Users (MAU) of channels (including web and app), with different pricing tiers for different usage levels. However, the monthly fee does not include additional costs such as system integration fees, consulting fees, or message delivery fees (e.g., EDM, SMS, LINE). The final cost will be determined based on mutual agreement. 
 Does AIQUA have trial version? At the moment, we are not support trial yet. Our sales rep will offer you others options to handle your requirement. 
-When using AIQUA, what's the price of EDM / SMS to offer our customers? You may refer to the pricing table on Sales Depot. EDM pricing: https://docs.google. com/file/d/1sLv6jq6ofShOGnoESoocQistUxQ7ZuBa/view?rtpof=true&sd=true SMS pricing: https://docs.google. com/spreadsheets/d/1CMz1Wzoj52bXVOEH1U1KJJDEQnfdtrMTLP2b6D00tmw/edit? gid=0#gid=0 
+When using AIQUA, what's the price of EDM / SMS to offer our customers? Please contact your Appier representative for EDM and SMS pricing. 
 Is there any issue with the sending order if AIQUA EDM and SMS have the same user_id? 
 There is no conflict sending EDM & SMS at the same time. 
 Can AIQUA integrate with our own SMS or Email message service provider? Integration with your SMS or email service provider is possible but requires additional customization. We recommend utilizing our pre-built messaging service provider for a more seamless and efficient implementation.
@@ -128,7 +128,7 @@ Yes, AIQUA allows communication with unregistered visitors through in-web messag
 Does AIQUA’s pricing include SMS and eDM services? The functionality for these channels is included in our pricing plan. However, the actual cost of sending eDMs and SMS messages is calculated based on usage to align with your specific needs. 
 When setting up marketing automation workflows on AIQUA, some nodes are skipped, the workflow is not triggered, or the audience does not enter the flow. How should I troubleshoot? 
 Start by testing with a small audience segment to ensure that each node is triggered correctly. This helps identify any potential issues before scaling up. 
-Can you share use case of AIQUA? Yes, I can refer you to examples of case studies that are available. (please refer to Sales depot: https://sites.google.com/appier.com/salesdepot/all-products/aiqua? authuser=0 
+Can you share use case of AIQUA? Yes, I can refer you to examples of case studies that are available. (please contact your Appier representative for case studies) 
 Does AIQUA support whatsapp? AIQUA alone does not support WhatsApp. However, if bundled with BotBonnie, WhatsApp integration is available. 
 What will the price of AIQUA be? AIQUA charges based on the Monthly Active Users (MAU) of channels (including web and app), with different pricing tiers for different usage levels. However, the monthly fee does not include additional costs such as system integration fees, consulting fees, or message delivery fees (e.g., EDM, SMS, LINE). The final cost will be determined based on mutual agreement. 
 When using AIQUA, if SMS or EDM messages are not sent within the scheduled time, can the sending period be extended? 
@@ -143,7 +143,7 @@ AIQUA stands out with:
 1) Recommendation Module (REC): AI-driven personalization to enhance engagement. 2) Synergy with AIRIS: Enables a unified 360-degree user profile and real-time, granular segmentation for precise personalized marketing execution. 3) Strong Local Customer Success Management (CSM): Dedicated regional support to ensure campaign success. 
 How long is data stored in AIQUA? TBC with PM (2 years)
 Does AIQUA have a place where we can check the performance of campaign? Yes, AiQUA has analytics module where you can check the performance metrics of your campaign such as total sent, total clicks, impressions, etc. 
-What is AIQUA’s future roadmap for the next 1–3 years? Let me check with the Product Management (PM) team for the latest roadmap details 
+What is AIQUA’s future roadmap for the next 1–3 years? Please contact your Appier representative for the latest roadmap details 
 What are the differences between AIQUA and Insider or Omnisegment? 
 Unlike Insider, which developed Omnisegment from a marketing automation foundation and later expanded to include some data analytics capabilities, AIQUA + AIRIS offers a truly comprehensive CDP + MA solution. This enables advanced real-time segmentation, precise personalization, and seamless OMO (Online-Merge-Offline) applications, ensuring a more robust and data-driven marketing strategy. 
 Does AIQUA Onsite Editor support mobile app? Yes, it supports mobile apps and provides a variety of interactive templates. What is a key difference if AIQUA compared with Braze? We are quite the same in terms of the features, but Appier provides the CDP and 

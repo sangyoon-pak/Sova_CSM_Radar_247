@@ -15,6 +15,11 @@ class Settings(BaseSettings):
         "https://openrouter.ai/api/v1", validation_alias="OPENROUTER_BASE_URL"
     )
     llm_model: str = Field("gpt-4o", validation_alias="LLM_MODEL")
+    rag_embedding_provider: str = Field("openrouter", validation_alias="RAG_EMBEDDING_PROVIDER")
+    rag_embedding_model: str = Field(
+        "openai/text-embedding-3-large",
+        validation_alias="RAG_EMBEDDING_MODEL",
+    )
 
     # Knowledge base
     knowledge_base_path: str = Field(
@@ -22,7 +27,22 @@ class Settings(BaseSettings):
         validation_alias="KNOWLEDGE_BASE_PATH",
     )
 
-    # Gmail (gog) — use openclaw_project credentials when GOG_HOME points there
+    # RC / scope-aware ranking (optional)
+    # When enabled and RC_SCOPE_LABELS is set, the retrieval pipeline can
+    # down-rank snippets whose primary documentation category differs from
+    # the user's inferred scope.
+    rc_scope_enable: bool = Field(True, validation_alias="RC_SCOPE_ENABLE")
+    rc_scope_field: str = Field("product", validation_alias="RC_SCOPE_FIELD")
+    # Comma-separated list. Example (for current Appier KB):
+    #   RC_SCOPE_LABELS=aiqua,airis,botbonnie,enterprise,aixon,aideal,ai_agent
+    rc_scope_labels: str = Field("", validation_alias="RC_SCOPE_LABELS")
+    rc_scope_penalty: int = Field(100, validation_alias="RC_SCOPE_PENALTY")
+    # Optional: regex used to infer a doc scope label from filename.
+    # Should include a capture group for the label, e.g.:
+    #   ^\d+_(?P<scope>[a-z0-9]+)_.*\.md$
+    rc_scope_filename_regex: str = Field("", validation_alias="RC_SCOPE_FILENAME_REGEX")
+
+    # Gmail (gog) — uses gog CLI + keyring stored under GOG_HOME (when set)
     gog_home: str = Field("", validation_alias="GOG_HOME")
     gog_account: str = Field("", validation_alias="GOG_ACCOUNT")
     gog_keyring_backend: str = Field("file", validation_alias="GOG_KEYRING_BACKEND")
@@ -59,7 +79,7 @@ class Settings(BaseSettings):
 
     @property
     def gog_home_resolved(self) -> Path | None:
-        """Resolve GOG_HOME to absolute path. Points to openclaw_project/scripts/.local for shared credentials."""
+        """Resolve GOG_HOME to absolute path (e.g. email_draft_agent/scripts/.local)."""
         if not self.gog_home:
             return None
         p = Path(self.gog_home)

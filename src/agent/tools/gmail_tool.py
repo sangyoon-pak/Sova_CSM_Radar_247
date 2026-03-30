@@ -1,4 +1,7 @@
-"""Gmail fetch tool. Uses gog CLI with credentials from openclaw_project when GOG_HOME is set."""
+"""Gmail fetch tool.
+
+Uses gog CLI with keyring stored under GOG_HOME when set.
+"""
 import os
 import subprocess
 from pathlib import Path
@@ -7,7 +10,7 @@ from src.config import settings
 
 
 def _gog_env() -> dict[str, str]:
-    # Use openclaw_project's gog credentials when GOG_HOME is set
+    # If GOG_HOME is set, treat it as a self-contained gog home dir.
     gog_home = settings.gog_home_resolved
     if gog_home:
         home = str(gog_home.resolve())

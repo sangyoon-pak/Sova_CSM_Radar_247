@@ -18,8 +18,14 @@
 - [x] **B4-1 (tmr-4)**: Enhance the dashboard UI so users can upload documents directly into the knowledge base.
 - [x] **B4-2 (tmr-5)**: Implement a document upload parser/ingestion pipeline so uploaded files are normalized and searchable by the search agent (md/txt -> markdown into `knowledge-base/`).
 - **B4-3**: Build a notification pipeline (decide channels and triggers) so the system can notify when drafts are ready or when errors occur.
-
-
-
-## long-term
+- **B4-4** : need to handle the language dynamically. when asked in korean, doc retrieve can retrieve the data regardless of the language but output should be in the language it was asked in. 
+- remove all the appier specific dependency from the core codebase to other adjacent files (e.g @prompt.py, memory.py, etc)
+- [ ] Remove remaining Appier-specific dependencies outside the retrieval core (e.g. email agent wrapper name, prompts, tool docstrings). Goal: share the search tool/stack across industries with only config/RC metadata changes.
+- [ ] Add neutral configuration examples (e.g. `RC_SCOPE_*`) to docs/ and verify both `RC_SCOPE_ENABLE=true/false` behave as expected.
+- [ ] Add regression tests that assert “no hard-coded product/appier strings” inside retrieval core modules (`doc_search.py`, `search_agent.py`).
+- [ ] Audit and delete any scripts that are no longer used after the refactor (ensure `scripts/` only contains relevant entrypoints).
+- Agent memory for self-evolution. If the answer is not correct, it should take note and memorise it. But how can we make it self-evolve ? 
+- Shifting from email drafting agent to proactive assistant CSM agent. e.g Agent probes email inbox and find look up client queries and analyse the intent of the queries. Agent decides if it is Appier product-related. If yes, it searches documents to find the most relevant infomation and notify CSM with answers to each of the client query so that CSM can draft and send the email dramatically fast. 
 - Can users also upload documents as text files or provide the URL link on the UI on top ? 
+- what is the best way for agent to nofify CSM ? 
+

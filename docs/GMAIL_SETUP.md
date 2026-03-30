@@ -1,26 +1,31 @@
 # Gmail Setup for Email Draft Agent
 
-Uses the same gog CLI and credentials as openclaw_project. OAuth must be completed **locally** for the agent to fetch emails.
+Installs and uses `gog` (gogcli) locally inside `email_draft_agent/`. OAuth must be completed **locally** for the agent to fetch emails.
 
 ---
 
 ## 1. One-time OAuth (Local)
 
-Run from `openclaw_project/scripts`:
+From the `email_draft_agent/` repo root, run:
 
 ```bash
-cd ../openclaw_project/scripts
+cd scripts
 
-# Use the .local dir (has gog binary and credentials.json)
+# 1) Install gog to ./scripts/.local (one-time)
+./install-gog-local.sh
+
+# 2) Use the .local dir (has gog binary)
 export GOG_HOME="$(pwd)/.local" HOME="$(pwd)/.local"
 export PATH="$(pwd)/.local/bin:$PATH"
 export GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=openclaw-gmail
 
-# Register OAuth client (if not done)
+# 3) Register OAuth client (if not done)
+# Put credentials.json at email_draft_agent/credentials.json (or change the path below).
 ./.local/bin/gog auth credentials ../credentials.json
 
-# Complete OAuth in browser (replace with your Gmail)
-./.local/bin/gog auth add sangyoon.park@appier.com --services gmail --readonly --manual
+# 4) Complete OAuth in browser (replace with your Gmail)
+./.local/bin/gog auth add YOUR_EMAIL --services gmail --readonly --manual
+
 ```
 
 1. Open the URL in your browser
@@ -35,8 +40,8 @@ export GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=openclaw-gmail
 In `email_draft_agent/.env`:
 
 ```bash
-GOG_HOME=../openclaw_project/scripts/.local
-GOG_ACCOUNT=sangyoon.park@appier.com
+GOG_HOME=./scripts/.local
+GOG_ACCOUNT=YOUR_EMAIL
 GOG_KEYRING_BACKEND=file
 GOG_KEYRING_PASSWORD=openclaw-gmail
 ```
@@ -57,4 +62,4 @@ print(fetch_inbox_emails(max_results=2)[:500])
 
 ## Note
 
-If you previously completed OAuth only on the VPS (Docker), the tokens are stored there—not on your Mac. You must run the OAuth flow locally once to store tokens in `openclaw_project/scripts/.local`.
+If you previously completed OAuth only on the VPS (Docker), the tokens are stored there—not on your Mac. You must run the OAuth flow locally once to store tokens in `email_draft_agent/scripts/.local`.
