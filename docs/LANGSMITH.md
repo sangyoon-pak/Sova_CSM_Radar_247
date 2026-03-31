@@ -24,6 +24,8 @@ Run a test invocation and check LangSmith:
 
 Then open [smith.langchain.com](https://smith.langchain.com) → **Projects** → `email_draft_agent` (or `default`).
 
+Each LLM span uses the model id from your `.env` (see [LLM_MODELS.md](LLM_MODELS.md)); filter traces by model or by run name (e.g. `search_agent.split_focus_subqueries`).
+
 ## No Traces Appearing?
 
 1. **Check both projects** — Traces may appear under `default` or `email_draft_agent`

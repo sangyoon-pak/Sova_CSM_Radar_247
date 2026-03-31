@@ -13,6 +13,9 @@
 - Retrieval + candidate ranking: `src/agent/tools/doc_search.py` (`search_documents`)
 - Retrieval logging (debug): `scripts/test_full_agent_reply.py --with-retrieval --retrieval-json ...`
 
+### LLM models (OpenRouter)
+Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. All fall back to **`LLM_MODEL`** when unset. See [docs/LLM_MODELS.md](LLM_MODELS.md).
+
 ---
 
 ## 1) Retrieval Stack (`doc_search.search_documents`)

@@ -6,13 +6,12 @@ retaining a high-level summary.
 """
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from typing import Sequence
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 
+from src.agent.chat_llm import get_chat_llm
 from src.config import settings
 from src.db import database
 
@@ -31,22 +30,8 @@ Write 3-10 bullet points capturing only the enduring, reusable information.
 Return the bullets as plain text, each bullet starting with '- '."""
 
 
-def _get_llm() -> ChatOpenAI:
-    api_key = settings.openrouter_api_key or settings.openai_api_key
-    if not api_key:
-        raise ValueError("Set OPENAI_API_KEY or OPENROUTER_API_KEY in .env")
-    if settings.openrouter_api_key:
-        return ChatOpenAI(
-            model=settings.llm_model,
-            api_key=settings.openrouter_api_key,
-            base_url=settings.openrouter_base_url,
-            temperature=0,
-        )
-    return ChatOpenAI(
-        model=settings.llm_model,
-        api_key=settings.openai_api_key,
-        temperature=0,
-    )
+def _get_llm():
+    return get_chat_llm(model=settings.llm_model_for_memory, temperature=0)
 
 
 def _format_interactions_for_compaction(interactions: Sequence[dict]) -> str:

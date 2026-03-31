@@ -9,12 +9,16 @@ class Settings(BaseSettings):
     """App settings from env."""
 
     # LLM
-    openai_api_key: str | None = Field(None, validation_alias="OPENAI_API_KEY")
     openrouter_api_key: str | None = Field(None, validation_alias="OPENROUTER_API_KEY")
     openrouter_base_url: str = Field(
         "https://openrouter.ai/api/v1", validation_alias="OPENROUTER_BASE_URL"
     )
     llm_model: str = Field("gpt-4o", validation_alias="LLM_MODEL")
+    # Optional per-role overrides (OpenRouter model ids). All fall back to LLM_MODEL when unset.
+    llm_model_main: str | None = Field(None, validation_alias="LLM_MODEL_MAIN")
+    llm_model_search_json: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_JSON")
+    llm_model_search_rerank: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_RERANK")
+    llm_model_memory: str | None = Field(None, validation_alias="LLM_MODEL_MEMORY")
     rag_embedding_provider: str = Field("openrouter", validation_alias="RAG_EMBEDDING_PROVIDER")
     rag_embedding_model: str = Field(
         "openai/text-embedding-3-large",
@@ -63,11 +67,34 @@ class Settings(BaseSettings):
     langsmith_api_key: str | None = Field(None, validation_alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field("email_draft_agent", validation_alias="LANGSMITH_PROJECT")
 
+    _project_root: Path = Path(__file__).resolve().parent.parent
+
     model_config = {
-        "env_file": ".env",
+        "env_file": str(_project_root / ".env"),
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
+
+    def _model_or_default(self, override: str | None) -> str:
+        if override and override.strip():
+            return override.strip()
+        return self.llm_model.strip()
+
+    @property
+    def llm_model_for_main(self) -> str:
+        return self._model_or_default(self.llm_model_main)
+
+    @property
+    def llm_model_for_search_json(self) -> str:
+        return self._model_or_default(self.llm_model_search_json)
+
+    @property
+    def llm_model_for_search_rerank(self) -> str:
+        return self._model_or_default(self.llm_model_search_rerank)
+
+    @property
+    def llm_model_for_memory(self) -> str:
+        return self._model_or_default(self.llm_model_memory)
 
     @property
     def kb_path_resolved(self) -> Path:

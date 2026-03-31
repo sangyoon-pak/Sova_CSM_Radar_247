@@ -11,7 +11,7 @@ Local Appier email assistant with **grep-based document search**. No OpenClaw, n
 
 ## Roadmap
 
-- **Search Agent** — Smarter retrieval: re-rank results, optional refined search when insufficient. See [docs/SEARCH_AGENT_ROADMAP.md](docs/SEARCH_AGENT_ROADMAP.md).
+- **Search Agent** — Smarter retrieval: re-rank results, optional refined search when insufficient. See [docs/SEARCH_AGENT.md](docs/SEARCH_AGENT.md).
 - **LangSmith tracing** — Observability for agent runs and tool calls. See [docs/LANGSMITH.md](docs/LANGSMITH.md).
 - **Memory & history** — DB-backed interaction log with UI controls to clear or summarize older runs.
 
@@ -26,6 +26,8 @@ brew install ripgrep   # For doc search
 ```
 
 See `docs/GMAIL_SETUP.md` for Gmail OAuth.
+
+**LLM routing:** optional per-role OpenRouter models (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, etc.). See [docs/LLM_MODELS.md](docs/LLM_MODELS.md).
 
 ## Run
 

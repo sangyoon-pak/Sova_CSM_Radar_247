@@ -6,9 +6,9 @@ import copy
 import json
 import re
 
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 
+from src.agent.chat_llm import get_chat_llm
 from src.config import settings
 from src.agent.tools.doc_search import (
     _aiqua_exclusive_query,
@@ -39,27 +39,56 @@ def take_retrieval_log() -> list[dict]:
 
 def _split_focus_subqueries(query: str) -> list[str]:
     """
-    Split long inquiry into focus questions, prioritizing numbered
-    '확인 요청 사항' style blocks to improve retrieval precision.
+    Split a long inquiry into focus questions.
+
+    Primary path: ask the LLM to interpret and split (language/format agnostic).
+    Fallback path: use lightweight regex heuristics when LLM output is unavailable.
     """
     text = (query or "").strip()
     if not text:
         return []
 
-    # Prefer section after "확인 요청 사항" when present.
-    anchor_idx = text.find("확인 요청 사항")
-    section = text[anchor_idx:] if anchor_idx >= 0 else text
-
-    # Capture numbered blocks like "1. ...", "2. ..."
-    parts = re.split(r"\n\s*(?=\d+\.)", section)
-    blocks: list[str] = []
-    for p in parts:
-        s = " ".join(p.split())
-        if re.match(r"^\d+\.", s):
-            blocks.append(s)
-
-    if blocks:
-        return blocks[:6]
+    # LLM-based split (preferred). If anything goes wrong, we fall back to heuristics.
+    try:
+        llm = _llm_search_json()
+        prompt = (
+            "Split the following customer inquiry into up to 6 focused sub-questions to improve document retrieval.\n"
+            "Rules:\n"
+            "- Be language-agnostic and format-agnostic (do not rely on specific headings/keywords).\n"
+            "- Preserve the original language of each sub-question.\n"
+            "- If the inquiry already contains numbered questions, keep each numbered item as a separate sub-question.\n"
+            "- If it's a single coherent question, return a single-item list.\n"
+            "- Return STRICT JSON only (no markdown, no prose): {\"subqueries\": [\"...\", ...]}\n"
+            "\n"
+            f"Inquiry:\n{text}\n"
+        )
+        response = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={
+                "run_name": "search_agent.split_focus_subqueries",
+                "tags": ["search_agent", "subquery_split"],
+                "metadata": {"max_subqueries": 6},
+            },
+        )
+        raw = (response.content or "").strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+        subqueries = data.get("subqueries", [])
+        cleaned: list[str] = []
+        for sq in subqueries:
+            s = " ".join(str(sq).split()).strip()
+            if not s:
+                continue
+            if s.lower() in {c.lower() for c in cleaned}:
+                continue
+            cleaned.append(s)
+        if cleaned:
+            return cleaned[:6]
+    except Exception:
+        pass
 
     # Fallback: sentence split
     sentences = [s.strip() for s in re.split(r"(?<=[?.!])\s+", text.replace("\n", " ")) if s.strip()]
@@ -98,22 +127,14 @@ def _extract_hard_terms(query: str) -> list[str]:
     return out[:12]
 
 
-def _get_llm():
-    api_key = settings.openrouter_api_key or settings.openai_api_key
-    if not api_key:
-        raise ValueError("Set OPENAI_API_KEY or OPENROUTER_API_KEY in .env")
-    if settings.openrouter_api_key:
-        return ChatOpenAI(
-            model=settings.llm_model,
-            api_key=settings.openrouter_api_key,
-            base_url=settings.openrouter_base_url,
-            temperature=0,
-        )
-    return ChatOpenAI(
-        model=settings.llm_model,
-        api_key=settings.openai_api_key,
-        temperature=0,
-    )
+def _llm_search_json():
+    """LLM for structured JSON outputs: subquery split, sufficiency, refine."""
+    return get_chat_llm(model=settings.llm_model_for_search_json, temperature=0)
+
+
+def _llm_search_rerank():
+    """LLM for snippet scoring (rerank)."""
+    return get_chat_llm(model=settings.llm_model_for_search_rerank, temperature=0)
 
 
 RERANK_PROMPT = """You score how relevant and actionable each document snippet is to the user's question.
@@ -187,7 +208,7 @@ def _rerank_matches(query: str, matches: list[dict], threshold: int = 3) -> list
     """Score each match 1-5, filter by threshold."""
     if not matches:
         return []
-    llm = _get_llm()
+    llm = _llm_search_rerank()
     # Build snippet list for prompt (truncate long lines)
     snippets = []
     for m in matches:
@@ -221,7 +242,7 @@ def _check_sufficient(query: str, matches: list[dict]) -> tuple[bool, str]:
     """LLM decides if results are sufficient."""
     if not matches:
         return False, "No matches found"
-    llm = _get_llm()
+    llm = _llm_search_json()
     preview = "\n".join((m.get("snippet") or m.get("line", ""))[:300] for m in matches[:10])
     prompt = SUFFICIENCY_PROMPT.format(query=query, snippet_preview=preview[:1500])
     response = llm.invoke([HumanMessage(content=prompt)])
@@ -239,7 +260,7 @@ def _check_sufficient(query: str, matches: list[dict]) -> tuple[bool, str]:
 
 def _refine_search_terms(query: str, reason: str) -> list[list[str]]:
     """LLM produces alternative term variants for a follow-up grep pass."""
-    llm = _get_llm()
+    llm = _llm_search_json()
     prompt = REFINE_PROMPT.format(query=query, reason=reason)
     response = llm.invoke([HumanMessage(content=prompt)])
     text = response.content.strip()
@@ -265,7 +286,7 @@ def search_with_agent(
     query: str,
     max_iterations: int = 2,
     rerank_threshold: int = 3,
-    max_context_chars: int = 8000,
+    max_context_chars: int = 20000,
 ) -> str:
     """
     Orchestrated search: grep → re-rank → sufficiency check → optional refined search.

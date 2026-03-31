@@ -24,7 +24,7 @@ def main() -> None:
     ap.add_argument("--output-file", type=str, default="")
     ap.add_argument("--max-iterations", type=int, default=2)
     ap.add_argument("--rerank-threshold", type=int, default=3)
-    ap.add_argument("--max-context-chars", type=int, default=9000)
+    ap.add_argument("--max-context-chars", type=int, default=20000)
     args = ap.parse_args()
 
     project_root = Path(__file__).resolve().parents[1]

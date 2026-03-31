@@ -151,16 +151,6 @@ def _get_embeddings():
         _EMBED_CFG = cfg
         return _EMBEDDINGS
 
-    if provider == "openai":
-        if OpenAIEmbeddings is None or not settings.openai_api_key:
-            return None
-        _EMBEDDINGS = OpenAIEmbeddings(
-            model=model_name or "text-embedding-3-large",
-            api_key=settings.openai_api_key,
-        )
-        _EMBED_CFG = cfg
-        return _EMBEDDINGS
-
     if provider == "local":
         if HuggingFaceEmbeddings is None:
             return None
