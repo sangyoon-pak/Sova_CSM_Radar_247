@@ -64,7 +64,28 @@
       <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" />
       <button onclick="uploadDoc()">Upload</button>
     </div>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.75rem;">
+      <input id="webUrl" type="text" placeholder="https://... (ask agent with web search)" style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button onclick="askWebUrl()">Ask (web)</button>
+    </div>
     <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
+    <details style="margin-top:0.75rem;">
+      <summary style="cursor:pointer;color:var(--muted);">Persisted docs (registry)</summary>
+      <div id="docRegistry" class="result-box" style="display:block;max-height:260px;"></div>
+    </details>
+  </section>
+  <section>
+    <h2>RC URLs (Web Search Sources)</h2>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+      <input id="rcUrlInput" type="text" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      <button onclick="addRcUrl()">Add</button>
+      <button onclick="discoverRcUrls()">Discover subpages (≤10)</button>
+    </div>
+    <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
+    <div id="rcUrlList" style="margin-top:0.75rem;"></div>
+    <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;">
+      When an RC URL is <strong>enabled</strong>, the agent may use OpenRouter web search to fetch relevant docs from that domain during runs.
+    </p>
   </section>
   <section>
     <h2>Interactions</h2>
@@ -171,6 +192,97 @@
         el.textContent = 'Error: ' + e.message;
       }
     }
+    async function askWebUrl() {
+      const url = document.getElementById('webUrl').value.trim();
+      if (!url) { alert('Enter a URL'); return; }
+      const el = document.getElementById('runResult');
+      el.style.display = 'block';
+      el.textContent = 'Running (web search enabled)...';
+      document.getElementById('runTrace').textContent = 'Starting...';
+      try {
+        const prompt = `Using web search, find and summarize the most relevant section for this URL. Prefer the exact page/anchor if available. Use citations.\\nURL: ${url}`;
+        const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: prompt, web: true, web_url: url }) });
+        const res = await pollRun(started.run_id);
+        el.textContent = res.output || 'Done.';
+        document.getElementById('webUrl').value = '';
+        loadInteractions();
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    }
+    async function loadDocRegistry() {
+      const data = await fetchJson('/kb/documents?limit=200');
+      const el = document.getElementById('docRegistry');
+      if (!data.length) { el.textContent = 'No docs ingested yet.'; return; }
+      el.innerHTML = data.map(d => {
+        const loc = d.url ? d.url : (d.path || '');
+        const title = d.title || '';
+        const lang = d.language || '';
+        const scope = d.scope || '';
+        return `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span><br><code style="font-size:0.78rem;">${escapeHtml(loc)}</code><br><span style="color:var(--muted);font-size:0.78rem;">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span></div>`;
+      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.35rem 0;">');
+    }
+    async function loadRcUrls() {
+      const data = await fetchJson('/rc/urls?limit=200');
+      const el = document.getElementById('rcUrlList');
+      if (!data.length) { el.innerHTML = '<div class="empty">No RC URLs saved.</div>'; return; }
+      el.innerHTML = data.map(r => {
+        const checked = r.enabled ? 'checked' : '';
+        return `<div class="cron-item" style="gap:0.75rem;">
+          <label style="display:flex;align-items:center;gap:0.35rem;">
+            <input type="checkbox" ${checked} onchange="toggleRcUrl('${escapeHtml(r.url)}', this.checked)"> enabled
+          </label>
+          <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.url)}</code>
+          <button class="danger" onclick="deleteRcUrl('${escapeHtml(r.url)}')">Remove</button>
+        </div>`;
+      }).join('');
+    }
+    async function addRcUrl() {
+      const url = document.getElementById('rcUrlInput').value.trim();
+      if (!url) { alert('Enter a URL'); return; }
+      const el = document.getElementById('rcUrlResult');
+      el.style.display = 'block';
+      el.textContent = 'Saving...';
+      try {
+        await fetchJson('/rc/urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled: true }) });
+        document.getElementById('rcUrlInput').value = '';
+        el.textContent = 'Saved.';
+        loadRcUrls();
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    }
+    async function toggleRcUrl(url, enabled) {
+      try {
+        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+      loadRcUrls();
+    }
+    async function deleteRcUrl(url) {
+      if (!confirm('Remove ' + url + '?')) return;
+      try {
+        await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+      loadRcUrls();
+    }
+    async function discoverRcUrls() {
+      const base_url = document.getElementById('rcUrlInput').value.trim();
+      if (!base_url) { alert('Enter a base URL to discover from'); return; }
+      const el = document.getElementById('rcUrlResult');
+      el.style.display = 'block';
+      el.textContent = 'Discovering...';
+      try {
+        const res = await fetchJson('/rc/discover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base_url, max_urls: 10 }) });
+        el.textContent = `Discovered ${res.discovered.length} URLs (saved as disabled):\\n` + (res.discovered || []).join('\\n');
+        loadRcUrls();
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+      }
+    }
     async function addCron() {
       const name = document.getElementById('cronName').value.trim();
       const expr = document.getElementById('cronExpr').value.trim();
@@ -239,6 +351,9 @@
       if (!data.length) { el.innerHTML = '<div class="empty">No interactions yet.</div>'; return; }
       el.innerHTML = data.map(i => `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.85rem">${(i.output_text || i.error_message || '').slice(0, 1000)}</pre></div>`).join('');
     }
+    // Initial loads
+    loadDocRegistry();
+    loadRcUrls();
     async function clearHistory() {
       if (!confirm('Delete all interaction history?')) return;
       try {

@@ -14,6 +14,13 @@ Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not
 
 Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDING_MODEL` in `.env` (see `src/agent/tools/doc_search.py`).
 
+## Web search (RC URLs)
+
+Web search is enabled **only** when the user has saved and enabled RC URLs in the dashboard.
+
+- RC URLs are managed via the UI and stored in the local DB.
+- The agent can call `search_rc_web()` to fetch relevant web docs from enabled RC URL domains, using OpenRouter’s Responses API + `web` plugin (with citations).
+
 ## Typical tuning
 
 - Use a **stronger** model for `LLM_MODEL_MAIN` (multi-step tool use, drafting).

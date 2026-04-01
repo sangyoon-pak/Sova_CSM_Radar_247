@@ -137,6 +137,73 @@ def _llm_search_rerank():
     return get_chat_llm(model=settings.llm_model_for_search_rerank, temperature=0)
 
 
+SCOPE_INFER_PROMPT = """You infer which documentation scope(s) a customer inquiry belongs to.
+
+You will be given:
+- a list of allowed scope labels
+- the inquiry text
+
+Return STRICT JSON ONLY (no markdown, no prose):
+{{
+  "scopes": ["label1", "label2"],   // 0-3 items, from allowed labels only
+  "primary": "label1" | null,       // one of scopes, or null if ambiguous
+  "confidence": 0.0                 // 0.0-1.0 confidence that primary is correct and the inquiry is mostly about that scope
+}}
+
+Rules:
+- Be language-agnostic (the inquiry may be Korean/English/etc.).
+- If the inquiry clearly concerns a single product/scope, output one scope and high confidence (>= 0.8).
+- If the inquiry spans multiple scopes, output multiple scopes and lower confidence (<= 0.7).
+- If you cannot determine, output empty scopes, primary null, confidence 0.0.
+
+Allowed labels: {labels}
+Inquiry:
+{query}
+"""
+
+
+def _infer_scope(query: str) -> tuple[set[str], str | None]:
+    """
+    Infer likely scope labels and an optional exclusive scope for routing.
+
+    Returns:
+    - scope_hints: set of labels (may be empty)
+    - exclusive_scope: a single label when confident and unambiguous, else None
+    """
+    if not settings.rc_scope_enable:
+        return set(), None
+    labels = [x.strip() for x in (settings.rc_scope_labels or "").split(",") if x.strip()]
+    if not labels:
+        return set(), None
+
+    llm = _llm_search_json()
+    prompt = SCOPE_INFER_PROMPT.format(labels=", ".join(labels), query=(query or "").strip()[:6000])
+    try:
+        resp = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={"run_name": "search_agent.infer_scope", "tags": ["search_agent", "scope_infer"]},
+        )
+        raw = (resp.content or "").strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+        scopes = {str(s).strip().lower() for s in (data.get("scopes") or []) if str(s).strip()}
+        scopes = {s for s in scopes if s in {l.strip().lower() for l in labels}}
+        primary = data.get("primary")
+        primary_s = str(primary).strip().lower() if primary else None
+        if primary_s and primary_s not in scopes:
+            primary_s = None
+        conf = float(data.get("confidence", 0.0) or 0.0)
+        exclusive = None
+        if primary_s and conf >= float(settings.rc_scope_exclusive_threshold or 0.75) and len(scopes) <= 1:
+            exclusive = primary_s
+        return scopes, exclusive
+    except Exception:
+        return set(), None
+
+
 RERANK_PROMPT = """You score how relevant and actionable each document snippet is to the user's question.
 
 {product_scope}
@@ -192,11 +259,16 @@ Output a JSON object with 2-3 alternative term lists:
 - Output ONLY the JSON object."""
 
 
-def _rerank_product_scope_note(query: str) -> str:
-    hints = _extract_product_hints(query)
-    if not _aiqua_exclusive_query(hints):
+def _rerank_product_scope_note(query: str, exclusive_scope: str | None = None) -> str:
+    if exclusive_scope:
+        exclusive = exclusive_scope
+    else:
+        hints = _extract_product_hints(query)
+        if not _aiqua_exclusive_query(hints):
+            return ""
+        exclusive = next(iter(hints))
+    if not exclusive:
         return ""
-    exclusive = next(iter(hints))
     return (
         f"Product scope: The user is asking about **{exclusive}**. Down-rank (scores 1–2) snippets from files whose primary "
         f"documentation scope differs from **{exclusive}** (when detected from KB frontmatter/filename). Favor snippets that directly "
@@ -204,7 +276,12 @@ def _rerank_product_scope_note(query: str) -> str:
     )
 
 
-def _rerank_matches(query: str, matches: list[dict], threshold: int = 3) -> list[dict]:
+def _rerank_matches(
+    query: str,
+    matches: list[dict],
+    threshold: int = 3,
+    exclusive_scope: str | None = None,
+) -> list[dict]:
     """Score each match 1-5, filter by threshold."""
     if not matches:
         return []
@@ -215,7 +292,7 @@ def _rerank_matches(query: str, matches: list[dict], threshold: int = 3) -> list
         text = (m.get("snippet") or m.get("line", ""))[:500]
         snippets.append(f"[{m['file']} L{m['line_num']}] {text}")
     snippet_text = "\n".join(f"{i+1}. {s}" for i, s in enumerate(snippets))
-    scope = _rerank_product_scope_note(query)
+    scope = _rerank_product_scope_note(query, exclusive_scope=exclusive_scope)
     prompt = RERANK_PROMPT.format(query=query, product_scope=scope) + "\n\nSnippets:\n" + snippet_text
     response = llm.invoke([HumanMessage(content=prompt)])
     text = response.content.strip()
@@ -295,6 +372,8 @@ def search_with_agent(
     all_matches: list[dict] = []
     seen = set()
 
+    scope_hints, exclusive_scope = _infer_scope(query)
+
     focus_subqueries = _split_focus_subqueries(query)
     if not focus_subqueries:
         focus_subqueries = [query]
@@ -323,6 +402,8 @@ def search_with_agent(
                     search_terms=terms + _extract_hard_terms(sq),
                     llm_extract=None,
                     max_results_per_term=10,
+                    scope_hints=scope_hints if scope_hints else None,
+                    exclusive_scope=exclusive_scope,
                 )
                 matches.extend(found)
 
@@ -336,11 +417,51 @@ def search_with_agent(
             break
 
         # Re-rank and filter (cap candidates to keep cost bounded).
-        all_matches = _rerank_matches(query, all_matches[:30], threshold=rerank_threshold)
+        all_matches = _rerank_matches(
+            query,
+            all_matches[:30],
+            threshold=rerank_threshold,
+            exclusive_scope=exclusive_scope,
+        )
         if not all_matches:
             all_matches = matches[:15]  # Fallback
 
     formatted = format_matches_for_context(all_matches, max_chars=max_context_chars)
+
+    def _format_retrieved_documents(matches: list[dict], max_items: int = 12) -> str:
+        """
+        Provide a compact, de-duplicated list of retrieved documents for the main agent
+        to cite/mention as references in the final answer.
+        """
+        if not matches:
+            return ""
+        docs: list[tuple[str, str, str | None]] = []
+        seen_doc: set[str] = set()
+        for m in matches:
+            meta = m.get("meta") or {}
+            title = (meta.get("title") or "").strip() or str(m.get("file") or "Document").strip()
+            url = (meta.get("url") or "").strip() or str(m.get("url") or "").strip()
+            path = str(m.get("path") or "").strip()
+            key = (url or path or title).strip().lower()
+            if not key or key in seen_doc:
+                continue
+            seen_doc.add(key)
+            docs.append((title, url or path or title, url or None))
+            if len(docs) >= max_items:
+                break
+        if not docs:
+            return ""
+        lines = ["## Retrieved documents"]
+        for title, ref, url in docs:
+            if url and url.startswith("http"):
+                lines.append(f"- {title}: {url}")
+            else:
+                lines.append(f"- {title}: {ref}")
+        return "\n".join(lines)
+
+    retrieved_docs = _format_retrieved_documents(all_matches)
+    if retrieved_docs and formatted and formatted != "No relevant documents found.":
+        formatted = f"{formatted}\n\n---\n\n{retrieved_docs}"
     if _retrieval_log is not None:
         _retrieval_log.append(
             {

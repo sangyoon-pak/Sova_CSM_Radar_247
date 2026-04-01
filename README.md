@@ -29,6 +29,8 @@ See `docs/GMAIL_SETUP.md` for Gmail OAuth.
 
 **LLM routing:** optional per-role OpenRouter models (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, etc.). See [docs/LLM_MODELS.md](docs/LLM_MODELS.md).
 
+**Web search:** you can persist “RC URLs” in the dashboard and enable them; the agent can then pull citations from those domains via OpenRouter web search.
+
 ## Run
 
 ```bash

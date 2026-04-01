@@ -34,6 +34,7 @@ _FTS_DB_PATH = (Path(__file__).resolve().parents[3] / "data" / "kb_fts.db").reso
 _FRONTMATTER_SCOPE_CACHE: dict[str, str | None] = {}
 # Backward-compatible alias for older helper names in this module.
 _FRONTMATTER_PRODUCT_CACHE = _FRONTMATTER_SCOPE_CACHE
+_FRONTMATTER_META_CACHE: dict[str, dict] = {}
 _LAST_FTS_STATE: tuple[int, int] | None = None  # (file_count, latest_mtime)
 _RAG_DIR = (Path(__file__).resolve().parents[3] / "data" / "rag").resolve()
 _RAG_INDEX_DIR = (_RAG_DIR / "faiss_index").resolve()
@@ -444,6 +445,43 @@ def _read_frontmatter_product(path_str: str) -> str | None:
     return normalized
 
 
+def _read_frontmatter_meta(path_str: str) -> dict:
+    """
+    Parse a small set of frontmatter metadata for retrieval/routing display:
+    title, tags, language, url, scope field.
+    """
+    if path_str in _FRONTMATTER_META_CACHE:
+        return _FRONTMATTER_META_CACHE[path_str]
+    p = Path(path_str)
+    try:
+        raw = p.read_text(encoding="utf-8", errors="replace")[:8000]
+    except OSError:
+        _FRONTMATTER_META_CACHE[path_str] = {}
+        return {}
+    if not raw.lstrip().startswith("---"):
+        _FRONTMATTER_META_CACHE[path_str] = {}
+        return {}
+    field = (settings.rc_scope_field or "product").strip()
+    meta: dict[str, object] = {}
+    for ln in raw.splitlines()[1:]:
+        s = ln.strip()
+        if s == "---":
+            break
+        if ":" not in ln:
+            continue
+        k, v = ln.split(":", 1)
+        key = k.strip().lower()
+        val = v.strip().strip('"').strip("'")
+        if key in {"title", "language", "url", "source_url"}:
+            meta[key] = val
+        if key in {"tags", "guide_keywords"}:
+            meta["tags"] = val
+        if key == field.lower():
+            meta["scope"] = _normalize_kb_product_label(val)
+    _FRONTMATTER_META_CACHE[path_str] = meta
+    return meta
+
+
 def _normalize_kb_product_label(label: str | None) -> str | None:
     if not label:
         return None
@@ -553,7 +591,14 @@ def _hard_tokens_from_inputs(query: str, terms: list[str]) -> set[str]:
     return {t.lower() for t in toks if t}
 
 
-def search_documents(query: str, search_terms: list[str] | None = None, llm_extract: Callable[[str], list[str]] | None = None, max_results_per_term: int = 10) -> list[dict]:
+def search_documents(
+    query: str,
+    search_terms: list[str] | None = None,
+    llm_extract: Callable[[str], list[str]] | None = None,
+    max_results_per_term: int = 10,
+    scope_hints: set[str] | None = None,
+    exclusive_scope: str | None = None,
+) -> list[dict]:
     kb = settings.kb_path_resolved
     if not kb.exists():
         return []
@@ -601,10 +646,12 @@ def search_documents(query: str, search_terms: list[str] | None = None, llm_extr
                 seen.add(key)
                 all_matches.append(m)
 
-    product_hints = _extract_product_hints(query + " " + " ".join(search_terms))
+    product_hints = set(scope_hints or _extract_product_hints(query + " " + " ".join(search_terms)))
     hard_tokens = _hard_tokens_from_inputs(query, search_terms)
-    aiqua_exclusive = _aiqua_exclusive_query(product_hints)
-    exclusive_scope = next(iter(product_hints)) if aiqua_exclusive and product_hints else None
+    is_exclusive = bool(exclusive_scope) if settings.rc_scope_enable else False
+    if not exclusive_scope:
+        is_exclusive = _aiqua_exclusive_query(product_hints)
+        exclusive_scope = next(iter(product_hints)) if is_exclusive and product_hints else None
 
     # Prefer semantic + actionable snippets with soft product alignment and hard-token matches.
     def _score(m: dict) -> tuple[int, int, int, int, int]:
@@ -642,16 +689,24 @@ def search_documents(query: str, search_terms: list[str] | None = None, llm_extr
         )
 
     all_matches.sort(key=_sort_key)
+
+    # Attach structured metadata for downstream LLM planning (best effort).
+    for m in all_matches:
+        path_str = str(m.get("path") or "")
+        if path_str:
+            fm = _read_frontmatter_meta(path_str)
+            if fm:
+                m.setdefault("meta", fm)
     if product_hints:
         aligned = []
         others = []
-        exclusive_label = next(iter(product_hints)) if aiqua_exclusive and product_hints else None
+        exclusive_label = exclusive_scope
         for m in all_matches:
             file_name = str(m.get("file", "")).lower()
             text = (m.get("snippet") or m.get("line") or "").lower()
             doc_products = _detect_doc_products(file_name, text)
             primary = _match_primary_product(m)
-            if aiqua_exclusive and exclusive_label and primary != exclusive_label:
+            if is_exclusive and exclusive_label and primary and primary != exclusive_label:
                 others.append(m)
             elif doc_products and (doc_products & product_hints):
                 aligned.append(m)
@@ -667,7 +722,16 @@ def format_matches_for_context(matches: list[dict], max_chars: int = 4000) -> st
     total = 0
     for m in matches:
         snippet = m.get("snippet") or m.get("line", "")
-        block = f"[From {m['file']} line {m['line_num']}]\n{snippet}"
+        meta = m.get("meta") or {}
+        title = (meta.get("title") or "").strip() or str(m.get("file") or "Document").strip()
+        url = (meta.get("url") or "").strip() or str(m.get("url") or "").strip()
+        if url:
+            src = f"{title} — {url}"
+        else:
+            path = str(m.get("path") or "").strip()
+            src = f"{title} — {path}" if path else title
+        # Keep a consistent, easy-to-cite source tag per chunk.
+        block = f"[Source: {src} | line {m['line_num']}]\n{snippet}"
         if total + len(block) > max_chars:
             break
         parts.append(block)

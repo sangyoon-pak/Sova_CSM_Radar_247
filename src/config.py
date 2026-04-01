@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     #   RC_SCOPE_LABELS=aiqua,airis,botbonnie,enterprise,aixon,aideal,ai_agent
     rc_scope_labels: str = Field("", validation_alias="RC_SCOPE_LABELS")
     rc_scope_penalty: int = Field(100, validation_alias="RC_SCOPE_PENALTY")
+    rc_scope_exclusive_threshold: float = Field(0.75, validation_alias="RC_SCOPE_EXCLUSIVE_THRESHOLD")
     # Optional: regex used to infer a doc scope label from filename.
     # Should include a capture group for the label, e.g.:
     #   ^\d+_(?P<scope>[a-z0-9]+)_.*\.md$
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
     gog_keyring_backend: str = Field("file", validation_alias="GOG_KEYRING_BACKEND")
     gog_keyring_password: str = Field("", validation_alias="GOG_KEYRING_PASSWORD")
     xdg_config_home: str = Field("", validation_alias="XDG_CONFIG_HOME")
+    gog_credentials_path: str = Field("", validation_alias="GOG_CREDENTIALS_PATH")
 
     # Server
     host: str = Field("127.0.0.1", validation_alias="HOST")
@@ -110,6 +112,21 @@ class Settings(BaseSettings):
         if not self.gog_home:
             return None
         p = Path(self.gog_home)
+        if not p.is_absolute():
+            root = Path(__file__).parent.parent
+            p = (root / p).resolve()
+        return p if p.exists() else None
+
+    @property
+    def gog_credentials_path_resolved(self) -> Path | None:
+        """
+        Resolve OAuth client credentials path for gog (Google OAuth client JSON).
+        If unset, we still check common locations.
+        """
+        p_raw = (self.gog_credentials_path or "").strip()
+        if not p_raw:
+            return None
+        p = Path(p_raw)
         if not p.is_absolute():
             root = Path(__file__).parent.parent
             p = (root / p).resolve()

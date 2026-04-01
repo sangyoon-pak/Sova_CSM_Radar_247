@@ -13,6 +13,7 @@ from src.agent.email_agent import run_agent
 from src.agent.memory import compact_memory
 from src.agent.prompts import PROBE_TRIGGER_MESSAGE
 from src.agent.tools.doc_upload import ingest_upload
+from src.agent.tools.openrouter_web import run_web_search
 from src.config import settings
 from src.db import database
 from src.api import run_state
@@ -24,6 +25,8 @@ router = APIRouter()
 class RunAgentRequest(BaseModel):
     input: str | None = None
     probe: bool = False
+    web: bool = False
+    web_url: str | None = None
 
 
 class RunAgentResponse(BaseModel):
@@ -71,7 +74,11 @@ class _UITraceCallback(BaseCallbackHandler):
 def run_agent_endpoint(req: RunAgentRequest):
     try:
         input_text = PROBE_TRIGGER_MESSAGE if req.probe else (req.input or "Hello, what can you do?")
-        output = run_agent(input_text)
+        if req.web:
+            res = run_web_search(query=input_text, model=settings.llm_model_for_main, url=req.web_url)
+            output = res.text or "No web search output."
+        else:
+            output = run_agent(input_text)
         database.log_interaction(
             "manual" if not req.probe else "manual_probe",
             input_text[:500],
@@ -88,12 +95,20 @@ def run_agent_endpoint(req: RunAgentRequest):
 def run_agent_async_endpoint(req: RunAgentRequest):
     input_text = PROBE_TRIGGER_MESSAGE if req.probe else (req.input or "Hello, what can you do?")
     trigger_type = "manual_probe" if req.probe else "manual"
+    if req.web:
+        trigger_type = trigger_type + "_web"
     run_id = run_state.create_run(trigger_type=trigger_type, input_text=input_text[:500])
 
     def _worker():
         cb = _UITraceCallback(run_id)
         try:
-            output = run_agent(input_text, callbacks=[cb])
+            if req.web:
+                run_state.add_event(run_id, "model_start", "Web search started")
+                res = run_web_search(query=input_text, model=settings.llm_model_for_main, url=req.web_url)
+                output = res.text or "No web search output."
+                run_state.add_event(run_id, "model_end", "Web search finished", (output or "")[:1000])
+            else:
+                output = run_agent(input_text, callbacks=[cb])
             database.log_interaction(trigger_type, input_text[:500], output, "completed")
             run_state.complete_run(run_id, output)
         except Exception as e:
@@ -125,6 +140,130 @@ async def docs_upload(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     return result
+
+@router.get("/kb/documents")
+def list_docs(limit: int = 200, offset: int = 0):
+    return database.list_kb_documents(limit=limit, offset=offset)
+
+
+class RCUrlUpsertRequest(BaseModel):
+    url: str
+    title: str | None = None
+    tags: list[str] | None = None
+    scope: str | None = None
+    enabled: bool = True
+
+
+@router.get("/rc/urls")
+def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False):
+    return database.list_rc_urls(limit=limit, offset=offset, enabled_only=enabled_only)
+
+
+@router.post("/rc/urls")
+def upsert_rc_url(req: RCUrlUpsertRequest):
+    try:
+        return database.upsert_rc_url(
+            url=req.url,
+            title=req.title,
+            tags=req.tags,
+            scope=req.scope,
+            enabled=req.enabled,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class RCUrlToggleRequest(BaseModel):
+    enabled: bool
+
+
+@router.patch("/rc/urls")
+def toggle_rc_url(req: RCUrlUpsertRequest):
+    """
+    Update an existing RC URL's enabled flag (and optional metadata).
+    """
+    try:
+        return database.upsert_rc_url(
+            url=req.url,
+            title=req.title,
+            tags=req.tags,
+            scope=req.scope,
+            enabled=req.enabled,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/rc/urls")
+def delete_rc_url(url: str):
+    try:
+        return {"deleted": database.delete_rc_url(url)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class RCDiscoverRequest(BaseModel):
+    base_url: str
+    max_urls: int = 10
+
+
+@router.post("/rc/discover")
+def discover_rc_urls(req: RCDiscoverRequest):
+    """
+    Discover up to N sub-URLs under the same domain using OpenRouter web search.
+    This is a best-effort approximation (not a full crawler).
+    """
+    try:
+        base = (req.base_url or "").strip()
+        if not base.startswith(("http://", "https://")):
+            raise ValueError("base_url must start with http:// or https://")
+        n = max(1, min(int(req.max_urls or 10), 10))
+        prompt = (
+            "Find up to {n} important child documentation pages under this base URL. "
+            "Return ONLY a JSON object: {{\"urls\": [\"https://...\", ...]}}. "
+            "Prefer URLs on the same domain and within the same docs section/path.\n"
+            "Base URL: {base}"
+        ).format(n=n, base=base)
+        res = run_web_search(query=prompt, model=settings.llm_model_for_main, url=base, max_output_tokens=1200)
+        import json as _json
+        import re as _re
+        raw = (res.text or "").strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        urls: list[str] = []
+        try:
+            data = _json.loads(raw)
+            cand = data.get("urls") or []
+            if isinstance(cand, list):
+                urls = [str(u).strip() for u in cand if str(u).strip().startswith(("http://", "https://"))]
+        except Exception:
+            # fallback: extract urls from text/citations
+            urls = _re.findall(r"https?://\\S+", raw)
+        # Include citations as additional candidates
+        urls.extend(res.citations or [])
+        # Dedup + keep under same host
+        from urllib.parse import urlparse
+        host = urlparse(base).netloc
+        seen = set()
+        out: list[str] = []
+        for u in urls:
+            pu = urlparse(u)
+            if host and pu.netloc != host:
+                continue
+            if u in seen:
+                continue
+            seen.add(u)
+            out.append(u)
+            if len(out) >= n:
+                break
+        # Upsert discovered urls as disabled by default (user can toggle on)
+        for u in out:
+            database.upsert_rc_url(url=u, enabled=False)
+        return {"base_url": base, "discovered": out}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/interactions")

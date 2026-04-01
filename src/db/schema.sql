@@ -26,3 +26,39 @@ CREATE TABLE IF NOT EXISTS cron_jobs (
     last_run_at TIMESTAMP,
     next_run_at TIMESTAMP
 );
+
+-- Persistent knowledge-base document registry.
+-- This stores structured metadata for files under knowledge-base/ and URL ingests.
+CREATE TABLE IF NOT EXISTS kb_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- One of: file_upload, url_ingest, kb_seed
+    source_type TEXT NOT NULL,
+    -- Absolute path on disk (for files we store locally). May be NULL for future remote-only sources.
+    path TEXT,
+    -- Original URL (for url_ingest). NULL for local uploads.
+    url TEXT,
+    -- Stable content hash to dedupe ingests.
+    content_sha256 TEXT,
+    title TEXT,
+    tags TEXT, -- JSON array string
+    language TEXT,
+    scope TEXT,
+    last_updated TEXT,
+    metadata JSON,
+    UNIQUE(path),
+    UNIQUE(url)
+);
+
+-- Persistent list of “Resource Center URLs” used for OpenRouter web search.
+CREATE TABLE IF NOT EXISTS rc_urls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    url TEXT NOT NULL UNIQUE,
+    title TEXT,
+    tags TEXT, -- JSON array string
+    scope TEXT,
+    enabled INTEGER DEFAULT 1
+);

@@ -17,6 +17,5 @@ if __name__ == "__main__":
         "src.main:app",
         host=settings.host,
         port=settings.port,
-        reload=True,
-        reload_dirs=[str(_ROOT)],
+        reload=False,
     )
