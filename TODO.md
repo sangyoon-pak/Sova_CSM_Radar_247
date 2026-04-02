@@ -22,16 +22,20 @@
 
 ------------------new----------------------
 ### UI
-- Improve the overall UI layout to look like a ready enterprise software. It looks very tacky and system feel 
-1) 
-- use menu and sub pages in utility scopes. separate the cron job sections from where users interact with the agent directly. 
+- include the instruction of this agent software
+- 
+
+4) what is the best way to combine the chat part and run agent part on the UI ? come back to me with your proposal. 
+
 
 
 ### Utility 
 - Build a notification pipeline (decide channels and triggers) so the system can notify when drafts are ready or when errors occur.
 - need to handle the language dynamically. when asked in korean, doc retrieve can retrieve the data regardless of the language but output should be in the language it was asked in (both email probe and user <> interaction, the final output should be in the language the query is asked in)
-- Can users also upload documents as text files or provide the URL link on the UI on top ? The documents and URL should be persistent 
-- Shifting from email drafting agent to proactive assistant CSM agent. e.g Agent probes email inbox and find look up client queries and analyse the intent of the queries. Agent decides if it is Appier product-related. If yes, it searches documents to find the most relevant infomation and notify CSM with answers to each of the client query so that CSM can draft and send the email dramatically fast.
+- Shifting from email drafting agent to proactive assistant CSM agent. I badly want this agent to do this
+1) periodically probe inbox and analyse the queries
+2) Agent should be able to sense if there are emails that come from the clients asking about what to do with appier product. If agent senses that it is appier product related client questions, it should be able to search through the docs and list up all the relevant information and actions item for CSM to review. Agent should be proactively also trying to answer the questions if they can as part of the process. 
+3) Agent should be able to nofify the CSM. I think the best way is to notify CSM through the web browser push. I have web push notification muted still, I can tell if there is something on my email inbox on the top of the browser tab with the number within parenthesis (). 
 
 
 ## Back-end
@@ -43,7 +47,11 @@
 - Agent memory for self-evolution. If the answer is not correct, it should take note and memorise it. But how can we make it self-evolve 
 - how can we optimise the ever-growing DB ? we should be able to flush so that we can maintain the lean size
 
-
-
+## wrap-up
+- what is the best way to package this software to distribute to other people 
+- appier related documents should not be exposed on the repo
+- any important variables (API tokens etc) should not be exposed on the repo.
+- should include how to install all the dependencies and set variables (e.g API keys) on the MD file. 
+- the UI should include what this software is all about and what it is aiming to do to help CSM concisely.  
 
 
