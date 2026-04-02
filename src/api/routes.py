@@ -146,6 +146,14 @@ def list_docs(limit: int = 200, offset: int = 0):
     return database.list_kb_documents(limit=limit, offset=offset)
 
 
+@router.delete("/kb/documents/{doc_id}")
+def delete_kb_doc(doc_id: int):
+    try:
+        return database.delete_kb_document(doc_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 class RCUrlUpsertRequest(BaseModel):
     url: str
     title: str | None = None
@@ -314,6 +322,13 @@ def memory_compact(req: CompactMemoryRequest):
 def serve_dashboard():
     p = Path(__file__).parent.parent / "web" / "index.html"
     if p.exists():
-        return FileResponse(p)
+        # Prevent stale UI caching (important when iterating on a single-file dashboard).
+        return FileResponse(
+            p,
+            headers={
+                "Cache-Control": "no-store, max-age=0",
+                "Pragma": "no-cache",
+            },
+        )
     from fastapi.responses import HTMLResponse
     return HTMLResponse("<h1>Email Draft Agent</h1><p>Dashboard UI not found.</p>")

@@ -5,99 +5,248 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Draft Agent — Dashboard</title>
   <style>
-    :root { --bg: #0f0f12; --surface: #18181c; --border: #2a2a30; --text: #e4e4e7; --muted: #71717a; --accent: #22c55e; --danger: #ef4444; }
+    :root {
+      --bg: #0f0f12;
+      --surface: #18181c;
+      --surface2: #111114;
+      --border: #2a2a30;
+      --text: #e4e4e7;
+      --muted: #71717a;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --shadow: 0 12px 30px rgba(0,0,0,0.35);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    html[data-theme="light"] {
+      --bg: #f7f7fb;
+      --surface: #ffffff;
+      --surface2: #f1f2f6;
+      --border: #e5e7eb;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #16a34a;
+      --danger: #dc2626;
+      --shadow: 0 14px 40px rgba(2,6,23,0.10);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
-    section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem; }
+    a { color: inherit; }
+    h1 { font-size: 1.15rem; margin-bottom: 0.25rem; letter-spacing: 0.01em; }
+    .subtitle { color: var(--muted); font-size: 0.88rem; margin-bottom: 0; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
     section h2 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
-    button { padding: 0.5rem 1rem; border-radius: 8px; border: none; background: var(--accent); color: #000; cursor: pointer; font-weight: 500; }
+    button { padding: 0.55rem 0.9rem; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #07110a; cursor: pointer; font-weight: 750; }
     button:hover { opacity: 0.9; }
     button.danger { background: var(--danger); color: white; }
-    .result-box { margin-top: 1rem; padding: 1rem; background: var(--bg); border-radius: 8px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-    textarea { width: 100%; min-height: 80px; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: monospace; margin-bottom: 0.5rem; }
+    button.ghost { background: transparent; border-color: var(--border); color: var(--text); }
+    button.ghost:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); opacity: 1; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom: 1rem; flex-wrap:wrap; }
+    .nav { display:flex; gap:0.5rem; flex-wrap:wrap; }
+    .nav-btn { padding:0.55rem 0.8rem; border-radius: 999px; background: transparent; border:1px solid var(--border); color: var(--text); font-weight: 800; }
+    .nav-btn:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .nav-btn.active { background: var(--accent); border-color: transparent; color: #000; }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+    .subnav { display:flex; gap:0.5rem; margin: 0 0 1rem 0; flex-wrap:wrap; }
+    .subnav-btn { padding:0.45rem 0.7rem; border-radius:10px; background: transparent; border:1px solid var(--border); color: var(--text); font-weight: 700; }
+    .subnav-btn.active { background: var(--accent); border-color: transparent; color: #000; }
+    .subtab-pane { display:none; }
+    .subtab-pane.active { display:block; }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: var(--mono);
+      outline: none;
+    }
+    input[type="text"]:focus, textarea:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+    textarea { min-height: 96px; margin-top: 0.5rem; }
+    .row { display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; }
+    .result-box { margin-top: 0.9rem; padding: 0.9rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; font-family: var(--mono); font-size: 0.86rem; white-space: pre-wrap; max-height: 340px; overflow-y: auto; }
+    .chat-bubble { margin-top: 0.9rem; padding: 0.95rem 0.95rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; box-shadow: none; }
+    .bubble-head { display:flex; align-items:center; justify-content:space-between; gap: 0.75rem; margin-bottom: 0.4rem; }
+    .agent-label { display:flex; gap:0.55rem; align-items:center; font-weight: 900; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+    .status-pill { font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); background: transparent; }
+    .status-pill.running { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+    .status-pill.error { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); }
+    .bubble-body {
+      font-family: var(--mono);
+      white-space: pre-wrap;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      max-height: 340px;          /* fixed-ish panel height */
+      overflow-y: auto;           /* scroll inside the response box */
+      overflow-x: hidden;
+      padding-right: 0.25rem;     /* room for scrollbar */
+      overflow-wrap: anywhere;    /* prevent long URLs/tokens from overflowing */
+      word-break: break-word;
+    }
+    /* Trace inspector: flat list (no card boxes) */
+    .trace-item { padding: 0.35rem 0; margin: 0; border-bottom: 1px solid var(--border); background: transparent; }
+    .trace-head { display:flex; justify-content:flex-start; gap: 0.75rem; align-items:baseline; padding: 0.15rem 0; }
+    .trace-type { color: var(--muted); font-size: 0.78rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.05em; min-width: 84px; }
+    .trace-title { font-weight: 850; flex: 1; font-size: 0.92rem; line-height: 1.25; }
+    .trace-time { color: var(--muted); font-size: 0.78rem; font-weight: 850; white-space: nowrap; }
+    .trace-detail { padding: 0.55rem 0 0.65rem 0; font-size: 0.88rem; color: var(--text); font-family: var(--mono); white-space: pre-wrap; line-height: 1.35; }
+    .trace-caret { color: var(--muted); font-size: 0.95rem; font-weight: 950; margin-left: 0.15rem; user-select:none; }
+    details[open] .trace-caret { transform: rotate(180deg); display: inline-block; }
     .cron-item { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
     .interaction { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     .interaction-meta { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.5rem; }
     .empty { color: var(--muted); text-align: center; padding: 2rem; }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display:none; }
+    .trace-controls { display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-top: 0.65rem; }
+    select { padding: 0.5rem 0.65rem; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-weight: 800; }
+    .trace-item details > summary { padding: 0; margin: 0; }
+    .trace-item details > summary:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .trace-item details[open] > summary { border-bottom: 0; }
+    /* Flat trace list container (avoid "big box" look) */
+    .trace-list {
+      margin-top: 0.65rem;
+      padding: 0.25rem 0;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      max-height: 520px;
+      overflow-y: auto;
+      font-family: var(--mono);
+    }
   </style>
 </head>
 <body>
-  <h1>Email Draft Agent</h1>
-  <p class="subtitle">Local Appier email assistant</p>
-  <section>
-    <h2>Run Agent</h2>
-    <button onclick="runProbe()">Probe Inbox Now</button>
-    <button onclick="runCustom()">Run Custom</button>
-    <textarea id="customInput" placeholder="Custom prompt..."></textarea>
-    <div id="runResult" class="result-box" style="display:none;"></div>
-    <details style="margin-top:0.5rem;">
-      <summary style="cursor:pointer;color:var(--muted);">Run trace (tools/reasoning)</summary>
-      <div id="runTrace" class="result-box" style="display:block;max-height:260px;"></div>
-    </details>
-  </section>
-  <section>
-    <h2>Chat Test</h2>
-    <div id="chatWindow" class="result-box" style="height:220px;overflow-y:auto;display:block;"></div>
-    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-      <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      <button onclick="sendChat()">Send</button>
-    </div>
-  </section>
-  <section>
-    <h2>Cron Jobs</h2>
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-      <input type="text" id="cronName" placeholder="Job name">
-      <input type="text" id="cronExpr" placeholder="0 * * * *">
-      <button onclick="addCron()">Add</button>
-    </div>
-    <div id="cronList"></div>
-    <details style="margin-top:0.75rem;">
-      <summary style="cursor:pointer;color:var(--muted);">Recent cron summaries</summary>
-      <div id="cronSummary" class="result-box" style="display:block;max-height:220px;"></div>
-    </details>
-  </section>
-  <section>
-    <h2>Document Upload</h2>
-    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-      <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" />
-      <button onclick="uploadDoc()">Upload</button>
-    </div>
-    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-top:0.75rem;">
-      <input id="webUrl" type="text" placeholder="https://... (ask agent with web search)" style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      <button onclick="askWebUrl()">Ask (web)</button>
-    </div>
-    <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-    <details style="margin-top:0.75rem;">
-      <summary style="cursor:pointer;color:var(--muted);">Persisted docs (registry)</summary>
-      <div id="docRegistry" class="result-box" style="display:block;max-height:260px;"></div>
-    </details>
-  </section>
-  <section>
-    <h2>RC URLs (Web Search Sources)</h2>
-    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-      <input id="rcUrlInput" type="text" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-      <button onclick="addRcUrl()">Add</button>
-      <button onclick="discoverRcUrls()">Discover subpages (≤10)</button>
-    </div>
-    <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-    <div id="rcUrlList" style="margin-top:0.75rem;"></div>
-    <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;">
-      When an RC URL is <strong>enabled</strong>, the agent may use OpenRouter web search to fetch relevant docs from that domain during runs.
-    </p>
-  </section>
-  <section>
-    <h2>Interactions</h2>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
-      <span style="font-size:0.8rem;color:var(--muted);">Recent runs</span>
-      <div style="display:flex;gap:0.5rem;">
-        <button onclick="compactHistory()">Summarize older</button>
-        <button class="danger" onclick="clearHistory()">Clear history</button>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1>Email Draft Agent</h1>
+        <p class="subtitle">Local Appier email assistant</p>
+      </div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="ghost" id="themeToggle" onclick="toggleTheme()">Theme</button>
+        <div class="nav">
+          <button class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')">Agent</button>
+          <button class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')">Cron</button>
+          <button class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')">Knowledge</button>
+          <button class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')">Interactions</button>
+        </div>
       </div>
     </div>
-    <div id="interactions"><div class="empty">Loading...</div></div>
-  </section>
+
+  <div class="tab-pane active" id="tab-agent">
+    <section>
+      <h2>Run Agent</h2>
+      <div class="row">
+        <button onclick="runProbe()">Probe Inbox Now</button>
+        <button class="ghost" onclick="runCustom()">Run Custom</button>
+      </div>
+      <textarea id="customInput" placeholder="Ask a question or paste a client inquiry…"></textarea>
+
+      <div id="runCard" class="chat-bubble" style="display:none;">
+        <div class="bubble-head">
+          <div class="agent-label"><span class="dot"></span><span>Agent</span></div>
+          <span id="runStatusPill" class="status-pill running">running</span>
+        </div>
+        <div id="runResult" class="bubble-body"></div>
+      </div>
+
+      <details id="traceDetails" style="margin-top:0.75rem;">
+        <summary style="cursor:pointer;color:var(--muted);font-weight:900;">Trace inspector</summary>
+        <div class="trace-controls">
+          <label style="color:var(--muted);font-weight:900;">Show</label>
+          <select id="traceFilter" onchange="rerenderTraceFiltered()">
+            <option value="important">Important</option>
+            <option value="tools">Tools only</option>
+            <option value="all">All events</option>
+          </select>
+          <button class="ghost" onclick="clearTraceUI()">Clear</button>
+        </div>
+        <div id="runTrace" class="trace-list" style="display:block;"></div>
+      </details>
+    </section>
+    <section>
+      <h2>Chat Test</h2>
+      <div id="chatWindow" class="result-box" style="height:220px;overflow-y:auto;display:block;"></div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+        <button onclick="sendChat()">Send</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane" id="tab-cron">
+    <section>
+      <h2>Cron Jobs</h2>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+        <input type="text" id="cronName" placeholder="Job name">
+        <input type="text" id="cronExpr" placeholder="0 * * * *">
+        <button onclick="addCron()">Add</button>
+      </div>
+      <div id="cronList"></div>
+      <details style="margin-top:0.75rem;">
+        <summary style="cursor:pointer;color:var(--muted);">Recent cron summaries</summary>
+        <div id="cronSummary" class="result-box" style="display:block;max-height:220px;"></div>
+      </details>
+    </section>
+  </div>
+
+  <div class="tab-pane" id="tab-knowledge">
+    <div class="subnav">
+      <button class="subnav-btn active" data-subtab="subtab-upload" onclick="showSubtab('subtab-upload')">Upload</button>
+      <button class="subnav-btn" data-subtab="subtab-rc" onclick="showSubtab('subtab-rc')">RC URLs</button>
+    </div>
+
+    <div id="subtab-upload" class="subtab-pane active">
+      <section>
+        <h2>Document Upload</h2>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+          <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" />
+          <button onclick="uploadDoc()">Upload</button>
+        </div>
+        <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
+        <details style="margin-top:0.75rem;">
+          <summary style="cursor:pointer;color:var(--muted);">Persisted docs (registry)</summary>
+          <div id="docRegistry" class="result-box" style="display:block;max-height:260px;"></div>
+        </details>
+      </section>
+    </div>
+
+    <div id="subtab-rc" class="subtab-pane">
+      <section>
+        <h2>RC URLs (Web Search Sources)</h2>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <input id="rcUrlInput" type="text" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <button onclick="addRcUrl()">Add</button>
+          <button onclick="discoverRcUrls()">Discover subpages (≤10)</button>
+        </div>
+        <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
+        <div id="rcUrlList" style="margin-top:0.75rem;"></div>
+        <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;">
+          When an RC URL is <strong>enabled</strong>, the agent may use OpenRouter web search to fetch relevant docs from that domain during runs.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <div class="tab-pane" id="tab-interactions">
+    <section>
+      <h2>Interactions</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
+        <span style="font-size:0.8rem;color:var(--muted);">Recent runs</span>
+        <div style="display:flex;gap:0.5rem;">
+          <button onclick="compactHistory()">Summarize older</button>
+          <button class="danger" onclick="clearHistory()">Clear history</button>
+        </div>
+      </div>
+      <div id="interactions"><div class="empty">Loading...</div></div>
+    </section>
+  </div>
+
   <script>
     async function fetchJson(path, opts = {}) {
       const r = await fetch(path, opts);
@@ -106,28 +255,38 @@
     }
     async function runProbe() {
       const el = document.getElementById('runResult');
-      el.style.display = 'block';
-      el.textContent = 'Running...';
-      document.getElementById('runTrace').textContent = 'Starting...';
+      document.getElementById('runCard').style.display = 'block';
+      el.textContent = 'Working…';
+      setRunStatus('running');
+      startTraceUI();
       try {
         const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ probe: true }) });
         const res = await pollRun(started.run_id);
         el.textContent = res.output || 'Done.';
+        setRunStatus('completed');
         loadInteractions();
         loadCronSummary();
-      } catch (e) { el.textContent = 'Error: ' + e.message; }
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+        setRunStatus('error');
+      }
     }
     async function runCustom() {
       const el = document.getElementById('runResult');
-      el.style.display = 'block';
-      el.textContent = 'Running...';
-      document.getElementById('runTrace').textContent = 'Starting...';
+      document.getElementById('runCard').style.display = 'block';
+      el.textContent = 'Working…';
+      setRunStatus('running');
+      startTraceUI();
       try {
         const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: document.getElementById('customInput').value || 'Hello' }) });
         const res = await pollRun(started.run_id);
         el.textContent = res.output || 'Done.';
+        setRunStatus('completed');
         loadInteractions();
-      } catch (e) { el.textContent = 'Error: ' + e.message; }
+      } catch (e) {
+        el.textContent = 'Error: ' + e.message;
+        setRunStatus('error');
+      }
     }
     const chatMessages = [];
     function renderChat() {
@@ -192,24 +351,7 @@
         el.textContent = 'Error: ' + e.message;
       }
     }
-    async function askWebUrl() {
-      const url = document.getElementById('webUrl').value.trim();
-      if (!url) { alert('Enter a URL'); return; }
-      const el = document.getElementById('runResult');
-      el.style.display = 'block';
-      el.textContent = 'Running (web search enabled)...';
-      document.getElementById('runTrace').textContent = 'Starting...';
-      try {
-        const prompt = `Using web search, find and summarize the most relevant section for this URL. Prefer the exact page/anchor if available. Use citations.\\nURL: ${url}`;
-        const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: prompt, web: true, web_url: url }) });
-        const res = await pollRun(started.run_id);
-        el.textContent = res.output || 'Done.';
-        document.getElementById('webUrl').value = '';
-        loadInteractions();
-      } catch (e) {
-        el.textContent = 'Error: ' + e.message;
-      }
-    }
+    // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
     async function loadDocRegistry() {
       const data = await fetchJson('/kb/documents?limit=200');
       const el = document.getElementById('docRegistry');
@@ -219,8 +361,18 @@
         const title = d.title || '';
         const lang = d.language || '';
         const scope = d.scope || '';
-        return `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span><br><code style="font-size:0.78rem;">${escapeHtml(loc)}</code><br><span style="color:var(--muted);font-size:0.78rem;">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span></div>`;
+        return `<div style="margin-bottom:0.65rem;padding-bottom:0.65rem;border-bottom:1px dashed var(--border)"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;"><div style="min-width:0;"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span><br><code style="font-size:0.78rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:560px;">${escapeHtml(loc)}</code><br><span style="color:var(--muted);font-size:0.78rem;">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span></div><button class="danger" style="padding:0.4rem 0.6rem;border-radius:10px;" onclick="deleteKbDoc(${d.id})">Delete</button></div></div>`;
       }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.35rem 0;">');
+    }
+
+    async function deleteKbDoc(id) {
+      if (!confirm('Delete KB document id=' + id + '?')) return;
+      try {
+        await fetchJson(`/kb/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        loadDocRegistry();
+      } catch (e) {
+        alert('Error deleting document: ' + e.message);
+      }
     }
     async function loadRcUrls() {
       const data = await fetchJson('/rc/urls?limit=200');
@@ -318,17 +470,112 @@
         return `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
       }).join('');
     }
-    function renderRunTrace(events) {
+    let _traceLen = 0;
+    let _traceAll = [];
+    function startTraceUI() {
       const el = document.getElementById('runTrace');
-      if (!events || !events.length) {
-        el.textContent = 'No trace events yet.';
-        return;
+      if (el) el.innerHTML = '';
+      _traceLen = 0;
+      _traceAll = [];
+      const d = document.getElementById('traceDetails');
+      if (d) d.open = false; // keep it quiet by default
+    }
+
+    function typeLabel(t) {
+      if (t === 'model_start' || t === 'model_end') return 'assistant';
+      if (t === 'tool_start' || t === 'tool_end') return 'tool';
+      if (t === 'web_round_start' || t === 'web_round_end') return 'web';
+      if (t === 'chain_start' || t === 'chain_end') return 'chain';
+      return String(t || 'event');
+    }
+
+    function renderTraceItem(e) {
+      const el = document.createElement('div');
+      el.className = 'trace-item';
+      const hasDetail = !!(e.detail && String(e.detail).trim());
+      const detailHtml = hasDetail ? `<div class="trace-detail">${escapeHtml(e.detail)}</div>` : '';
+      const ts = e.ts ? new Date(e.ts).toLocaleTimeString() : '';
+      // Per-event collapsible to reduce "log wall" feeling.
+      if (hasDetail) {
+        el.innerHTML = `
+          <details>
+            <summary style="cursor:pointer;">
+              <div class="trace-head">
+                <div class="trace-type">${escapeHtml(typeLabel(e.type))}</div>
+                <div class="trace-title">${escapeHtml(e.title || '')}</div>
+                <div class="trace-time">${escapeHtml(ts)}</div>
+                <div class="trace-caret">▾</div>
+              </div>
+            </summary>
+            ${detailHtml}
+          </details>
+        `;
+      } else {
+        el.innerHTML = `
+          <div class="trace-head">
+            <div class="trace-type">${escapeHtml(typeLabel(e.type))}</div>
+            <div class="trace-title">${escapeHtml(e.title || '')}</div>
+            <div class="trace-time">${escapeHtml(ts)}</div>
+          </div>
+        `;
       }
-      el.innerHTML = events.map((e, idx) => {
-        const detail = e.detail ? `<details><summary>details</summary><pre style="white-space:pre-wrap;">${escapeHtml(e.detail)}</pre></details>` : '';
-        return `<div><strong>${idx + 1}. [${e.type}]</strong> ${escapeHtml(e.title)} <span style="color:var(--muted)">(${new Date(e.ts).toLocaleTimeString()})</span>${detail}</div>`;
-      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">');
+      return el;
+    }
+
+    function clearTraceUI() {
+      _traceLen = 0;
+      _traceAll = [];
+      const el = document.getElementById('runTrace');
+      if (el) el.innerHTML = '';
+    }
+
+    function isImportantEvent(e) {
+      const t = String(e.type || '');
+      return t === 'tool_start' || t === 'tool_end' || t === 'model_start' || t === 'model_end' || t === 'web_round_start' || t === 'web_round_end';
+    }
+
+    function rerenderTraceFiltered() {
+      const mode = (document.getElementById('traceFilter')?.value || 'important');
+      const el = document.getElementById('runTrace');
+      if (!el) return;
+      el.innerHTML = '';
+      const filtered = _traceAll.filter(e => {
+        if (mode === 'all') return true;
+        if (mode === 'tools') return String(e.type || '').startsWith('tool_');
+        return isImportantEvent(e);
+      });
+      for (const e of filtered.slice(-80)) {
+        el.appendChild(renderTraceItem(e));
+      }
       el.scrollTop = el.scrollHeight;
+    }
+
+    function setRunStatus(status) {
+      const pill = document.getElementById('runStatusPill');
+      if (!pill) return;
+      pill.classList.remove('running', 'error');
+      if (status === 'running') pill.classList.add('running');
+      if (status === 'error') pill.classList.add('error');
+      pill.textContent = status;
+    }
+
+    function getInitialTheme() {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const btn = document.getElementById('themeToggle');
+      if (btn) btn.textContent = theme === 'dark' ? 'Dark' : 'Light';
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || getInitialTheme();
+      const next = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme(next);
     }
     function escapeHtml(s) {
       return String(s)
@@ -336,12 +583,55 @@
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;');
     }
+
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(p => {
+        p.classList.toggle('active', p.id === tabId);
+      });
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+      });
+    }
+
+    function showSubtab(subtabId) {
+      document.querySelectorAll('.subtab-pane').forEach(p => {
+        p.classList.toggle('active', p.id === subtabId);
+      });
+      document.querySelectorAll('.subnav-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-subtab') === subtabId);
+      });
+    }
     async function pollRun(runId) {
       while (true) {
         const run = await fetchJson(`/agent/runs/${encodeURIComponent(runId)}`);
-        renderRunTrace(run.events || []);
-        if (run.status === 'completed') return run;
-        if (run.status === 'error') throw new Error(run.error || 'Run failed');
+        const events = run.events || [];
+        if (events.length > _traceLen) {
+          for (let i = _traceLen; i < events.length; i++) {
+            _traceAll.push(events[i]);
+          }
+          _traceLen = events.length;
+          rerenderTraceFiltered();
+        }
+
+        // Live update: show latest model_end detail while running.
+        const runResultEl = document.getElementById('runResult');
+        const lastEnd = (() => {
+          for (let i = events.length - 1; i >= 0; i--) {
+            if (events[i].type === 'model_end' && events[i].detail) return events[i].detail;
+          }
+          return '';
+        })();
+
+        if (run.status === 'completed') {
+          runResultEl.textContent = run.output || 'Done.';
+          setRunStatus('completed');
+          return run;
+        }
+        if (run.status === 'error') {
+          setRunStatus('error');
+          throw new Error(run.error || 'Run failed');
+        }
+        if (lastEnd) runResultEl.textContent = lastEnd;
         await new Promise(r => setTimeout(r, 700));
       }
     }
@@ -352,6 +642,9 @@
       el.innerHTML = data.map(i => `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.85rem">${(i.output_text || i.error_message || '').slice(0, 1000)}</pre></div>`).join('');
     }
     // Initial loads
+    // Theme init
+    applyTheme(getInitialTheme());
+
     loadDocRegistry();
     loadRcUrls();
     async function clearHistory() {
@@ -388,5 +681,6 @@
     loadCronSummary();
     loadInteractions();
   </script>
+  </div>
 </body>
 </html>

@@ -1,6 +1,7 @@
 """Local email draft agent using LangChain."""
 import os
 import re
+import json
 from collections.abc import Sequence
 
 from langchain_core.tools import tool
@@ -22,6 +23,53 @@ def _ensure_langsmith_env():
 
 def _get_llm():
     return get_chat_llm(model=settings.llm_model_for_main, temperature=0.3)
+
+def _llm_intent_router():
+    # Deterministic classifier for UX routing (language-agnostic).
+    return get_chat_llm(model=settings.llm_model_for_search_json, temperature=0.0)
+
+
+INTENT_ROUTE_PROMPT = """You route the user's request to the correct action.
+
+Return STRICT JSON ONLY:
+{{
+  "route": "inbox_peek" | "agent_run",
+  "reason": "short"
+}}
+
+Definitions:
+- inbox_peek: user is asking to show the latest/recent emails / check inbox / list emails. Do NOT draft replies. Do NOT search docs.
+- agent_run: anything else (drafting, answering product questions, analysis, etc).
+
+Be language-agnostic. Examples of inbox_peek:
+- "latest email", "recent emails", "check inbox"
+- "최근 이메일", "최신 이메일", "메일 확인", "받은편지함 보여줘"
+
+User message:
+{text}
+"""
+
+
+def _route_user_request(text: str) -> str:
+    t = (text or "").strip()
+    if not t:
+        return "agent_run"
+    llm = _llm_intent_router()
+    prompt = INTENT_ROUTE_PROMPT.format(text=t[:2000])
+    try:
+        resp = llm.invoke([HumanMessage(content=prompt)], config={"run_name": "email_agent.route_intent"})
+        raw = (resp.content or "").strip()
+        if "```" in raw:
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw.strip())
+        route = str(data.get("route") or "").strip()
+        if route in ("inbox_peek", "agent_run"):
+            return route
+    except Exception:
+        pass
+    return "agent_run"
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
 
@@ -125,6 +173,26 @@ def run_agent(
     callbacks: Sequence | None = None,
 ) -> str:
     _ensure_langsmith_env()
+
+    # If the user is just asking to see recent/latest emails, do that directly.
+    # This avoids accidental doc retrieval + drafting on short inbox-peek queries (Korean/English/etc).
+    if _route_user_request(input_text) == "inbox_peek":
+        from src.agent.tools.gmail_tool import fetch_inbox_emails as _fetch
+        # Emit trace events (tool_start/tool_end) so the UI Trace inspector stays useful.
+        cbs = list(callbacks) if callbacks else []
+        for cb in cbs:
+            try:
+                cb.on_tool_start({"name": "fetch_inbox_emails"}, f"max_results=5 search=default")  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        out = _fetch(max_results=5)
+        for cb in cbs:
+            try:
+                cb.on_tool_end(out)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        return out
+
     agent = create_agent_executor()
     config = {"callbacks": list(callbacks)} if callbacks else None
     result = agent.invoke({"messages": [HumanMessage(content=input_text)]}, config=config)

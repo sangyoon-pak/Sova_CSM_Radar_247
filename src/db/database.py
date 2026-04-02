@@ -316,6 +316,46 @@ def list_kb_documents(limit: int = 200, offset: int = 0) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def delete_kb_document(doc_id: int) -> dict:
+    """
+    Delete a persisted KB document.
+    - Removes the registry row from `kb_documents`.
+    - If the registry row has a local `path`, deletes that file (best-effort) too.
+    """
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, path, url, source_type FROM kb_documents WHERE id = ?",
+            (doc_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return {"deleted": 0}
+
+        removed_path = None
+        kb_root = getattr(settings, "kb_path_resolved", None)
+        path = row["path"]
+        if path and kb_root:
+            try:
+                abs_p = Path(path).resolve()
+                # Safety: only delete files under our knowledge base folder.
+                if abs_p == kb_root or kb_root in abs_p.parents:
+                    abs_p.unlink(missing_ok=True)
+                    removed_path = str(abs_p)
+            except Exception:
+                removed_path = None
+
+        conn.execute("DELETE FROM kb_documents WHERE id = ?", (doc_id,))
+        conn.commit()
+        conn.close()
+        return {
+            "deleted": 1,
+            "removed_path": removed_path,
+            "source_type": row["source_type"],
+        }
+
+
 def upsert_rc_url(
     *,
     url: str,

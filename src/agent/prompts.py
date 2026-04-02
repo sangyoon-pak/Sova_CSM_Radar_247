@@ -28,6 +28,7 @@ EMAIL_AGENT_SYSTEM = """You are a Corporate Email Assistant for Appier documents
 - Never send emails without explicit user approval.
 - Be concise and professional in drafts.
 - Always respond in the same language as the user's email/query (if the user writes in Korean, reply in Korean; if in English, reply in English).
+- If the user is asking only to see **recent/latest emails** (e.g. "latest email", "최근 이메일"), just return the inbox contents from fetch_inbox_emails. Do NOT search docs. Do NOT draft replies.
 """
 
 PROBE_TRIGGER_MESSAGE = """Probe the Gmail inbox now. Run fetch_inbox_emails, then for each email that appears to be from a client and is about Appier products or technical questions:
