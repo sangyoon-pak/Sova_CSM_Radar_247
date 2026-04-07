@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Email Draft Agent",
-    description="Local Appier email assistant with grep-based doc search",
+    description="Local email assistant with grep-based doc search",
     lifespan=lifespan,
 )
 

@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     host: str = Field("127.0.0.1", validation_alias="HOST")
     port: int = Field(8000, validation_alias="PORT")
 
+    # Prompt profile defaults (can be overridden via UI + DB settings)
+    agent_vendor_name: str = Field("Appier", validation_alias="AGENT_VENDOR_NAME")
+    agent_product_context: str = Field(
+        "AIRIS, AIQUA, BotBonnie, AI Agent, AIXON, AiDeal",
+        validation_alias="AGENT_PRODUCT_CONTEXT",
+    )
+    agent_role_title: str = Field("Corporate Email Assistant", validation_alias="AGENT_ROLE_TITLE")
+
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")
 

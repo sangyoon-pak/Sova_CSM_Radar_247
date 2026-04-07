@@ -11,7 +11,7 @@ from langchain_core.messages import HumanMessage
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
 from src.agent.tools.doc_search import (
-    _aiqua_exclusive_query,
+    _single_scope_exclusive_query,
     _extract_product_hints,
     format_matches_for_context,
     search_documents,
@@ -264,7 +264,7 @@ def _rerank_product_scope_note(query: str, exclusive_scope: str | None = None) -
         exclusive = exclusive_scope
     else:
         hints = _extract_product_hints(query)
-        if not _aiqua_exclusive_query(hints):
+        if not _single_scope_exclusive_query(hints):
             return ""
         exclusive = next(iter(hints))
     if not exclusive:

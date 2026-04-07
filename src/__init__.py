@@ -1,1 +1,1 @@
-"""Email draft agent - local Appier email assistant."""
+"""Email draft agent - local email assistant."""

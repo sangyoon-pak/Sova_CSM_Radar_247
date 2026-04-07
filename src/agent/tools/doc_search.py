@@ -512,7 +512,7 @@ def _match_primary_product(m: dict) -> str | None:
     return _filename_product_guess(file_name)
 
 
-def _aiqua_exclusive_query(product_hints: set[str]) -> bool:
+def _single_scope_exclusive_query(scope_hints: set[str]) -> bool:
     """
     Return True only when a single exclusive scope/category is inferred.
 
@@ -520,7 +520,7 @@ def _aiqua_exclusive_query(product_hints: set[str]) -> bool:
     """
     if not settings.rc_scope_enable:
         return False
-    return len(product_hints) == 1
+    return len(scope_hints) == 1
 
 
 def _cross_product_penalty_weight(exclusive_scope: str | None, doc_primary: str | None) -> int:
@@ -650,7 +650,7 @@ def search_documents(
     hard_tokens = _hard_tokens_from_inputs(query, search_terms)
     is_exclusive = bool(exclusive_scope) if settings.rc_scope_enable else False
     if not exclusive_scope:
-        is_exclusive = _aiqua_exclusive_query(product_hints)
+        is_exclusive = _single_scope_exclusive_query(product_hints)
         exclusive_scope = next(iter(product_hints)) if is_exclusive and product_hints else None
 
     # Prefer semantic + actionable snippets with soft product alignment and hard-token matches.

@@ -1,6 +1,6 @@
 # Search Agent Architecture — Smarter Document Retrieval (Current)
 
-**Goal:** Make `search_appier_docs` return citations that are actually usable for the client question by combining:
+**Goal:** Make `search_product_docs` return citations that are actually usable for the client question by combining:
 1) multi-stage retrieval (RAG + exact grep + FTS),
 2) product-scope aware ranking,
 3) LLM rerank + sufficiency + optional refine/re-search.
@@ -8,7 +8,7 @@
 ---
 
 ## File Map
-- Tool entry: `src/agent/email_agent.py` (`search_appier_docs` → `search_with_agent`)
+- Tool entry: `src/agent/email_agent.py` (`search_product_docs` → `search_with_agent`)
 - Orchestrator + LLM loop: `src/agent/tools/search_agent.py` (`search_with_agent`)
 - Retrieval + candidate ranking: `src/agent/tools/doc_search.py` (`search_documents`)
 - Retrieval logging (debug): `scripts/test_full_agent_reply.py --with-retrieval --retrieval-json ...`
@@ -67,8 +67,8 @@ Final return: top candidates (currently capped at `[:50]`) with `snippet/line_nu
 This is an iterative loop around `search_documents()` plus LLM decisions.
 
 ### Step 1. Focus split
-- `_split_focus_subqueries(query)` prioritizes the “확인 요청 사항” section
-- and pulls numbered blocks (`1. ...`, `2. ...`) to improve retrieval precision.
+- `_split_focus_subqueries(query)` uses an LLM to split a long inquiry into focused sub-questions
+- language-agnostic, format-agnostic, and resilient to different numbering styles.
 
 ### Step 2. Term variants (iteration 0 vs refined iteration)
 - Iteration 0:
@@ -135,5 +135,5 @@ In `scripts/test_full_agent_reply.py --with-retrieval`, each candidate line show
 ## References
 - Retrieval: `src/agent/tools/doc_search.py`
 - Orchestration: `src/agent/tools/search_agent.py`
-- Tool wiring: `src/agent/email_agent.py` (`search_appier_docs`)
+- Tool wiring: `src/agent/email_agent.py` (`search_product_docs`)
 - Debug output: `scripts/test_full_agent_reply.py`

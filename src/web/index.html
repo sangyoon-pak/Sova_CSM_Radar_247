@@ -99,6 +99,18 @@
     .cron-item { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
     .interaction { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
     .interaction-meta { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.5rem; }
+    .tool-chip {
+      display: inline-block;
+      font-size: 0.74rem;
+      font-weight: 800;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.1rem 0.45rem;
+      margin-right: 0.35rem;
+      margin-top: 0.2rem;
+      color: var(--text);
+      background: var(--surface2);
+    }
     .empty { color: var(--muted); text-align: center; padding: 2rem; }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display:none; }
@@ -107,6 +119,94 @@
     .trace-item details > summary { padding: 0; margin: 0; }
     .trace-item details > summary:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
     .trace-item details[open] > summary { border-bottom: 0; }
+    .profile-card {
+      margin-bottom: 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface2);
+      padding: 0.75rem 0.8rem;
+    }
+    .profile-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-bottom: 0.35rem;
+    }
+    .profile-head-left { display:flex; align-items:center; gap:0.45rem; min-width:0; }
+    .profile-caret {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 900;
+      transition: transform 0.18s ease;
+      display: inline-block;
+      user-select: none;
+    }
+    .profile-toggle-btn {
+      font-size: 0.74rem;
+      font-weight: 900;
+      border-radius: 999px;
+      padding: 0.16rem 0.48rem;
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: transparent;
+      white-space: nowrap;
+    }
+    .profile-title { font-size: 0.84rem; font-weight: 900; color: var(--text); letter-spacing: 0.01em; }
+    .profile-pill {
+      font-size: 0.74rem;
+      font-weight: 900;
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+      border-radius: 999px;
+      padding: 0.15rem 0.45rem;
+      white-space: nowrap;
+    }
+    .profile-help { color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-bottom: 0.55rem; }
+    #profileDetails[open] .profile-caret { transform: rotate(90deg); }
+    .opt-caret {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 900;
+      transition: transform 0.18s ease;
+      display: inline-block;
+      user-select: none;
+    }
+    .opt-card[open] .opt-caret { transform: rotate(90deg); }
+    .opt-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface2);
+      padding: 0.6rem 0.7rem;
+    }
+    .opt-summary {
+      cursor: pointer;
+      color: var(--text);
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .opt-help { color: var(--muted); font-size: 0.78rem; margin: 0.45rem 0 0.5rem; }
+    .opt-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 180px));
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .opt-field label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.74rem;
+      margin-bottom: 0.2rem;
+      font-weight: 800;
+    }
+    .opt-field input {
+      width: 100%;
+      border-radius: 10px;
+      padding: 0.45rem 0.55rem;
+      font-family: var(--mono);
+    }
     /* Flat trace list container (avoid "big box" look) */
     .trace-list {
       margin-top: 0.65rem;
@@ -133,7 +233,7 @@
           <button class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')">Agent</button>
           <button class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')">Cron</button>
           <button class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')">Knowledge</button>
-          <button class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')">Interactions</button>
+          <button class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')">Run History</button>
         </div>
       </div>
     </div>
@@ -141,6 +241,30 @@
   <div class="tab-pane active" id="tab-agent">
     <section>
       <h2>Run Agent</h2>
+      <details id="profileDetails" class="profile-card" open>
+        <summary>
+          <div class="profile-head">
+            <div class="profile-head-left">
+              <span class="profile-caret">▸</span>
+              <span class="profile-title">Agent profile (customize your vendor/product context)</span>
+              <span class="profile-toggle-btn">Configure</span>
+            </div>
+            <span class="profile-pill">applies to all runs</span>
+          </div>
+        </summary>
+        <div style="margin-top:0.6rem;">
+          <p class="profile-help">Set your own company/vendor and product lines here. The agent uses this profile in its system prompt for every run.</p>
+          <div class="row" style="margin-bottom:0.5rem;">
+            <input id="profileVendorName" type="text" placeholder="Vendor name (e.g. Appier)" style="min-width:240px;flex:1;" />
+            <input id="profileRoleTitle" type="text" placeholder="Role title (e.g. Corporate Email Assistant)" style="min-width:260px;flex:1;" />
+          </div>
+          <textarea id="profileProductContext" placeholder="Product lines / scope hints (comma-separated)"></textarea>
+          <div class="row" style="margin-top:0.5rem;">
+            <button class="ghost" onclick="saveAgentProfile()">Save profile</button>
+            <span id="profileSaveStatus" style="color:var(--muted);font-size:0.82rem;">Using saved profile.</span>
+          </div>
+        </div>
+      </details>
       <div class="row">
         <button onclick="runProbe()">Probe Inbox Now</button>
         <button class="ghost" onclick="runCustom()">Run Custom</button>
@@ -235,14 +359,40 @@
 
   <div class="tab-pane" id="tab-interactions">
     <section>
-      <h2>Interactions</h2>
+      <h2>Run History</h2>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
         <span style="font-size:0.8rem;color:var(--muted);">Recent runs</span>
         <div style="display:flex;gap:0.5rem;">
+          <button onclick="optimizeDataStore()">Optimize DB</button>
           <button onclick="compactHistory()">Summarize older</button>
           <button class="danger" onclick="clearHistory()">Clear history</button>
         </div>
       </div>
+      <details class="opt-card" open style="margin-bottom:0.6rem;">
+        <summary class="opt-summary"><span class="opt-caret">▸</span><span>DB optimize settings</span></summary>
+        <div class="opt-help">Adjust retention days and cleanup options, then click <strong>Optimize DB</strong>.</div>
+        <div class="opt-grid">
+          <div class="opt-field">
+            <label for="keepInteractionsDays">Keep interactions (days)</label>
+            <input id="keepInteractionsDays" type="number" min="0" value="30" />
+          </div>
+          <div class="opt-field">
+            <label for="keepMemoryDays">Keep memory rows (days)</label>
+            <input id="keepMemoryDays" type="number" min="0" value="60" />
+          </div>
+          <div class="opt-field">
+            <label for="keepFeedbackDays">Keep feedback rows (days)</label>
+            <input id="keepFeedbackDays" type="number" min="0" value="120" />
+          </div>
+        </div>
+        <div class="row">
+          <label style="font-size:0.8rem;color:var(--muted);"><input id="optDeleteReports" type="checkbox" checked /> delete report outputs</label>
+          <label style="font-size:0.8rem;color:var(--muted);"><input id="optVacuum" type="checkbox" checked /> vacuum db</label>
+          <label style="font-size:0.8rem;color:var(--muted);"><input id="optPurgeMemory" type="checkbox" /> purge memory table</label>
+        </div>
+        <div id="maintenanceStats" style="margin-top:0.45rem;color:var(--muted);font-size:0.78rem;"></div>
+      </details>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.55rem;">Tip: expand a run and submit feedback (correct/incorrect/useful/noisy). Feedback updates self-evolution memory.</p>
       <div id="interactions"><div class="empty">Loading...</div></div>
     </section>
   </div>
@@ -286,6 +436,38 @@
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
         setRunStatus('error');
+      }
+    }
+    async function loadAgentProfile() {
+      const status = document.getElementById('profileSaveStatus');
+      try {
+        const p = await fetchJson('/agent/profile');
+        document.getElementById('profileVendorName').value = p.vendor_name || '';
+        document.getElementById('profileProductContext').value = p.product_context || '';
+        document.getElementById('profileRoleTitle').value = p.role_title || '';
+        if (status) status.textContent = 'Loaded saved profile.';
+      } catch (e) {
+        console.warn('Failed to load agent profile:', e);
+        if (status) status.textContent = 'Using defaults (failed to load saved profile).';
+      }
+    }
+    async function saveAgentProfile() {
+      const status = document.getElementById('profileSaveStatus');
+      const body = {
+        vendor_name: (document.getElementById('profileVendorName').value || '').trim(),
+        product_context: (document.getElementById('profileProductContext').value || '').trim(),
+        role_title: (document.getElementById('profileRoleTitle').value || '').trim(),
+      };
+      status.textContent = 'Saving...';
+      try {
+        await fetchJson('/agent/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        status.textContent = 'Saved. New runs will use this profile.';
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
       }
     }
     const chatMessages = [];
@@ -584,6 +766,12 @@
         .replaceAll('>', '&gt;');
     }
 
+    function parseInteractionMetadata(raw) {
+      if (!raw) return {};
+      if (typeof raw === 'object') return raw || {};
+      try { return JSON.parse(raw); } catch { return {}; }
+    }
+
     function showTab(tabId) {
       document.querySelectorAll('.tab-pane').forEach(p => {
         p.classList.toggle('active', p.id === tabId);
@@ -638,13 +826,96 @@
     async function loadInteractions() {
       const data = await fetchJson('/interactions');
       const el = document.getElementById('interactions');
-      if (!data.length) { el.innerHTML = '<div class="empty">No interactions yet.</div>'; return; }
-      el.innerHTML = data.map(i => `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.85rem">${(i.output_text || i.error_message || '').slice(0, 1000)}</pre></div>`).join('');
+      if (!data.length) { el.innerHTML = '<div class="empty">No run history yet.</div>'; return; }
+      el.innerHTML = data.map(i => {
+        const md = parseInteractionMetadata(i.metadata);
+        const tools = Array.isArray(md.tools_used) ? md.tools_used : [];
+        const toolChips = tools.length
+          ? tools.map(t => `<span class="tool-chip">${escapeHtml(t)}</span>`).join('')
+          : '<span style="color:var(--muted);font-size:0.78rem;">No tool calls recorded</span>';
+        const promptPreview = escapeHtml((i.input_text || '').slice(0, 220));
+        const out = escapeHtml((i.output_text || i.error_message || '').slice(0, 1200));
+        const fullPrompt = escapeHtml(i.input_text || '');
+        return `
+          <details class="interaction">
+            <summary style="cursor:pointer;list-style:none;">
+              <div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
+              <div style="font-size:0.84rem;font-family:var(--mono);white-space:pre-wrap;line-height:1.35;">${promptPreview || '(empty prompt)'}</div>
+              <div style="margin-top:0.35rem;">${toolChips}</div>
+            </summary>
+            <div style="margin-top:0.65rem;">
+              <div class="row" style="margin-bottom:0.55rem;">
+                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'correct')">Correct</button>
+                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'incorrect')">Incorrect</button>
+                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'useful')">Useful</button>
+                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'noisy')">Noisy</button>
+              </div>
+              <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.25rem;">User prompt</div>
+              <pre style="white-space:pre-wrap;font-size:0.82rem;margin-bottom:0.55rem;">${fullPrompt || '(empty prompt)'}</pre>
+              <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.25rem;">Final output</div>
+              <pre style="white-space:pre-wrap;font-size:0.85rem;">${out || '(empty output)'}</pre>
+            </div>
+          </details>
+        `;
+      }).join('');
+    }
+    async function submitRunFeedback(interactionId, verdict) {
+      const needsText = verdict === 'incorrect' || verdict === 'noisy';
+      const correction = needsText ? (prompt('Optional correction / what should change?') || '').trim() : '';
+      try {
+        await fetchJson('/memory/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interaction_id: interactionId, verdict, correction })
+        });
+        alert('Feedback saved. Self-evolution memory refreshed.');
+      } catch (e) {
+        alert('Failed to save feedback: ' + e.message);
+      }
+    }
+    async function optimizeDataStore() {
+      if (!confirm('Optimize DB now? This prunes older rows, vacuums DB, and can remove report output files.')) return;
+      try {
+        const interactionsDays = Number(document.getElementById('keepInteractionsDays')?.value || 30);
+        const memoryDays = Number(document.getElementById('keepMemoryDays')?.value || 60);
+        const feedbackDays = Number(document.getElementById('keepFeedbackDays')?.value || 120);
+        const body = {
+          interactions_keep_days: Number.isFinite(interactionsDays) ? interactionsDays : 30,
+          memory_keep_days: Number.isFinite(memoryDays) ? memoryDays : 60,
+          feedback_keep_days: Number.isFinite(feedbackDays) ? feedbackDays : 120,
+          purge_memory_table: !!document.getElementById('optPurgeMemory')?.checked,
+          delete_report_outputs: !!document.getElementById('optDeleteReports')?.checked,
+          vacuum: !!document.getElementById('optVacuum')?.checked
+        };
+        const res = await fetchJson('/maintenance/optimize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const d = res.deleted || {};
+        alert(`Optimized.\nDeleted interactions: ${d.agent_interactions || 0}\nDeleted memory rows: ${d.agent_memory || 0}\nDeleted feedback rows: ${d.agent_feedback || 0}\nDeleted report outputs: ${d.report_outputs || 0}`);
+        loadMaintenanceStats();
+        loadInteractions();
+      } catch (e) {
+        alert('Optimize failed: ' + e.message);
+      }
+    }
+    async function loadMaintenanceStats() {
+      const el = document.getElementById('maintenanceStats');
+      if (!el) return;
+      try {
+        const s = await fetchJson('/maintenance/stats');
+        const sizeMb = ((s.database_size_bytes || 0) / (1024 * 1024)).toFixed(2);
+        el.textContent = `DB: ${sizeMb} MB | interactions=${s.agent_interactions || 0}, memory=${s.agent_memory || 0}, feedback=${s.agent_feedback || 0}, kb_docs=${s.kb_documents || 0}, rc_urls=${s.rc_urls || 0}`;
+      } catch (e) {
+        el.textContent = 'Failed to load maintenance stats.';
+      }
     }
     // Initial loads
     // Theme init
     applyTheme(getInitialTheme());
 
+    loadAgentProfile();
     loadDocRegistry();
     loadRcUrls();
     async function clearHistory() {
@@ -680,6 +951,7 @@
     loadCronJobs();
     loadCronSummary();
     loadInteractions();
+    loadMaintenanceStats();
   </script>
   </div>
 </body>

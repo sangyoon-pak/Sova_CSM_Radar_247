@@ -8,7 +8,7 @@ Example:
     --query-file data/reports/fixtures/client_query_kr_full.txt \\
     --output-file data/reports/full_agent_reply_latest.txt
 
-Include retrieval ( what search_appier_docs returned to the model ) for RAG tuning:
+Include retrieval ( what search_product_docs returned to the model ) for RAG tuning:
   .venv/bin/python scripts/test_full_agent_reply.py \\
     --query-file data/reports/fixtures/client_query_kr_full.txt \\
     --output-file data/reports/full_agent_reply_latest.txt \\
@@ -38,7 +38,7 @@ def _format_retrieval_section(log: list[dict]) -> str:
     lines = [
         "",
         "=" * 72,
-        "# Retrieval — search_appier_docs (what the model received)",
+        "# Retrieval — search_product_docs (what the model received)",
         "",
     ]
     for i, entry in enumerate(log, 1):
@@ -70,7 +70,7 @@ def _format_retrieval_section(log: list[dict]) -> str:
         lines.append("---")
         lines.append("")
     if len(log) == 0:
-        lines.append("_(No search_appier_docs calls recorded — logging was enabled but tool was not used.)_")
+        lines.append("_(No search_product_docs calls recorded — logging was enabled but tool was not used.)_")
         lines.append("")
     return "\n".join(lines)
 
@@ -105,7 +105,7 @@ def main() -> None:
 
     instruction = """다음은 고객 메일 본문입니다.
 - Gmail(fetch_inbox_emails)는 호출하지 마세요.
-- AIQUA/Appier 기술 문의이므로 search_appier_docs를 반드시 사용해, 위 메일 전체(또는 핵심 질문)로 문서를 검색하고 근거를 수집하세요. 가능하면 첫 검색에 본문 전체(특히 번호 질문)를 넣으세요.
+- AIQUA/Appier 기술 문의이므로 search_product_docs를 반드시 사용해, 위 메일 전체(또는 핵심 질문)로 문서를 검색하고 근거를 수집하세요. 가능하면 첫 검색에 본문 전체(특히 번호 질문)를 넣으세요.
 - 고객 메일이 AIQUA만 다루는 경우(AV API, quantumgraph, AIQUA 콘솔 등) 출처는 AIQUA 문서(파일명에 aiqua 등)만 인용하고, AIRIS·BotBonnie·Enterprise 허브 문서는 인용하지 마세요.
 - 확인 요청 사항이 번호로 나열되어 있으면 1, 2, 3… 순서로 한국어 답변 초안을 작성하세요.
 - 검색 결과로 근거를 확보하지 못한 항목은 추측하지 말고, KB에 관련 문서가 없음을 밝히고 Appier CSM/지원팀 확인을 권하세요.

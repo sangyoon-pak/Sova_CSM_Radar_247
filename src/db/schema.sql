@@ -62,3 +62,21 @@ CREATE TABLE IF NOT EXISTS rc_urls (
     scope TEXT,
     enabled INTEGER DEFAULT 1
 );
+
+-- Lightweight key/value settings used by UI-configurable prompt profile.
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User feedback that drives self-evolution memory.
+CREATE TABLE IF NOT EXISTS agent_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    interaction_id INTEGER,
+    verdict TEXT NOT NULL, -- correct | incorrect | useful | noisy
+    note TEXT,
+    correction TEXT,
+    metadata JSON
+);

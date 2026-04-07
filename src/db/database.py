@@ -316,6 +316,48 @@ def list_kb_documents(limit: int = 200, offset: int = 0) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_app_setting(key: str, default: str | None = None) -> str | None:
+    conn = _conn()
+    row = conn.execute("SELECT value FROM app_settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    if not row:
+        return default
+    return row[0]
+
+
+def set_app_setting(key: str, value: str) -> None:
+    with _WRITE_LOCK:
+        conn = _conn()
+        now = datetime.utcnow().isoformat()
+        conn.execute(
+            """
+            INSERT INTO app_settings (key, value, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+              value=excluded.value,
+              updated_at=excluded.updated_at
+            """,
+            (key, value, now),
+        )
+        conn.commit()
+        conn.close()
+
+
+def get_agent_profile_settings() -> dict:
+    return {
+        "vendor_name": get_app_setting("vendor_name", settings.agent_vendor_name) or settings.agent_vendor_name,
+        "product_context": get_app_setting("product_context", settings.agent_product_context) or settings.agent_product_context,
+        "role_title": get_app_setting("role_title", settings.agent_role_title) or settings.agent_role_title,
+    }
+
+
+def set_agent_profile_settings(*, vendor_name: str, product_context: str, role_title: str) -> dict:
+    set_app_setting("vendor_name", (vendor_name or "").strip())
+    set_app_setting("product_context", (product_context or "").strip())
+    set_app_setting("role_title", (role_title or "").strip())
+    return get_agent_profile_settings()
+
+
 def delete_kb_document(doc_id: int) -> dict:
     """
     Delete a persisted KB document.
@@ -451,3 +493,153 @@ def delete_rc_url(url: str) -> int:
         deleted = cur.rowcount or 0
         conn.close()
         return deleted
+
+
+def insert_feedback(
+    *,
+    interaction_id: int | None,
+    verdict: str,
+    note: str | None = None,
+    correction: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    verdict_norm = (verdict or "").strip().lower()
+    if verdict_norm not in {"correct", "incorrect", "useful", "noisy"}:
+        raise ValueError("verdict must be one of: correct, incorrect, useful, noisy")
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        conn.execute(
+            """
+            INSERT INTO agent_feedback (interaction_id, verdict, note, correction, metadata)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                interaction_id,
+                verdict_norm,
+                (note or "").strip() or None,
+                (correction or "").strip() or None,
+                json.dumps(metadata) if metadata else None,
+            ),
+        )
+        row = conn.execute("SELECT * FROM agent_feedback ORDER BY id DESC LIMIT 1").fetchone()
+        conn.commit()
+        conn.close()
+        return dict(row) if row else {}
+
+
+def list_feedback(limit: int = 100, offset: int = 0) -> list[dict]:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT id, created_at, interaction_id, verdict, note, correction, metadata
+        FROM agent_feedback
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+        """,
+        (limit, offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT created_at, verdict, note, correction
+        FROM agent_feedback
+        WHERE (correction IS NOT NULL AND TRIM(correction) != '')
+           OR (note IS NOT NULL AND TRIM(note) != '')
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_runtime_learning_instructions() -> str:
+    return (get_app_setting("agent_learning_instructions", "") or "").strip()
+
+
+def db_stats() -> dict:
+    path = _db_path()
+    conn = _conn()
+    def _count(tbl: str) -> int:
+        row = conn.execute(f"SELECT COUNT(*) FROM {tbl}").fetchone()
+        return int(row[0]) if row else 0
+    stats = {
+        "database_path": str(path),
+        "database_size_bytes": path.stat().st_size if path.exists() else 0,
+        "agent_interactions": _count("agent_interactions"),
+        "agent_memory": _count("agent_memory"),
+        "agent_feedback": _count("agent_feedback"),
+        "kb_documents": _count("kb_documents"),
+        "rc_urls": _count("rc_urls"),
+    }
+    conn.close()
+    return stats
+
+
+def optimize_data_store(
+    *,
+    interactions_keep_days: int = 30,
+    memory_keep_days: int = 60,
+    feedback_keep_days: int = 120,
+    purge_memory_table: bool = False,
+    delete_report_outputs: bool = False,
+    vacuum: bool = True,
+) -> dict:
+    with _WRITE_LOCK:
+        conn = _conn()
+        cur = conn.cursor()
+        deleted = {
+            "agent_interactions": 0,
+            "agent_memory": 0,
+            "agent_feedback": 0,
+            "report_outputs": 0,
+        }
+        if interactions_keep_days >= 0:
+            c = cur.execute(
+                "DELETE FROM agent_interactions WHERE created_at < datetime('now', ?)",
+                (f"-{int(interactions_keep_days)} days",),
+            )
+            deleted["agent_interactions"] = c.rowcount or 0
+        if purge_memory_table:
+            c = cur.execute("DELETE FROM agent_memory")
+            deleted["agent_memory"] = c.rowcount or 0
+        elif memory_keep_days >= 0:
+            c = cur.execute(
+                "DELETE FROM agent_memory WHERE created_at < datetime('now', ?)",
+                (f"-{int(memory_keep_days)} days",),
+            )
+            deleted["agent_memory"] = c.rowcount or 0
+        if feedback_keep_days >= 0:
+            c = cur.execute(
+                "DELETE FROM agent_feedback WHERE created_at < datetime('now', ?)",
+                (f"-{int(feedback_keep_days)} days",),
+            )
+            deleted["agent_feedback"] = c.rowcount or 0
+        conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+        if vacuum:
+            conn.execute("VACUUM;")
+        conn.close()
+
+    deleted_files = 0
+    if delete_report_outputs:
+        reports_dir = Path(__file__).parent.parent.parent / "data" / "reports"
+        if reports_dir.exists():
+            for p in reports_dir.glob("*"):
+                if p.is_file() and p.suffix.lower() in {".txt", ".json"} and "fixtures" not in str(p):
+                    try:
+                        p.unlink(missing_ok=True)
+                        deleted_files += 1
+                    except Exception:
+                        pass
+    deleted["report_outputs"] = deleted_files
+    return {"deleted": deleted, "stats": db_stats()}

@@ -74,3 +74,34 @@ def compact_memory(before: datetime | None = None, max_interactions: int = 200) 
     deleted = database.delete_interactions_by_ids(ids)
     return {"summarized": len(ids), "deleted": deleted}
 
+
+def refresh_learning_instructions(max_feedback: int = 80) -> dict:
+    """
+    Build compact runtime instructions from explicit user feedback.
+    Stores the result in app_settings key: agent_learning_instructions.
+    """
+    samples = database.get_learning_feedback_samples(limit=max_feedback)
+    if not samples:
+        database.set_app_setting("agent_learning_instructions", "")
+        return {"updated": True, "rules": 0}
+
+    lines: list[str] = []
+    for s in samples:
+        verdict = str(s.get("verdict") or "")
+        note = str(s.get("note") or "")[:300]
+        corr = str(s.get("correction") or "")[:300]
+        lines.append(f"- verdict={verdict}\n  note={note}\n  correction={corr}")
+    prompt = (
+        "You convert user feedback into strict reusable operating rules for an email assistant.\n"
+        "Output 3-10 concise bullet rules.\n"
+        "Rules must be behavior-focused and testable.\n"
+        "Do not include private details.\n\n"
+        f"Feedback:\n{chr(10).join(lines)}"
+    )
+    llm = _get_llm()
+    response = llm.invoke([HumanMessage(content=prompt)])
+    rules = str(response.content or "").strip()
+    database.set_app_setting("agent_learning_instructions", rules)
+    bullet_count = len([ln for ln in rules.splitlines() if ln.strip().startswith("-")])
+    return {"updated": True, "rules": bullet_count}
+

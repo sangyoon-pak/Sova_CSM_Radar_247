@@ -10,7 +10,8 @@ from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
-from src.agent.prompts import EMAIL_AGENT_SYSTEM
+from src.agent.prompts import render_email_agent_system
+from src.db import database
 
 
 def _ensure_langsmith_env():
@@ -149,8 +150,8 @@ def fetch_inbox_emails(search: str = "in:inbox category:primary newer_than:2d", 
 
 
 @tool
-def search_appier_docs(query: str) -> str:
-    """Search Appier documentation for relevant context. Use when the email asks about Appier products (AIRIS, AIQUA, BotBonnie, etc.)."""
+def search_product_docs(query: str) -> str:
+    """Search product documentation for relevant context."""
     from src.agent.tools.search_agent import search_with_agent
     return search_with_agent(query=query, max_context_chars=20000)
 
@@ -163,8 +164,15 @@ def search_rc_web(query: str) -> str:
 
 def create_agent_executor():
     llm = _get_llm()
-    tools = [fetch_inbox_emails, search_appier_docs, search_rc_web]
-    system_prompt = EMAIL_AGENT_SYSTEM
+    tools = [fetch_inbox_emails, search_product_docs, search_rc_web]
+    profile = database.get_agent_profile_settings()
+    learning = database.get_runtime_learning_instructions()
+    system_prompt = render_email_agent_system(
+        vendor_name=profile["vendor_name"],
+        product_context=profile["product_context"],
+        role_title=profile["role_title"],
+        learning_instructions=learning,
+    )
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
 
 

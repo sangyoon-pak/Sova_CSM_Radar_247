@@ -1,6 +1,6 @@
 # Email Draft Agent
 
-Local Appier email assistant with **grep-based document search**. No OpenClaw, no VPS, no 24/7 heartbeat.
+Local email assistant with **grep-based document search**. No OpenClaw, no VPS, no 24/7 heartbeat.
 
 ## Features
 
@@ -8,6 +8,22 @@ Local Appier email assistant with **grep-based document search**. No OpenClaw, n
 - **Gmail probe**: Fetches inbox via gog CLI using local gog keyring (GOG_HOME)
 - **Cron control**: UI to add/edit/disable cron jobs
 - **Dashboard**: View agent interactions, run probes/custom prompts, and test chat
+
+## Neutral Scope Config Examples
+
+Use `RC_SCOPE_*` to make retrieval scope-aware without hard-coding product names:
+
+```bash
+# Disable scope routing entirely
+RC_SCOPE_ENABLE=false
+
+# Enable scope routing with your own labels
+RC_SCOPE_ENABLE=true
+RC_SCOPE_FIELD=product
+RC_SCOPE_LABELS=product_a,product_b,platform,enterprise
+RC_SCOPE_PENALTY=100
+RC_SCOPE_EXCLUSIVE_THRESHOLD=0.75
+```
 
 ## Roadmap
 

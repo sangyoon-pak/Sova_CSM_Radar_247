@@ -10,7 +10,7 @@
 
 ### Batch 3 – UX for tools & docs
 - [x] **B3-1**: On the UI, show tool calls / run events in near real-time while a run is in progress (via async run + `/agent/runs/:run_id` polling).
-- [x] **B3-2**: Ensure that for non-cron user queries, the same doc-search flow (`search_appier_docs` → search agent) is used when the agent determines Appier/product relevance.
+- [x] **B3-2**: Ensure that for non-cron user queries, the same doc-search flow (`search_product_docs` → search agent) is used when the agent determines product relevance.
 - [x] **B3-3**: Tool outputs/details and chain/model steps are displayed under collapsible sections in the “Run trace” panel.
 - [x] **B3-4**: Shows recent cron run summaries on the UI (via `/cron/summary`).
 
@@ -22,36 +22,32 @@
 
 ------------------new----------------------
 ### UI
-- include the instruction of this agent software
-- 
-
-4) what is the best way to combine the chat part and run agent part on the UI ? come back to me with your proposal. 
-
+- continue to improve the current UX/UI design to an enterprise Agentic AI software level.
+- shift the UI and wording from email_draft_agent to proactive assistant CSM agent
+- what is the best way to combine the chat part and run agent part on the UI ? come back to me with your proposal. 
 
 
-### Utility 
+
+### Agent Utility 
 - Build a notification pipeline (decide channels and triggers) so the system can notify when drafts are ready or when errors occur.
 - need to handle the language dynamically. when asked in korean, doc retrieve can retrieve the data regardless of the language but output should be in the language it was asked in (both email probe and user <> interaction, the final output should be in the language the query is asked in)
-- Shifting from email drafting agent to proactive assistant CSM agent. I badly want this agent to do this
+- Shifting from email drafting agent to proactive assistant CSM agent. I badly want this agent to do this.
 1) periodically probe inbox and analyse the queries
 2) Agent should be able to sense if there are emails that come from the clients asking about what to do with appier product. If agent senses that it is appier product related client questions, it should be able to search through the docs and list up all the relevant information and actions item for CSM to review. Agent should be proactively also trying to answer the questions if they can as part of the process. 
 3) Agent should be able to nofify the CSM. I think the best way is to notify CSM through the web browser push. I have web push notification muted still, I can tell if there is something on my email inbox on the top of the browser tab with the number within parenthesis (). 
+4) we should change the name of the directory from 'email_draft_agent' to proactive_csm_agent
+- cron job is to be set by users asking agent to set a cron job. e.g) I want you to probe email every 3 hours and get back to me with the drafted version of action items with the relevant documents that could answers the client email inquries. 
 
 
-## Back-end
-- Remove remaining Appier-specific dependencies outside the retrieval core (e.g. email agent wrapper name, prompts, tool docstrings). Goal: share the search tool/stack across industries with only config/RC metadata changes.
-- remove all the appier specific dependency from the core codebase to other adjacent files (e.g @prompt.py, memory.py, etc) 
-- Add neutral configuration examples (e.g. `RC_SCOPE_*`) to docs/ and verify both `RC_SCOPE_ENABLE=true/false` behave as expected.
-- regression tests that assert “no hard-coded product/appier strings” inside retrieval core modules (`doc_search.py`, `search_agent.py`).
-- Audit and delete any scripts that are no longer used after the refactor (ensure `scripts/` only contains relevant entrypoints).
-- Agent memory for self-evolution. If the answer is not correct, it should take note and memorise it. But how can we make it self-evolve 
-- how can we optimise the ever-growing DB ? we should be able to flush so that we can maintain the lean size
 
-## wrap-up
-- what is the best way to package this software to distribute to other people 
+## wrap-up 
 - appier related documents should not be exposed on the repo
 - any important variables (API tokens etc) should not be exposed on the repo.
 - should include how to install all the dependencies and set variables (e.g API keys) on the MD file. 
 - the UI should include what this software is all about and what it is aiming to do to help CSM concisely.  
+- pack up the code to run in the container. 
+- update the md files that shows how to install this software package including external dependencies that requires users to install and configure such as API tokens, gogcli, and open router part. Include general guide line if openrouter is not an option for some users.  
+- update the md files as for how the retrieval works and why this way can be business critical and sustainable. 
+- update the md files as for how the agent self evolves.  
 
 
