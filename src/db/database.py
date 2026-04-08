@@ -263,6 +263,9 @@ def upsert_kb_document(
             ),
         )
         row = conn.execute("SELECT * FROM kb_documents WHERE path = ?", (path,)).fetchone()
+        conn.commit()
+        conn.close()
+        return dict(row) if row else {}
     else:
         conn.execute(
             """
@@ -314,6 +317,39 @@ def list_kb_documents(limit: int = 200, offset: int = 0) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def update_kb_document_metadata(doc_id: int, patch: dict) -> dict:
+    """
+    Merge a JSON patch into kb_documents.metadata for a given document id.
+    """
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, metadata FROM kb_documents WHERE id = ?",
+            (int(doc_id),),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return {}
+        current = {}
+        try:
+            if row["metadata"]:
+                current = json.loads(row["metadata"])
+        except Exception:
+            current = {}
+        merged = dict(current or {})
+        merged.update(patch or {})
+        now = datetime.utcnow().isoformat()
+        conn.execute(
+            "UPDATE kb_documents SET metadata = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(merged), now, int(doc_id)),
+        )
+        out = conn.execute("SELECT * FROM kb_documents WHERE id = ?", (int(doc_id),)).fetchone()
+        conn.commit()
+        conn.close()
+        return dict(out) if out else {}
 
 
 def get_app_setting(key: str, default: str | None = None) -> str | None:
@@ -391,6 +427,16 @@ def delete_kb_document(doc_id: int) -> dict:
         conn.execute("DELETE FROM kb_documents WHERE id = ?", (doc_id,))
         conn.commit()
         conn.close()
+
+    # Best-effort: update derived stores after deletion (runs outside DB lock).
+    try:
+        from threading import Thread
+        from src.agent.tools import doc_search
+        kb_root = getattr(settings, "kb_path_resolved", None)
+        if kb_root and removed_path:
+            Thread(target=lambda: doc_search.tombstone_files([Path(removed_path)]), daemon=True).start()
+    except Exception:
+        pass
         return {
             "deleted": 1,
             "removed_path": removed_path,

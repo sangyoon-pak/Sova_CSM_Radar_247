@@ -6,6 +6,7 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 import re
+import json
 import sqlite3
 import subprocess
 from collections.abc import Callable
@@ -39,6 +40,7 @@ _LAST_FTS_STATE: tuple[int, int] | None = None  # (file_count, latest_mtime)
 _RAG_DIR = (Path(__file__).resolve().parents[3] / "data" / "rag").resolve()
 _RAG_INDEX_DIR = (_RAG_DIR / "faiss_index").resolve()
 _RAG_STATE_PATH = (_RAG_DIR / "state.txt").resolve()
+_RAG_TOMBSTONES_PATH = (_RAG_DIR / "tombstones.json").resolve()
 _RAG_EMBED_MODEL_LOCAL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 _RAG_CHUNK_SIZE = 900
 _RAG_OVERLAP = 150
@@ -230,6 +232,25 @@ def _ensure_fts_index(base_path: Path):
     _LAST_FTS_STATE = state
 
 
+def _load_tombstones() -> set[str]:
+    try:
+        if _RAG_TOMBSTONES_PATH.exists():
+            data = json.loads(_RAG_TOMBSTONES_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                return set(str(x) for x in data)
+    except Exception:
+        return set()
+    return set()
+
+
+def _save_tombstones(paths: set[str]) -> None:
+    try:
+        _RAG_DIR.mkdir(parents=True, exist_ok=True)
+        _RAG_TOMBSTONES_PATH.write_text(json.dumps(sorted(paths)), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def _extract_query_tokens(query: str) -> list[str]:
     # Keep words from multiple scripts, plus underscore terms.
     tokens = re.findall(r"[A-Za-z0-9_]{2,}|[가-힣]{2,}", query)
@@ -334,12 +355,16 @@ def run_rag_search(query: str, base_path: Path, max_results: int = 20) -> list[d
         docs = store.similarity_search_with_relevance_scores(query, k=max_results)
     except Exception:
         docs = []
+    tomb = _load_tombstones()
     out: list[dict] = []
     for item in docs:
         if len(item) != 2:
             continue
         doc, score = item
         md = doc.metadata or {}
+        p = str(md.get("path") or "")
+        if p and p in tomb:
+            continue
         file_name = str(md.get("file", Path(md.get("path", "")).name))
         text = (doc.page_content or "").strip()
         if not text:
@@ -357,6 +382,116 @@ def run_rag_search(query: str, base_path: Path, max_results: int = 20) -> list[d
         )
     return out
 
+
+def reindex_kb(base_path: Path) -> dict:
+    """
+    Force rebuild of local KB derived indexes (FTS + RAG).
+    This is intentionally coarse-grained (full rebuild) for simplicity.
+    """
+    global _LAST_FTS_STATE, _VECTORSTORE, _VECTORSTORE_FP
+    _LAST_FTS_STATE = None
+    _VECTORSTORE = None
+    _VECTORSTORE_FP = None
+    try:
+        _RAG_STATE_PATH.unlink(missing_ok=True)
+    except Exception:
+        pass
+    _ensure_fts_index(base_path)
+    _ensure_rag_index(base_path)
+    return {"fts_db": str(_FTS_DB_PATH), "rag_dir": str(_RAG_INDEX_DIR)}
+
+
+def index_files(paths: list[Path]) -> dict:
+    """
+    Incrementally index only the given files into FTS and (if available) FAISS.
+    """
+    # FTS upsert
+    _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_FTS_DB_PATH))
+    conn.execute(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"
+    )
+    for p in paths:
+        try:
+            content = p.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        conn.execute("DELETE FROM fts_docs WHERE path = ?", (str(p),))
+        conn.execute(
+            "INSERT INTO fts_docs(path, file, content) VALUES (?, ?, ?)",
+            (str(p), p.name, content),
+        )
+    conn.commit()
+    conn.close()
+
+    # RAG incremental add
+    if FAISS is not None:
+        embeddings = _get_embeddings()
+        if embeddings is not None:
+            _RAG_DIR.mkdir(parents=True, exist_ok=True)
+            global _VECTORSTORE, _VECTORSTORE_FP
+            if _RAG_INDEX_DIR.exists():
+                try:
+                    _VECTORSTORE = FAISS.load_local(
+                        str(_RAG_INDEX_DIR),
+                        embeddings,
+                        allow_dangerous_deserialization=True,
+                    )
+                except Exception:
+                    _VECTORSTORE = None
+            if _VECTORSTORE is None:
+                _VECTORSTORE = FAISS.from_texts(texts=[], embedding=embeddings, metadatas=[])
+            texts: list[str] = []
+            metadatas: list[dict] = []
+            for p in paths:
+                try:
+                    content = p.read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                for line_start, chunk in _split_into_chunks(content):
+                    if _is_metadata_line(chunk[:120]):
+                        continue
+                    texts.append(chunk)
+                    metadatas.append({"path": str(p), "file": p.name, "line_num": line_start, "source": "rag"})
+            if texts:
+                _VECTORSTORE.add_texts(texts=texts, metadatas=metadatas)
+                _VECTORSTORE.save_local(str(_RAG_INDEX_DIR))
+                _VECTORSTORE_FP = None
+
+    # remove from tombstones if re-indexed
+    tomb = _load_tombstones()
+    before = len(tomb)
+    for p in paths:
+        tomb.discard(str(p))
+    if len(tomb) != before:
+        _save_tombstones(tomb)
+
+    return {"indexed_files": [str(p) for p in paths]}
+
+
+def tombstone_files(paths: list[Path]) -> dict:
+    """
+    Mark files as deleted for vector retrieval (FAISS doesn't support easy deletes).
+    Also remove from FTS table.
+    """
+    # FTS delete
+    _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_FTS_DB_PATH))
+    try:
+        conn.execute(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"
+        )
+        for p in paths:
+            conn.execute("DELETE FROM fts_docs WHERE path = ?", (str(p),))
+        conn.commit()
+    finally:
+        conn.close()
+
+    tomb = _load_tombstones()
+    for p in paths:
+        tomb.add(str(p))
+    _save_tombstones(tomb)
+    return {"tombstoned": [str(p) for p in paths]}
 
 def _is_metadata_line(text: str) -> bool:
     t = (text or "").strip()

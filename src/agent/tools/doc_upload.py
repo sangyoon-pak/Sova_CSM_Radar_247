@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from pathlib import Path
+from threading import Thread
 
 from fastapi import UploadFile
 
@@ -83,7 +84,7 @@ async def ingest_upload(file: UploadFile, kb_path: Path, max_bytes: int = 5_000_
     md = build_uploaded_markdown(filename=normalized_name, body=normalized_md, meta=meta)
     out_path.write_text(md, encoding="utf-8")
 
-    database.upsert_kb_document(
+    row = database.upsert_kb_document(
         source_type="file_upload",
         path=str(out_path.resolve()),
         content_sha256=sha256_text(md),
@@ -92,13 +93,30 @@ async def ingest_upload(file: UploadFile, kb_path: Path, max_bytes: int = 5_000_
         language=meta.language,
         scope=meta.scope,
         last_updated=meta.last_updated,
-        metadata={"filename": out_name},
+        metadata={"filename": out_name, "index_status": "pending"},
     )
+
+    doc_id = int(row.get("id")) if isinstance(row, dict) and row.get("id") else None
+    if doc_id:
+        database.update_kb_document_metadata(doc_id, {"index_status": "indexing"})
+
+    def _index_worker():
+        try:
+            from src.agent.tools import doc_search
+            doc_search.index_files([out_path])
+            if doc_id:
+                database.update_kb_document_metadata(doc_id, {"index_status": "indexed"})
+        except Exception as e:
+            if doc_id:
+                database.update_kb_document_metadata(doc_id, {"index_status": "failed", "index_error": str(e)[:500]})
+
+    Thread(target=_index_worker, daemon=True).start()
 
     return {
         "saved": True,
         "filename": out_name,
         "chars": len(md),
         "language": meta.language,
+        "doc_id": doc_id,
     }
 
