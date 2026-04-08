@@ -1,4 +1,4 @@
-# Gmail Setup for Email Draft Agent
+# Gmail Setup (Proactive CSM Assistant)
 
 Installs and uses `gog` (gogcli) locally inside `email_draft_agent/`. OAuth must be completed **locally** for the agent to fetch emails.
 

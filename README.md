@@ -1,13 +1,15 @@
-# Email Draft Agent
+# Proactive CSM Assistant
 
-Local email assistant with **grep-based document search**. No OpenClaw, no VPS, no 24/7 heartbeat.
+> *Repository folder may still be named `email_draft_agent`; the product direction is a **proactive CSM assistant**—inbox-aware, doc-grounded replies for customer success.*
+
+Local console with **grep / RAG document search**, Gmail probe, and a dashboard for runs and knowledge. No OpenClaw, no VPS, no 24/7 heartbeat.
 
 ## Features
 
 - **Grep-based search**: LLM analyzes query → extracts search terms → ripgrep through knowledge base
 - **Gmail probe**: Fetches inbox via gog CLI using local gog keyring (GOG_HOME)
 - **Cron control**: UI to add/edit/disable cron jobs
-- **Dashboard**: View agent interactions, run probes/custom prompts, and test chat
+- **Dashboard**: Workbench (probe + task prompt + follow-up chat), run history, knowledge uploads
 
 ## Neutral Scope Config Examples
 

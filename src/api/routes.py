@@ -377,6 +377,17 @@ class OptimizeRequest(BaseModel):
     vacuum: bool = True
 
 
+class ThreadCreateRequest(BaseModel):
+    title: str | None = None
+    pinned: bool = False
+
+
+class ThreadSendRequest(BaseModel):
+    thread_id: int
+    text: str
+    probe: bool = False
+
+
 @router.post("/memory/compact")
 def memory_compact(req: CompactMemoryRequest):
     """
@@ -431,6 +442,104 @@ def maintenance_optimize(req: OptimizeRequest):
     )
 
 
+@router.get("/threads")
+def list_threads(limit: int = 50, offset: int = 0, q: str | None = None):
+    return database.list_threads(limit=limit, offset=offset, query=q)
+
+
+@router.post("/threads")
+def create_thread(req: ThreadCreateRequest):
+    return database.create_thread(title=req.title, pinned=req.pinned)
+
+
+@router.get("/threads/{thread_id}/messages")
+def get_thread_messages(thread_id: int, limit: int = 200, offset: int = 0):
+    return database.list_messages(thread_id=thread_id, limit=limit, offset=offset)
+
+
+@router.delete("/threads/{thread_id}")
+def delete_thread(thread_id: int):
+    try:
+        return database.delete_thread(thread_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/threads/send", response_model=RunAgentAsyncResponse)
+def send_thread_message(req: ThreadSendRequest):
+    text = (req.text or "").strip()
+    if not text and not req.probe:
+        raise HTTPException(status_code=400, detail="text is required")
+
+    # Persist the user message immediately.
+    user_msg = database.add_message(
+        thread_id=req.thread_id,
+        role="user",
+        content=text if text else "(probe inbox)",
+        metadata={"kind": "probe" if req.probe else "message"},
+    )
+
+    input_text = PROBE_TRIGGER_MESSAGE if req.probe else text
+    trigger_type = "thread_probe" if req.probe else "thread_message"
+    run_id = run_state.create_run(trigger_type=trigger_type, input_text=input_text[:500])
+
+    def _worker():
+        cb = _UITraceCallback(run_id)
+        try:
+            output = run_agent(input_text, callbacks=[cb])
+            run_state.complete_run(run_id, output)
+            run = run_state.get_run(run_id) or {}
+            events = run.get("events") or []
+            metadata = {
+                "run_id": run_id,
+                "tools_used": _tools_used_from_events(events),
+                "events": events,
+                "thread_id": req.thread_id,
+                "user_message_id": user_msg.get("id"),
+            }
+            database.add_message(
+                thread_id=req.thread_id,
+                role="assistant",
+                content=output,
+                metadata=metadata,
+            )
+            database.log_interaction(
+                trigger_type,
+                input_text[:500],
+                output,
+                "completed",
+                metadata=metadata,
+            )
+        except Exception as e:
+            run_state.fail_run(run_id, str(e))
+            run = run_state.get_run(run_id) or {}
+            events = run.get("events") or []
+            metadata = {
+                "run_id": run_id,
+                "tools_used": _tools_used_from_events(events),
+                "events": events,
+                "thread_id": req.thread_id,
+                "user_message_id": user_msg.get("id"),
+            }
+            database.add_message(
+                thread_id=req.thread_id,
+                role="assistant",
+                content=f"Error: {e}",
+                metadata=metadata,
+            )
+            database.log_interaction(
+                trigger_type,
+                input_text[:500],
+                "",
+                "error",
+                error_message=str(e),
+                metadata=metadata,
+            )
+
+    Thread(target=_worker, daemon=True).start()
+    return RunAgentAsyncResponse(run_id=run_id, status="running")
+
+
 @router.get("/")
 def serve_dashboard():
     p = Path(__file__).parent.parent / "web" / "index.html"
@@ -444,4 +553,4 @@ def serve_dashboard():
             },
         )
     from fastapi.responses import HTMLResponse
-    return HTMLResponse("<h1>Email Draft Agent</h1><p>Dashboard UI not found.</p>")
+    return HTMLResponse("<h1>Proactive CSM Assistant</h1><p>Dashboard UI not found.</p>")

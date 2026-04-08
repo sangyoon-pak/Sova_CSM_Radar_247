@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Draft Agent — Dashboard</title>
+  <title>Proactive CSM Assistant — Console</title>
   <style>
     :root {
       --bg: #0f0f12;
@@ -218,29 +218,108 @@
       overflow-y: auto;
       font-family: var(--mono);
     }
+    .hero-blurb {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+      max-width: 52rem;
+      margin-bottom: 0.75rem;
+    }
+    .section-lead {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin: -0.35rem 0 1rem 0;
+    }
+    .subh {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 1rem 0 0.45rem 0;
+    }
+    .subh:first-of-type { margin-top: 0; }
+    .hr-soft {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1.1rem 0;
+    }
+    .workbench-layout {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 0.9rem;
+      align-items: start;
+      margin-top: 0.9rem;
+    }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface2);
+      padding: 0.75rem;
+    }
+    .thread-item {
+      padding: 0.5rem 0.55rem;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      margin-bottom: 0.45rem;
+    }
+    .thread-item:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .thread-item.active {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+    }
+    .thread-title { font-weight: 900; font-size: 0.86rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .thread-meta { color: var(--muted); font-size: 0.74rem; margin-top: 0.15rem; }
+    .transcript {
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+    .msg {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 0.65rem 0.75rem;
+      margin-bottom: 0.6rem;
+      background: var(--surface);
+    }
+    .msg.user { border-color: color-mix(in srgb, var(--border) 70%, var(--accent)); }
+    .msg.assistant { border-color: var(--border); }
+    .msg-head { display:flex; justify-content:space-between; gap:0.75rem; align-items:baseline; margin-bottom:0.35rem; }
+    .msg-role { font-weight: 950; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .msg-time { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+    .msg-body { font-family: var(--mono); white-space: pre-wrap; overflow-wrap:anywhere; word-break: break-word; font-size: 0.86rem; line-height: 1.4; }
+    @media (max-width: 860px) {
+      .workbench-layout { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="topbar">
       <div>
-        <h1>Email Draft Agent</h1>
-        <p class="subtitle">Local Appier email assistant</p>
+        <h1>Proactive CSM Assistant</h1>
+        <p class="subtitle">Local console · inbox intelligence &amp; doc-grounded replies</p>
       </div>
       <div class="row" style="justify-content:flex-end;">
         <button class="ghost" id="themeToggle" onclick="toggleTheme()">Theme</button>
         <div class="nav">
-          <button class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')">Agent</button>
+          <button class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')">Workbench</button>
           <button class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')">Cron</button>
           <button class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')">Knowledge</button>
           <button class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')">Run History</button>
         </div>
       </div>
     </div>
+    <p class="hero-blurb">
+      Helps CSMs triage client email, pull answers from your knowledge base (and enabled doc sites), and draft grounded replies—same agent backs one-off runs and follow-up chat below.
+    </p>
 
   <div class="tab-pane active" id="tab-agent">
     <section>
-      <h2>Run Agent</h2>
+      <h2>CSM workbench</h2>
+      <p class="section-lead">Probe the inbox, run a task with the prompt box, then continue in conversation if you need refinements. Trace and run history stay available for audit.</p>
       <details id="profileDetails" class="profile-card" open>
         <summary>
           <div class="profile-head">
@@ -256,7 +335,7 @@
           <p class="profile-help">Set your own company/vendor and product lines here. The agent uses this profile in its system prompt for every run.</p>
           <div class="row" style="margin-bottom:0.5rem;">
             <input id="profileVendorName" type="text" placeholder="Vendor name (e.g. Appier)" style="min-width:240px;flex:1;" />
-            <input id="profileRoleTitle" type="text" placeholder="Role title (e.g. Corporate Email Assistant)" style="min-width:260px;flex:1;" />
+            <input id="profileRoleTitle" type="text" placeholder="Role title (e.g. CSM Assistant)" style="min-width:260px;flex:1;" />
           </div>
           <textarea id="profileProductContext" placeholder="Product lines / scope hints (comma-separated)"></textarea>
           <div class="row" style="margin-top:0.5rem;">
@@ -265,40 +344,48 @@
           </div>
         </div>
       </details>
-      <div class="row">
-        <button onclick="runProbe()">Probe Inbox Now</button>
-        <button class="ghost" onclick="runCustom()">Run Custom</button>
-      </div>
-      <textarea id="customInput" placeholder="Ask a question or paste a client inquiry…"></textarea>
-
-      <div id="runCard" class="chat-bubble" style="display:none;">
-        <div class="bubble-head">
-          <div class="agent-label"><span class="dot"></span><span>Agent</span></div>
-          <span id="runStatusPill" class="status-pill running">running</span>
+      <div class="workbench-layout">
+        <div class="panel">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+            <strong style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Threads</strong>
+            <div class="row" style="gap:0.4rem;">
+              <button class="ghost" style="padding:0.35rem 0.55rem;border-radius:12px;" onclick="createThread()">New</button>
+              <button class="danger" style="padding:0.35rem 0.55rem;border-radius:12px;" onclick="deleteActiveThread()">Delete</button>
+            </div>
+          </div>
+          <input id="threadSearch" type="text" placeholder="Search threads..." style="padding:0.55rem 0.65rem;border-radius:12px;margin-bottom:0.55rem;" oninput="loadThreads()" />
+          <div id="threadList"><div class="empty" style="padding:1rem 0;">Loading…</div></div>
         </div>
-        <div id="runResult" class="bubble-body"></div>
-      </div>
 
-      <details id="traceDetails" style="margin-top:0.75rem;">
-        <summary style="cursor:pointer;color:var(--muted);font-weight:900;">Trace inspector</summary>
-        <div class="trace-controls">
-          <label style="color:var(--muted);font-weight:900;">Show</label>
-          <select id="traceFilter" onchange="rerenderTraceFiltered()">
-            <option value="important">Important</option>
-            <option value="tools">Tools only</option>
-            <option value="all">All events</option>
-          </select>
-          <button class="ghost" onclick="clearTraceUI()">Clear</button>
+        <div class="panel">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+            <div>
+              <div style="font-weight:950;">Transcript</div>
+              <div id="threadHint" style="color:var(--muted);font-size:0.78rem;">Select a thread to start.</div>
+            </div>
+            <div class="row" style="gap:0.45rem;">
+              <button onclick="probeThread()">Probe inbox</button>
+              <button class="ghost" onclick="sendThreadMessage()">Send</button>
+            </div>
+          </div>
+          <div id="transcript" class="transcript"><div class="empty">No thread selected.</div></div>
+          <div class="subh">Message</div>
+          <textarea id="composer" placeholder="Ask for action items, draft reply, or paste a client thread for doc-backed answers…"></textarea>
+
+          <details id="traceDetails" style="margin-top:0.75rem;">
+            <summary style="cursor:pointer;color:var(--muted);font-weight:900;">Run trace</summary>
+            <div class="trace-controls">
+              <label style="color:var(--muted);font-weight:900;">Show</label>
+              <select id="traceFilter" onchange="rerenderTraceFiltered()">
+                <option value="important">Important</option>
+                <option value="tools">Tools only</option>
+                <option value="all">All events</option>
+              </select>
+              <button class="ghost" onclick="clearTraceUI()">Clear</button>
+            </div>
+            <div id="runTrace" class="trace-list" style="display:block;"></div>
+          </details>
         </div>
-        <div id="runTrace" class="trace-list" style="display:block;"></div>
-      </details>
-    </section>
-    <section>
-      <h2>Chat Test</h2>
-      <div id="chatWindow" class="result-box" style="height:220px;overflow-y:auto;display:block;"></div>
-      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-        <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-        <button onclick="sendChat()">Send</button>
       </div>
     </section>
   </div>
@@ -403,40 +490,117 @@
       if (!r.ok) throw new Error(await r.text());
       return r.json();
     }
-    async function runProbe() {
-      const el = document.getElementById('runResult');
-      document.getElementById('runCard').style.display = 'block';
-      el.textContent = 'Working…';
-      setRunStatus('running');
-      startTraceUI();
-      try {
-        const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ probe: true }) });
-        const res = await pollRun(started.run_id);
-        el.textContent = res.output || 'Done.';
-        setRunStatus('completed');
-        loadInteractions();
-        loadCronSummary();
-      } catch (e) {
-        el.textContent = 'Error: ' + e.message;
-        setRunStatus('error');
+
+    let _activeThreadId = null;
+    function _fmtTime(ts) {
+      try { return new Date(ts).toLocaleString(); } catch { return ''; }
+    }
+    function _threadTitle(t) {
+      return (t && t.title) ? String(t.title) : `Thread #${t.id}`;
+    }
+    async function loadThreads() {
+      const q = (document.getElementById('threadSearch')?.value || '').trim();
+      const data = await fetchJson('/threads?limit=50' + (q ? `&q=${encodeURIComponent(q)}` : ''));
+      const el = document.getElementById('threadList');
+      if (!data.length) {
+        el.innerHTML = '<div class="empty" style="padding:1rem 0;">No threads yet. Click “New”.</div>';
+        _activeThreadId = null;
+        return;
+      }
+      el.innerHTML = data.map(t => {
+        const active = (_activeThreadId === t.id) ? 'active' : '';
+        return `<div class="thread-item ${active}" onclick="selectThread(${t.id})">
+          <div class="thread-title">${escapeHtml(_threadTitle(t))}</div>
+          <div class="thread-meta">${escapeHtml(_fmtTime(t.updated_at || t.created_at || ''))}</div>
+        </div>`;
+      }).join('');
+      if (!_activeThreadId) {
+        await selectThread(data[0].id);
       }
     }
-    async function runCustom() {
-      const el = document.getElementById('runResult');
-      document.getElementById('runCard').style.display = 'block';
-      el.textContent = 'Working…';
-      setRunStatus('running');
+    async function createThread() {
+      const title = (prompt('Thread title (optional):') || '').trim();
+      const t = await fetchJson('/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title || null })
+      });
+      _activeThreadId = t.id;
+      await loadThreads();
+      await loadThreadMessages();
+    }
+    async function selectThread(id) {
+      _activeThreadId = Number(id);
+      await loadThreads();
+      await loadThreadMessages();
+    }
+    async function deleteActiveThread() {
+      if (!_activeThreadId) return;
+      if (!confirm(`Delete thread #${_activeThreadId}? This removes all messages in it.`)) return;
+      try {
+        await fetchJson(`/threads/${encodeURIComponent(_activeThreadId)}`, { method: 'DELETE' });
+        _activeThreadId = null;
+        await loadThreads();
+        await loadThreadMessages();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      }
+    }
+    async function loadThreadMessages() {
+      const hint = document.getElementById('threadHint');
+      const el = document.getElementById('transcript');
+      if (!_activeThreadId) {
+        if (hint) hint.textContent = 'Select a thread to start.';
+        el.innerHTML = '<div class="empty">No thread selected.</div>';
+        return;
+      }
+      if (hint) hint.textContent = `Thread #${_activeThreadId}`;
+      const msgs = await fetchJson(`/threads/${encodeURIComponent(_activeThreadId)}/messages?limit=200`);
+      if (!msgs.length) {
+        el.innerHTML = '<div class="empty">No messages yet.</div>';
+        return;
+      }
+      el.innerHTML = msgs.map(m => {
+        const role = String(m.role || 'system');
+        return `<div class="msg ${escapeHtml(role)}">
+          <div class="msg-head">
+            <div class="msg-role">${escapeHtml(role)}</div>
+            <div class="msg-time">${escapeHtml(_fmtTime(m.created_at || ''))}</div>
+          </div>
+          <div class="msg-body">${escapeHtml(m.content || '')}</div>
+        </div>`;
+      }).join('');
+      el.scrollTop = el.scrollHeight;
+    }
+    async function _sendToThread({ text, probe }) {
+      if (!_activeThreadId) {
+        alert('Select a thread first.');
+        return;
+      }
       startTraceUI();
       try {
-        const started = await fetchJson('/agent/run_async', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: document.getElementById('customInput').value || 'Hello' }) });
-        const res = await pollRun(started.run_id);
-        el.textContent = res.output || 'Done.';
-        setRunStatus('completed');
+        const started = await fetchJson('/threads/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_id: _activeThreadId, text: text || '', probe: !!probe })
+        });
+        await loadThreadMessages(); // shows the user message immediately
+        await pollRun(started.run_id);
+        await loadThreadMessages(); // shows assistant message after completion
         loadInteractions();
       } catch (e) {
-        el.textContent = 'Error: ' + e.message;
-        setRunStatus('error');
+        alert('Error: ' + e.message);
       }
+    }
+    async function sendThreadMessage() {
+      const el = document.getElementById('composer');
+      const text = (el?.value || '').trim();
+      if (!text) return;
+      if (el) el.value = '';
+      await _sendToThread({ text, probe: false });
+    }
+    async function probeThread() {
+      await _sendToThread({ text: '', probe: true });
     }
     async function loadAgentProfile() {
       const status = document.getElementById('profileSaveStatus');
@@ -468,47 +632,6 @@
         status.textContent = 'Saved. New runs will use this profile.';
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
-      }
-    }
-    const chatMessages = [];
-    function renderChat() {
-      const el = document.getElementById('chatWindow');
-      if (!chatMessages.length) {
-        el.textContent = 'No messages yet.';
-        return;
-      }
-      el.innerHTML = chatMessages.map(m => {
-        const who = m.role === 'user' ? 'You' : 'Agent';
-        return `<div><strong>${who}:</strong> ${m.content}</div>`;
-      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.25rem 0;">');
-      el.scrollTop = el.scrollHeight;
-    }
-    async function sendChat() {
-      const inputEl = document.getElementById('chatInput');
-      const text = inputEl.value.trim();
-      if (!text) return;
-      chatMessages.push({ role: 'user', content: text });
-      renderChat();
-      inputEl.value = '';
-      try {
-        // Build a single prompt that includes prior conversation turns.
-        const history = chatMessages.map(m => {
-          const who = m.role === 'user' ? 'User' : 'Agent';
-          return `${who}: ${m.content}`;
-        }).join('\\n');
-        const prompt = `Here is the prior conversation between the user and you:\\n${history}\\n\\nPlease respond to the last user message based on this context.`;
-        const started = await fetchJson('/agent/run_async', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input: prompt })
-        });
-        const res = await pollRun(started.run_id);
-        chatMessages.push({ role: 'assistant', content: res.output || '' });
-        renderChat();
-        loadInteractions();
-      } catch (e) {
-        chatMessages.push({ role: 'assistant', content: 'Error: ' + e.message });
-        renderChat();
       }
     }
     async function uploadDoc() {
@@ -802,7 +925,7 @@
         }
 
         // Live update: show latest model_end detail while running.
-        const runResultEl = document.getElementById('runResult');
+        const runResultEl = document.getElementById('runResult'); // legacy; may not exist in unified-thread UI
         const lastEnd = (() => {
           for (let i = events.length - 1; i >= 0; i--) {
             if (events[i].type === 'model_end' && events[i].detail) return events[i].detail;
@@ -811,7 +934,7 @@
         })();
 
         if (run.status === 'completed') {
-          runResultEl.textContent = run.output || 'Done.';
+          if (runResultEl) runResultEl.textContent = run.output || 'Done.';
           setRunStatus('completed');
           return run;
         }
@@ -819,7 +942,7 @@
           setRunStatus('error');
           throw new Error(run.error || 'Run failed');
         }
-        if (lastEnd) runResultEl.textContent = lastEnd;
+        if (lastEnd && runResultEl) runResultEl.textContent = lastEnd;
         await new Promise(r => setTimeout(r, 700));
       }
     }
@@ -916,6 +1039,7 @@
     applyTheme(getInitialTheme());
 
     loadAgentProfile();
+    loadThreads();
     loadDocRegistry();
     loadRcUrls();
     async function clearHistory() {

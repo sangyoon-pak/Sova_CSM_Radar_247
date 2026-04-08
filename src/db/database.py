@@ -643,3 +643,127 @@ def optimize_data_store(
                         pass
     deleted["report_outputs"] = deleted_files
     return {"deleted": deleted, "stats": db_stats()}
+
+
+def create_thread(*, title: str | None = None, pinned: bool = False, metadata: dict | None = None) -> dict:
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        now = datetime.utcnow().isoformat()
+        conn.execute(
+            """
+            INSERT INTO conversation_threads (title, pinned, metadata, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                (title or "").strip() or None,
+                1 if pinned else 0,
+                json.dumps(metadata) if metadata else None,
+                now,
+                now,
+            ),
+        )
+        row = conn.execute("SELECT * FROM conversation_threads ORDER BY id DESC LIMIT 1").fetchone()
+        conn.commit()
+        conn.close()
+        return dict(row) if row else {}
+
+
+def list_threads(limit: int = 50, offset: int = 0, query: str | None = None) -> list[dict]:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    q = (query or "").strip()
+    if q:
+        rows = conn.execute(
+            """
+            SELECT id, created_at, updated_at, title, pinned, metadata
+            FROM conversation_threads
+            WHERE COALESCE(title, '') LIKE ?
+            ORDER BY pinned DESC, updated_at DESC, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (f"%{q}%", limit, offset),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT id, created_at, updated_at, title, pinned, metadata
+            FROM conversation_threads
+            ORDER BY pinned DESC, updated_at DESC, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (limit, offset),
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def add_message(*, thread_id: int, role: str, content: str, metadata: dict | None = None) -> dict:
+    role_norm = (role or "").strip().lower()
+    if role_norm not in {"user", "assistant", "system"}:
+        raise ValueError("role must be one of: user, assistant, system")
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        now = datetime.utcnow().isoformat()
+        conn.execute(
+            """
+            INSERT INTO conversation_messages (thread_id, role, content, metadata, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                int(thread_id),
+                role_norm,
+                content,
+                json.dumps(metadata) if metadata else None,
+                now,
+            ),
+        )
+        conn.execute(
+            "UPDATE conversation_threads SET updated_at = ? WHERE id = ?",
+            (now, int(thread_id)),
+        )
+        row = conn.execute("SELECT * FROM conversation_messages ORDER BY id DESC LIMIT 1").fetchone()
+        conn.commit()
+        conn.close()
+        return dict(row) if row else {}
+
+
+def list_messages(thread_id: int, limit: int = 200, offset: int = 0) -> list[dict]:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT id, created_at, thread_id, role, content, metadata
+        FROM conversation_messages
+        WHERE thread_id = ?
+        ORDER BY id ASC
+        LIMIT ? OFFSET ?
+        """,
+        (int(thread_id), limit, offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_thread(thread_id: int) -> dict:
+    """
+    Delete a conversation thread and its messages.
+    (No foreign key constraints are enforced, so we delete messages first.)
+    """
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        tid = int(thread_id)
+        row = conn.execute(
+            "SELECT id, title, created_at, updated_at FROM conversation_threads WHERE id = ?",
+            (tid,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return {"deleted": 0}
+        c1 = conn.execute("DELETE FROM conversation_messages WHERE thread_id = ?", (tid,))
+        c2 = conn.execute("DELETE FROM conversation_threads WHERE id = ?", (tid,))
+        conn.commit()
+        conn.close()
+        return {"deleted": int(c2.rowcount or 0), "deleted_messages": int(c1.rowcount or 0), "thread": dict(row)}

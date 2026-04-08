@@ -65,7 +65,7 @@ class Settings(BaseSettings):
         "AIRIS, AIQUA, BotBonnie, AI Agent, AIXON, AiDeal",
         validation_alias="AGENT_PRODUCT_CONTEXT",
     )
-    agent_role_title: str = Field("Corporate Email Assistant", validation_alias="AGENT_ROLE_TITLE")
+    agent_role_title: str = Field("CSM Assistant", validation_alias="AGENT_ROLE_TITLE")
 
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")

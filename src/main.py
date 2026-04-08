@@ -1,4 +1,4 @@
-"""FastAPI application - Email Draft Agent dashboard and API."""
+"""FastAPI application - Proactive CSM Assistant console and API."""
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -23,8 +23,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Email Draft Agent",
-    description="Local email assistant with grep-based doc search",
+    title="Proactive CSM Assistant",
+    description="Local CSM console: Gmail probe, knowledge-grounded answers, and scheduled runs.",
     lifespan=lifespan,
 )
 

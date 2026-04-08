@@ -80,3 +80,22 @@ CREATE TABLE IF NOT EXISTS agent_feedback (
     correction TEXT,
     metadata JSON
 );
+
+-- Unified conversation threads for the Workbench UI.
+CREATE TABLE IF NOT EXISTS conversation_threads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    title TEXT,
+    pinned INTEGER DEFAULT 0,
+    metadata JSON
+);
+
+CREATE TABLE IF NOT EXISTS conversation_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    thread_id INTEGER NOT NULL,
+    role TEXT NOT NULL, -- user | assistant | system
+    content TEXT,
+    metadata JSON
+);

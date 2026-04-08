@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the Email Draft Agent server."""
+"""Run the Proactive CSM Assistant server."""
 from pathlib import Path
 
 from dotenv import load_dotenv

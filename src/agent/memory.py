@@ -92,7 +92,7 @@ def refresh_learning_instructions(max_feedback: int = 80) -> dict:
         corr = str(s.get("correction") or "")[:300]
         lines.append(f"- verdict={verdict}\n  note={note}\n  correction={corr}")
     prompt = (
-        "You convert user feedback into strict reusable operating rules for an email assistant.\n"
+        "You convert user feedback into strict reusable operating rules for a CSM-facing assistant.\n"
         "Output 3-10 concise bullet rules.\n"
         "Rules must be behavior-focused and testable.\n"
         "Do not include private details.\n\n"

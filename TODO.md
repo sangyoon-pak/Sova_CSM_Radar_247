@@ -22,9 +22,14 @@
 
 ------------------new----------------------
 ### UI
-- continue to improve the current UX/UI design to an enterprise Agentic AI software level.
-- shift the UI and wording from email_draft_agent to proactive assistant CSM agent
-- what is the best way to combine the chat part and run agent part on the UI ? come back to me with your proposal. 
+- [x] **Enterprise / CSM wording (v1)**: Dashboard rebranded to **Proactive CSM Assistant**; nav **Workbench**; product blurb under header; FastAPI title/README aligned. Folder rename remains separate (see Agent Utility).
+- [x] **Combine chat + run (v1 — single workbench)**: One **CSM workbench** section: profile → actions → task prompt → latest response + **Run trace** → divider → **Follow-up conversation** (same agent backend). Reduces split-brain between “Run Agent” and “Chat Test.”
+- **Proposal — next iterations (pick one path)**:
+  1. **Unified thread (recommended long-term)**: Treat every user message as one row in `conversation_threads`; “Probe” / “Run with prompt” append to the thread and stream the same transcript. Sidebar: thread list + search.
+  2. **Composer modes**: One textarea with a segmented control `[ Task | Chat ]`—Task runs probe-style tools by default, Chat stays lightweight; both log to the same run history with `mode` in metadata.
+  3. **Split view (wide screens)**: Left: transcript; right: trace + citations; mobile stacks workbench → trace → chat.
+
+Continue polishing density, empty states, and onboarding copy as the proactive CSM roadmap lands.
 
 
 
@@ -43,11 +48,13 @@
 ## wrap-up 
 - appier related documents should not be exposed on the repo
 - any important variables (API tokens etc) should not be exposed on the repo.
-- should include how to install all the dependencies and set variables (e.g API keys) on the MD file. 
-- the UI should include what this software is all about and what it is aiming to do to help CSM concisely.  
-- pack up the code to run in the container. 
 - update the md files that shows how to install this software package including external dependencies that requires users to install and configure such as API tokens, gogcli, and open router part. Include general guide line if openrouter is not an option for some users.  
 - update the md files as for how the retrieval works and why this way can be business critical and sustainable. 
+- update the md files as for how the agent self evolves. 
+- the UI should include what this software is all about and what it is aiming to do to help CSM concisely can take reference from md files. 
+- should include how to install all the dependencies and set variables (e.g API keys) on the MD file.  
+- pack up the code to run in the container. 
+
 - update the md files as for how the agent self evolves.  
 
 
