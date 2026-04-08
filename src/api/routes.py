@@ -13,6 +13,7 @@ from src.agent.email_agent import run_agent
 from src.agent.memory import compact_memory, refresh_learning_instructions
 from src.agent.prompts import PROBE_TRIGGER_MESSAGE
 from src.agent.tools.doc_upload import ingest_upload
+from src.agent.tools import doc_search
 from src.agent.tools.openrouter_web import run_web_search
 from src.config import settings
 from src.db import database
@@ -210,6 +211,50 @@ def list_docs(limit: int = 200, offset: int = 0):
 def delete_kb_doc(doc_id: int):
     try:
         return database.delete_kb_document(doc_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/kb/reindex")
+def reindex_kb_documents():
+    """
+    Rebuild search indexes from currently registered KB documents.
+    Useful when uploads previously failed indexing or retrieval looks incomplete.
+    """
+    try:
+        import json as _json
+
+        docs = database.list_kb_documents(limit=5000, offset=0)
+        paths: list[Path] = []
+        updated_doc_ids: list[int] = []
+        for d in docs:
+            p = (d.get("path") or "").strip()
+            if p and Path(p).exists():
+                paths.append(Path(p))
+                updated_doc_ids.append(int(d.get("id")))
+
+        result = doc_search.index_files(paths)
+
+        # Mark included docs as indexed (clear prior error marker).
+        for d in docs:
+            doc_id = int(d.get("id"))
+            if doc_id not in updated_doc_ids:
+                continue
+            md = d.get("metadata") or {}
+            if isinstance(md, str):
+                try:
+                    md = _json.loads(md)
+                except Exception:
+                    md = {}
+            md["index_status"] = "indexed"
+            md.pop("index_error", None)
+            database.update_kb_document_metadata(doc_id, md)
+
+        return {
+            "ok": True,
+            "indexed_docs": len(updated_doc_ids),
+            "indexed_files": result.get("indexed_files", []),
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

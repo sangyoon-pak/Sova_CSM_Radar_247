@@ -137,6 +137,72 @@ def _llm_search_rerank():
     return get_chat_llm(model=settings.llm_model_for_search_rerank, temperature=0)
 
 
+def _doc_key(m: dict) -> str:
+    meta = m.get("meta") or {}
+    url = str(meta.get("url") or m.get("url") or "").strip().lower()
+    if url:
+        return f"url:{url}"
+    path = str(m.get("path") or "").strip().lower()
+    if path:
+        return f"path:{path}"
+    return f"file:{str(m.get('file') or '').strip().lower()}"
+
+
+def _distinct_doc_count(matches: list[dict]) -> int:
+    if not matches:
+        return 0
+    return len({_doc_key(m) for m in matches})
+
+
+def _diversify_matches(matches: list[dict], max_per_doc: int = 4, keep_limit: int = 30) -> list[dict]:
+    """
+    Keep ranking signal, but avoid context being dominated by one document.
+    Round-robin across docs while capping per-doc entries.
+    """
+    if not matches:
+        return []
+    buckets: dict[str, list[dict]] = {}
+    order: list[str] = []
+    for m in matches:
+        k = _doc_key(m)
+        if k not in buckets:
+            buckets[k] = []
+            order.append(k)
+        if len(buckets[k]) < max_per_doc:
+            buckets[k].append(m)
+    out: list[dict] = []
+    while len(out) < keep_limit:
+        advanced = False
+        for k in order:
+            if buckets[k]:
+                out.append(buckets[k].pop(0))
+                advanced = True
+                if len(out) >= keep_limit:
+                    break
+        if not advanced:
+            break
+    return out
+
+
+def _augment_with_unseen_docs(primary: list[dict], fallback_pool: list[dict], target_docs: int = 3) -> list[dict]:
+    """
+    If rerank becomes too single-source, inject top candidates from unseen docs.
+    """
+    out = list(primary)
+    seen_docs = {_doc_key(m) for m in out}
+    if len(seen_docs) >= target_docs:
+        return out
+    for m in fallback_pool:
+        k = _doc_key(m)
+        if k in seen_docs:
+            continue
+        out.append(m)
+        seen_docs.add(k)
+        if len(seen_docs) >= target_docs:
+            break
+    return out
+
+
 SCOPE_INFER_PROMPT = """You infer which documentation scope(s) a customer inquiry belongs to.
 
 You will be given:
@@ -370,6 +436,7 @@ def search_with_agent(
     Returns formatted context for the main agent.
     """
     all_matches: list[dict] = []
+    fallback_candidates: list[dict] = []
     seen = set()
 
     scope_hints, exclusive_scope = _infer_scope(query)
@@ -412,6 +479,7 @@ def search_with_agent(
             if key not in seen:
                 seen.add(key)
                 all_matches.append(m)
+                fallback_candidates.append(m)
 
         if not matches:
             break
@@ -425,6 +493,11 @@ def search_with_agent(
         )
         if not all_matches:
             all_matches = matches[:15]  # Fallback
+        elif _distinct_doc_count(all_matches) < 2:
+            # Recover source diversity when rerank over-focuses on one large document.
+            all_matches = _augment_with_unseen_docs(all_matches, fallback_candidates, target_docs=3)
+
+    all_matches = _diversify_matches(all_matches, max_per_doc=4, keep_limit=30)
 
     formatted = format_matches_for_context(all_matches, max_chars=max_context_chars)
 

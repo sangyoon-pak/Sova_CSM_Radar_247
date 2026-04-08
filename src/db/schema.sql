@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS cron_jobs (
     next_run_at TIMESTAMP
 );
 
--- Persistent knowledge-base document registry.
--- This stores structured metadata for files under knowledge-base/ and URL ingests.
+-- Persistent KB document registry.
+-- This stores structured metadata for files under the configured KB path and URL ingests.
 CREATE TABLE IF NOT EXISTS kb_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -1,7 +1,7 @@
 """Doc upload ingestion helpers.
 
 The knowledge base is searched via grep over plain text/markdown files.
-So for now we normalize uploads into UTF-8 markdown files under knowledge-base/.
+Uploads are normalized into UTF-8 markdown under the configured user KB path.
 """
 
 from __future__ import annotations

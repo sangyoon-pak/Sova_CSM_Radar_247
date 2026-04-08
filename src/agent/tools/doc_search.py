@@ -439,8 +439,6 @@ def index_files(paths: list[Path]) -> dict:
                     )
                 except Exception:
                     _VECTORSTORE = None
-            if _VECTORSTORE is None:
-                _VECTORSTORE = FAISS.from_texts(texts=[], embedding=embeddings, metadatas=[])
             texts: list[str] = []
             metadatas: list[dict] = []
             for p in paths:
@@ -454,7 +452,10 @@ def index_files(paths: list[Path]) -> dict:
                     texts.append(chunk)
                     metadatas.append({"path": str(p), "file": p.name, "line_num": line_start, "source": "rag"})
             if texts:
-                _VECTORSTORE.add_texts(texts=texts, metadatas=metadatas)
+                if _VECTORSTORE is None:
+                    _VECTORSTORE = FAISS.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas)
+                else:
+                    _VECTORSTORE.add_texts(texts=texts, metadatas=metadatas)
                 _VECTORSTORE.save_local(str(_RAG_INDEX_DIR))
                 _VECTORSTORE_FP = None
 

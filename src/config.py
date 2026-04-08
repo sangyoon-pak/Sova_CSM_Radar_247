@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # Knowledge base
     knowledge_base_path: str = Field(
-        "knowledge-base",
+        "data/user_kb/files",
         validation_alias="KNOWLEDGE_BASE_PATH",
     )
 

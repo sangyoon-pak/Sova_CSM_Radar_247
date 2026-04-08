@@ -6,52 +6,72 @@
   <title>Proactive CSM Assistant — Console</title>
   <style>
     :root {
-      --bg: #0f0f12;
-      --surface: #18181c;
-      --surface2: #111114;
-      --border: #2a2a30;
-      --text: #e4e4e7;
-      --muted: #71717a;
-      --accent: #22c55e;
-      --danger: #ef4444;
-      --shadow: 0 12px 30px rgba(0,0,0,0.35);
+      --bg: #f6f6f3;
+      --surface: #ffffff;
+      --surface2: #f5f5f1;
+      --border: #e7e7e3;
+      --text: #202124;
+      --muted: #6b7280;
+      --accent: #2f6feb;
+      --danger: #dc2626;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
       --radius: 14px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     html[data-theme="light"] {
-      --bg: #f7f7fb;
+      --bg: #f6f6f3;
       --surface: #ffffff;
-      --surface2: #f1f2f6;
-      --border: #e5e7eb;
-      --text: #0f172a;
-      --muted: #64748b;
-      --accent: #16a34a;
+      --surface2: #f5f5f1;
+      --border: #e7e7e3;
+      --text: #202124;
+      --muted: #6b7280;
+      --accent: #2f6feb;
       --danger: #dc2626;
-      --shadow: 0 14px 40px rgba(2,6,23,0.10);
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+    }
+    html[data-theme="dark"] {
+      --bg: #121316;
+      --surface: #181a1f;
+      --surface2: #1f222a;
+      --border: #2d3340;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #60a5fa;
+      --danger: #f87171;
+      --shadow: 0 14px 40px rgba(0,0,0,0.32);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem; font-size: 16px; line-height: 1.5; }
     a { color: inherit; }
-    h1 { font-size: 1.15rem; margin-bottom: 0.25rem; letter-spacing: 0.01em; }
-    .subtitle { color: var(--muted); font-size: 0.88rem; margin-bottom: 0; }
+    h1 { font-size: 1.45rem; margin-bottom: 0.1rem; letter-spacing: 0.01em; line-height: 1.2; }
+    .subtitle { color: var(--muted); font-size: 0.97rem; margin-bottom: 0; }
     .container { max-width: 1100px; margin: 0 auto; }
-    section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+    section { background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, var(--bg)) 0%, var(--surface) 100%); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
     section h2 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
-    button { padding: 0.55rem 0.9rem; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #07110a; cursor: pointer; font-weight: 750; }
+    button { padding: 0.55rem 0.9rem; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #ffffff; cursor: pointer; font-weight: 750; }
     button:hover { opacity: 0.9; }
     button.danger { background: var(--danger); color: white; }
     button.ghost { background: transparent; border-color: var(--border); color: var(--text); }
     button.ghost:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); opacity: 1; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom: 1rem; flex-wrap:wrap; }
-    .nav { display:flex; gap:0.5rem; flex-wrap:wrap; }
+    .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom: 0.65rem; flex-wrap:wrap; }
+    .nav {
+      display:flex;
+      gap:0.35rem;
+      flex-wrap:wrap;
+      border:1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem;
+      background: var(--surface);
+      box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+    }
     .nav-btn { padding:0.55rem 0.8rem; border-radius: 999px; background: transparent; border:1px solid var(--border); color: var(--text); font-weight: 800; }
     .nav-btn:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 12%, transparent); }
-    .nav-btn.active { background: var(--accent); border-color: transparent; color: #000; }
+    .nav-btn.active { background: var(--accent); border-color: transparent; color: #fff; }
     .tab-pane { display:none; }
     .tab-pane.active { display:block; }
     .subnav { display:flex; gap:0.5rem; margin: 0 0 1rem 0; flex-wrap:wrap; }
     .subnav-btn { padding:0.45rem 0.7rem; border-radius:10px; background: transparent; border:1px solid var(--border); color: var(--text); font-weight: 700; }
-    .subnav-btn.active { background: var(--accent); border-color: transparent; color: #000; }
+    .subnav-btn.active { background: var(--accent); border-color: transparent; color: #fff; }
     .subtab-pane { display:none; }
     .subtab-pane.active { display:block; }
     input[type="text"], textarea {
@@ -61,7 +81,7 @@
       border: 1px solid var(--border);
       background: var(--surface2);
       color: var(--text);
-      font-family: var(--mono);
+      font-family: inherit;
       outline: none;
     }
     input[type="text"]:focus, textarea:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
@@ -115,6 +135,14 @@
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display:none; }
     .trace-controls { display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-top: 0.65rem; }
+    .section-caret {
+      display: inline-block;
+      color: var(--muted);
+      font-weight: 900;
+      margin-right: 0.35rem;
+      transition: transform 0.18s ease;
+    }
+    details[open] > summary .section-caret { transform: rotate(90deg); }
     select { padding: 0.5rem 0.65rem; border-radius: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-weight: 800; }
     .trace-item details > summary { padding: 0; margin: 0; }
     .trace-item details > summary:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
@@ -220,10 +248,14 @@
     }
     .hero-blurb {
       color: var(--muted);
-      font-size: 0.84rem;
-      line-height: 1.45;
-      max-width: 52rem;
-      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      max-width: 62rem;
+      margin-bottom: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.6rem 0.75rem;
+      background: color-mix(in srgb, var(--surface2) 70%, var(--surface));
     }
     .section-lead {
       color: var(--muted);
@@ -258,6 +290,32 @@
       background: var(--surface2);
       padding: 0.75rem;
     }
+    .panel-head {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:0.55rem;
+      margin-bottom:0.55rem;
+      padding-bottom:0.45rem;
+      border-bottom:1px solid var(--border);
+    }
+    .panel-title {
+      font-size:0.78rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      font-weight:900;
+    }
+    .badge-soft {
+      font-size:0.72rem;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:0.12rem 0.45rem;
+      color:var(--muted);
+      font-weight:800;
+      background:color-mix(in srgb, var(--surface) 70%, transparent);
+      white-space:nowrap;
+    }
     .thread-item {
       padding: 0.5rem 0.55rem;
       border-radius: 12px;
@@ -270,26 +328,70 @@
       border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
       background: color-mix(in srgb, var(--accent) 10%, transparent);
     }
-    .thread-title { font-weight: 900; font-size: 0.86rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .thread-meta { color: var(--muted); font-size: 0.74rem; margin-top: 0.15rem; }
+    .thread-title { font-weight: 900; font-size: 0.93rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .thread-meta { color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
     .transcript {
       max-height: 520px;
       overflow-y: auto;
       padding-right: 0.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0.55rem;
+      margin-bottom: 0.55rem;
     }
     .msg {
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 0.65rem 0.75rem;
+      padding: 0.7rem 0.8rem;
       margin-bottom: 0.6rem;
       background: var(--surface);
     }
-    .msg.user { border-color: color-mix(in srgb, var(--border) 70%, var(--accent)); }
-    .msg.assistant { border-color: var(--border); }
+    .msg.user {
+      border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+      background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+    }
+    .msg.assistant {
+      border-color: color-mix(in srgb, var(--border) 82%, #10b981 18%);
+      background: color-mix(in srgb, #10b981 6%, var(--surface));
+    }
     .msg-head { display:flex; justify-content:space-between; gap:0.75rem; align-items:baseline; margin-bottom:0.35rem; }
-    .msg-role { font-weight: 950; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-    .msg-time { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
-    .msg-body { font-family: var(--mono); white-space: pre-wrap; overflow-wrap:anywhere; word-break: break-word; font-size: 0.86rem; line-height: 1.4; }
+    .msg-role { font-weight: 950; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    .msg.user .msg-role { color: color-mix(in srgb, var(--accent) 75%, var(--muted)); }
+    .msg.assistant .msg-role { color: color-mix(in srgb, #10b981 72%, var(--muted)); }
+    .msg-time { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .msg-body { font-family: inherit; white-space: pre-wrap; overflow-wrap:anywhere; word-break: break-word; font-size: 0.98rem; line-height: 1.55; }
+    .composer-wrap {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 0.55rem;
+    }
+    .composer-help {
+      color: var(--muted);
+      font-size: 0.76rem;
+      margin-top: 0.35rem;
+    }
+    .processing-indicator {
+      display: none;
+      align-items: center;
+      gap: 0.45rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .processing-indicator.show { display: inline-flex; }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      border: 2px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+      border-top-color: var(--accent);
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
     @media (max-width: 860px) {
       .workbench-layout { grid-template-columns: 1fr; }
     }
@@ -300,7 +402,7 @@
     <div class="topbar">
       <div>
         <h1>Proactive CSM Assistant</h1>
-        <p class="subtitle">Local console · inbox intelligence &amp; doc-grounded replies</p>
+        <p class="subtitle">CSM Copilot for inbox triage and doc-grounded replies</p>
       </div>
       <div class="row" style="justify-content:flex-end;">
         <button class="ghost" id="themeToggle" onclick="toggleTheme()">Theme</button>
@@ -313,7 +415,7 @@
       </div>
     </div>
     <p class="hero-blurb">
-      Helps CSMs triage client email, pull answers from your knowledge base (and enabled doc sites), and draft grounded replies—same agent backs one-off runs and follow-up chat below.
+      Triage client requests, ground answers in your uploaded docs, and draft responses with citations.
     </p>
 
   <div class="tab-pane active" id="tab-agent">
@@ -346,8 +448,8 @@
       </details>
       <div class="workbench-layout">
         <div class="panel">
-          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-            <strong style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;">Threads</strong>
+          <div class="panel-head">
+            <strong class="panel-title">Threads</strong>
             <div class="row" style="gap:0.4rem;">
               <button class="ghost" style="padding:0.35rem 0.55rem;border-radius:12px;" onclick="createThread()">New</button>
               <button class="danger" style="padding:0.35rem 0.55rem;border-radius:12px;" onclick="deleteActiveThread()">Delete</button>
@@ -358,22 +460,26 @@
         </div>
 
         <div class="panel">
-          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+          <div class="panel-head">
             <div>
               <div style="font-weight:950;">Transcript</div>
               <div id="threadHint" style="color:var(--muted);font-size:0.78rem;">Select a thread to start.</div>
             </div>
             <div class="row" style="gap:0.45rem;">
+              <div id="processingIndicator" class="processing-indicator"><span class="spinner"></span><span id="processingText">Processing…</span></div>
               <button onclick="probeThread()">Probe inbox</button>
               <button class="ghost" onclick="sendThreadMessage()">Send</button>
             </div>
           </div>
           <div id="transcript" class="transcript"><div class="empty">No thread selected.</div></div>
           <div class="subh">Message</div>
-          <textarea id="composer" placeholder="Ask for action items, draft reply, or paste a client thread for doc-backed answers…"></textarea>
+          <div class="composer-wrap">
+            <textarea id="composer" placeholder="Ask for action items, draft reply, or paste a client thread for doc-backed answers…" style="margin-top:0;"></textarea>
+            <div class="composer-help">Press Enter to send, Shift+Enter for newline.</div>
+          </div>
 
           <details id="traceDetails" style="margin-top:0.75rem;">
-            <summary style="cursor:pointer;color:var(--muted);font-weight:900;">Run trace</summary>
+            <summary style="cursor:pointer;color:var(--muted);font-weight:900;"><span class="section-caret">▸</span>Run trace</summary>
             <div class="trace-controls">
               <label style="color:var(--muted);font-weight:900;">Show</label>
               <select id="traceFilter" onchange="rerenderTraceFiltered()">
@@ -400,7 +506,7 @@
       </div>
       <div id="cronList"></div>
       <details style="margin-top:0.75rem;">
-        <summary style="cursor:pointer;color:var(--muted);">Recent cron summaries</summary>
+        <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span>Recent cron summaries</summary>
         <div id="cronSummary" class="result-box" style="display:block;max-height:220px;"></div>
       </details>
     </section>
@@ -416,12 +522,16 @@
       <section>
         <h2>Document Upload</h2>
         <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-          <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" />
-          <button onclick="uploadDoc()">Upload</button>
+          <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" multiple />
+          <button onclick="uploadDoc()">Upload selected</button>
+          <button class="ghost" onclick="reindexKb()">Reindex docs</button>
         </div>
+        <p style="margin-top:0.55rem;color:var(--muted);font-size:0.82rem;">
+          <strong>Reindex docs</strong> rebuilds search indexes for all uploaded files. Use this when a document shows failed indexing status or when answers seem to miss uploaded sources.
+        </p>
         <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
         <details style="margin-top:0.75rem;">
-          <summary style="cursor:pointer;color:var(--muted);">Persisted docs (registry)</summary>
+          <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span>Persisted docs (registry)</summary>
           <div id="docRegistry" class="result-box" style="display:block;max-height:260px;"></div>
         </details>
       </section>
@@ -577,6 +687,7 @@
         alert('Select a thread first.');
         return;
       }
+      setProcessingUI(true, probe ? 'Probing inbox…' : 'Assistant is processing…');
       startTraceUI();
       try {
         const started = await fetchJson('/threads/send', {
@@ -590,6 +701,8 @@
         loadInteractions();
       } catch (e) {
         alert('Error: ' + e.message);
+      } finally {
+        setProcessingUI(false);
       }
     }
     async function sendThreadMessage() {
@@ -636,24 +749,62 @@
     }
     async function uploadDoc() {
       const fileInput = document.getElementById('uploadFile');
-      const file = fileInput.files[0];
-      if (!file) { alert('Select a file to upload.'); return; }
-
-      const form = new FormData();
-      form.append('file', file);
+      const files = Array.from(fileInput.files || []);
+      if (!files.length) { alert('Select one or more files to upload.'); return; }
 
       const el = document.getElementById('uploadResult');
       el.style.display = 'block';
-      el.textContent = 'Uploading...';
+      el.textContent = `Uploading ${files.length} file(s)...`;
 
+      const ok = [];
+      const fail = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        el.textContent = `Uploading ${i + 1}/${files.length}: ${file.name}`;
+        const form = new FormData();
+        form.append('file', file);
+        try {
+          const res = await fetch('/docs/upload', { method: 'POST', body: form });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.detail || 'Upload failed');
+          ok.push(`${file.name} -> ${data.filename || 'saved'}`);
+        } catch (e) {
+          fail.push(`${file.name} -> ${e.message}`);
+        }
+      }
+
+      const lines = [];
+      lines.push(`Completed: ${ok.length} succeeded, ${fail.length} failed.`);
+      if (ok.length) lines.push('', 'Success:', ...ok);
+      if (fail.length) lines.push('', 'Failed:', ...fail);
+      el.textContent = lines.join('\n');
+      fileInput.value = '';
+      loadDocRegistry();
+    }
+    async function reindexKb() {
+      const el = document.getElementById('uploadResult');
+      if (!confirm('Reindex all uploaded documents now?')) return;
+      el.style.display = 'block';
+      let sec = 0;
+      el.textContent = 'Reindexing all uploaded docs... (0s)';
+      const timer = setInterval(() => {
+        sec += 1;
+        el.textContent = `Reindexing all uploaded docs... (${sec}s)`;
+      }, 1000);
       try {
-        const res = await fetch('/docs/upload', { method: 'POST', body: form });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.detail || 'Upload failed');
-        el.textContent = `Uploaded and saved as: ${data.filename}\nChars: ${data.chars}`;
-        fileInput.value = '';
+        const res = await fetchJson('/kb/reindex', { method: 'POST' });
+        const count = Number(res.indexed_docs || 0);
+        clearInterval(timer);
+        el.textContent = `Reindex complete in ${sec}s. Indexed ${count} document(s).`;
+        loadDocRegistry();
       } catch (e) {
-        el.textContent = 'Error: ' + e.message;
+        clearInterval(timer);
+        const msg = String(e.message || '');
+        if (msg.includes('Not Found') || msg.includes('"detail":"Not Found"')) {
+          el.textContent = 'Reindex is unavailable on the running server. Restart the app to load the latest backend route (/kb/reindex), then try again.';
+        } else {
+          el.textContent = 'Reindex failed: ' + msg;
+        }
       }
     }
     // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
@@ -863,6 +1014,28 @@
       if (status === 'error') pill.classList.add('error');
       pill.textContent = status;
     }
+    function setProcessingUI(on, text = 'Processing…') {
+      const el = document.getElementById('processingIndicator');
+      const tx = document.getElementById('processingText');
+      if (!el || !tx) return;
+      tx.textContent = text;
+      el.classList.toggle('show', !!on);
+    }
+    function processingTextFromEvent(e) {
+      if (!e) return 'Assistant is processing…';
+      const type = String(e.type || '');
+      const title = String(e.title || '');
+      if (type === 'tool_start') {
+        const t = title.replace('Tool start:', '').trim() || 'tool';
+        return `Using tool: ${t}…`;
+      }
+      if (type === 'tool_end') return 'Tool finished. Analyzing results…';
+      if (type === 'model_start') return 'Reasoning…';
+      if (type === 'model_end') return 'Drafting response…';
+      if (type === 'chain_start') return 'Planning next steps…';
+      if (type === 'chain_end') return 'Finalizing…';
+      return 'Assistant is processing…';
+    }
 
     function getInitialTheme() {
       const saved = localStorage.getItem('theme');
@@ -922,6 +1095,9 @@
           }
           _traceLen = events.length;
           rerenderTraceFiltered();
+          // Live spinner text based on most recent event.
+          const latest = events[events.length - 1];
+          setProcessingUI(true, processingTextFromEvent(latest));
         }
 
         // Live update: show latest model_end detail while running.
@@ -936,10 +1112,12 @@
         if (run.status === 'completed') {
           if (runResultEl) runResultEl.textContent = run.output || 'Done.';
           setRunStatus('completed');
+          setProcessingUI(false);
           return run;
         }
         if (run.status === 'error') {
           setRunStatus('error');
+          setProcessingUI(false);
           throw new Error(run.error || 'Run failed');
         }
         if (lastEnd && runResultEl) runResultEl.textContent = lastEnd;
@@ -957,11 +1135,14 @@
           ? tools.map(t => `<span class="tool-chip">${escapeHtml(t)}</span>`).join('')
           : '<span style="color:var(--muted);font-size:0.78rem;">No tool calls recorded</span>';
         const promptPreview = escapeHtml((i.input_text || '').slice(0, 220));
-        const out = escapeHtml((i.output_text || i.error_message || '').slice(0, 1200));
+        const out = escapeHtml(i.output_text || i.error_message || '');
         const fullPrompt = escapeHtml(i.input_text || '');
         return `
           <details class="interaction">
             <summary style="cursor:pointer;list-style:none;">
+              <div style="display:flex;align-items:center;gap:0.35rem;color:var(--muted);font-size:0.78rem;font-weight:900;margin-bottom:0.25rem;">
+                <span class="section-caret">▸</span><span>Expand details</span>
+              </div>
               <div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
               <div style="font-size:0.84rem;font-family:var(--mono);white-space:pre-wrap;line-height:1.35;">${promptPreview || '(empty prompt)'}</div>
               <div style="margin-top:0.35rem;">${toolChips}</div>
@@ -1076,6 +1257,17 @@
     loadCronSummary();
     loadInteractions();
     loadMaintenanceStats();
+
+    // Composer UX: Enter sends, Shift+Enter inserts newline.
+    const composerEl = document.getElementById('composer');
+    if (composerEl) {
+      composerEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendThreadMessage();
+        }
+      });
+    }
   </script>
   </div>
 </body>
