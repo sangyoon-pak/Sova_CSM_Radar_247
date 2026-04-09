@@ -1,4 +1,4 @@
-"""FastAPI application - Proactive CSM Assistant console and API."""
+"""FastAPI application - Sova (CSM Radar Agent) console and API."""
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -23,8 +23,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Proactive CSM Assistant",
-    description="Local CSM console: Gmail probe, knowledge-grounded answers, and scheduled runs.",
+    title="Sova — CSM Radar Agent 24/7",
+    description="Sova console: inbox radar, KB-grounded answers, cron, and traceable runs.",
     lifespan=lifespan,
 )
 

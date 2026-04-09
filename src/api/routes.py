@@ -598,4 +598,4 @@ def serve_dashboard():
             },
         )
     from fastapi.responses import HTMLResponse
-    return HTMLResponse("<h1>Proactive CSM Assistant</h1><p>Dashboard UI not found.</p>")
+    return HTMLResponse("<h1>Sova — CSM Radar Agent 24/7</h1><p>Dashboard UI not found.</p>")

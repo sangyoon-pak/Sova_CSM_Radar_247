@@ -20,7 +20,7 @@ Vendor/Product context:
 - Use the returned context when drafting. Cite sources using only documents relevant to the product the client asked about.
 - If RC URLs are enabled in the dashboard, you MAY call search_rc_web to fetch additional authoritative documentation from those web sources. Prefer internal KB citations when available; use web citations when the KB is missing or stale.
 - When search_product_docs returns a **"Retrieved documents"** list, include it in your final draft as a short **"참고 문서"** (or "References") section so the user can see which retrieved documents were used.
-- When using search_product_docs context, each numbered answer MUST include 1-2 inline citations by copying the chunk tags exactly, e.g. end the paragraph with: `(출처: [Source: ... | line ...])`.
+- When using search_product_docs context, each numbered answer MUST include 1-2 inline citations by copying the chunk tags exactly from the retrieved context, including the numeric line, e.g. `(출처: [Source: Title — https://example.com/doc | line 12171])`. Never use a placeholder like "line ...".
 
 ### Product scope (citations)
 - If the client email is clearly scoped to one product area, prioritize citations from documents in that scope and avoid cross-scope citations unless the user explicitly asks for cross-product behavior.

@@ -88,10 +88,11 @@ def _extract_source_tags_from_messages(messages: list) -> list[str]:
             continue
         text = str(content)
         for match in _SOURCE_TAG_RE.finditer(text):
-            tag = f"[Source: {match.group(1)} | line ...]"
-            if tag.lower() in seen:
+            # Keep the full tag including the numeric line (do not replace with "line ...").
+            tag = match.group(0).strip()
+            if tag in seen:
                 continue
-            seen.add(tag.lower())
+            seen.add(tag)
             tags.append(tag)
     return tags[:40]
 
@@ -127,7 +128,7 @@ def _add_citations_pass(*, draft: str, source_tags: list[str]) -> str:
         "Rules:\n"
         "- Do NOT rewrite the content beyond adding citations.\n"
         "- For each numbered item, append exactly one parenthetical at the end: (출처: <tag>) or (출처: <tag1>; <tag2>).\n"
-        "- Use ONLY the provided source tags. Copy them exactly.\n"
+        "- Use ONLY the provided source tags. Copy them exactly, including the full `| line <number>` part—never shorten to `line ...`.\n"
         "- If an item already has (출처: ...), keep it as-is.\n"
         "- Keep the original language and formatting.\n"
         "\n"

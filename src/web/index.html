@@ -3,88 +3,198 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proactive CSM Assistant — Console</title>
+  <title>Sova — CSM Radar Agent 24/7</title>
   <style>
+    /* Enterprise-style tokens: neutral surfaces, one primary accent, restrained destructive. */
     :root {
-      --bg: #f6f6f3;
+      --bg: #f5f4f1;
       --surface: #ffffff;
-      --surface2: #f5f5f1;
-      --border: #e7e7e3;
-      --text: #202124;
-      --muted: #6b7280;
-      --accent: #2f6feb;
-      --danger: #dc2626;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
-      --radius: 14px;
+      --surface2: #f0efec;
+      --surface-raised: #fafaf8;
+      --border: #e4e2dc;
+      --border-subtle: #eceae6;
+      --text: #2d2c29;
+      --muted: #6f6e69;
+      --accent: #1d6fc4;
+      --accent-hover: #185ea8;
+      --accent-soft: rgba(29, 111, 196, 0.1);
+      --sage: #2d6a5f;
+      --sage-soft: rgba(45, 106, 95, 0.08);
+      --peach: #c47d5a;
+      --peach-soft: rgba(196, 125, 90, 0.1);
+      --danger: #b45348;
+      --danger-border: color-mix(in srgb, #b45348 28%, var(--border));
+      --shadow: 0 1px 2px rgba(45, 44, 41, 0.04), 0 4px 16px rgba(45, 44, 41, 0.05);
+      --shadow-sm: 0 1px 0 rgba(45, 44, 41, 0.04);
+      --radius: 12px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     html[data-theme="light"] {
-      --bg: #f6f6f3;
+      --bg: #f5f4f1;
       --surface: #ffffff;
-      --surface2: #f5f5f1;
-      --border: #e7e7e3;
-      --text: #202124;
-      --muted: #6b7280;
-      --accent: #2f6feb;
-      --danger: #dc2626;
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+      --surface2: #f0efec;
+      --surface-raised: #fafaf8;
+      --border: #e4e2dc;
+      --border-subtle: #eceae6;
+      --text: #2d2c29;
+      --muted: #6f6e69;
+      --accent: #1d6fc4;
+      --accent-hover: #185ea8;
+      --accent-soft: rgba(29, 111, 196, 0.1);
+      --danger: #b45348;
+      --danger-border: color-mix(in srgb, #b45348 28%, var(--border));
+      --shadow: 0 1px 2px rgba(45, 44, 41, 0.04), 0 4px 16px rgba(45, 44, 41, 0.05);
     }
     html[data-theme="dark"] {
-      --bg: #121316;
-      --surface: #181a1f;
-      --surface2: #1f222a;
-      --border: #2d3340;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --accent: #60a5fa;
-      --danger: #f87171;
-      --shadow: 0 14px 40px rgba(0,0,0,0.32);
+      --bg: #1a1a18;
+      --surface: #222220;
+      --surface2: #2a2a27;
+      --surface-raised: #262624;
+      --border: #3a3935;
+      --border-subtle: #32312e;
+      --text: #e8e7e3;
+      --muted: #9c9a94;
+      --accent: #6ba3e0;
+      --accent-hover: #8bb8e8;
+      --accent-soft: rgba(107, 163, 224, 0.14);
+      --sage: #5cb3a3;
+      --sage-soft: rgba(92, 179, 163, 0.12);
+      --peach: #c9a08a;
+      --peach-soft: rgba(201, 160, 138, 0.12);
+      --danger: #d67a72;
+      --danger-border: color-mix(in srgb, #d67a72 35%, var(--border));
+      --shadow: 0 2px 8px rgba(0,0,0,0.32);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.5rem; font-size: 16px; line-height: 1.5; }
-    a { color: inherit; }
-    h1 { font-size: 1.45rem; margin-bottom: 0.1rem; letter-spacing: 0.01em; line-height: 1.2; }
-    .subtitle { color: var(--muted); font-size: 0.97rem; margin-bottom: 0; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    section { background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, var(--bg)) 0%, var(--surface) 100%); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
-    section h2 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
-    button { padding: 0.55rem 0.9rem; border-radius: 12px; border: 1px solid transparent; background: var(--accent); color: #ffffff; cursor: pointer; font-weight: 750; }
-    button:hover { opacity: 0.9; }
-    button.danger { background: var(--danger); color: white; }
-    button.ghost { background: transparent; border-color: var(--border); color: var(--text); }
-    button.ghost:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); opacity: 1; }
-    .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom: 0.65rem; flex-wrap:wrap; }
+    body { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.35rem 1.5rem 2rem; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-underline-offset: 2px; }
+    h1 { font-size: 1.35rem; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.025em; line-height: 1.28; color: var(--text); }
+    .subtitle { color: var(--muted); font-size: 0.875rem; margin-bottom: 0; font-weight: 450; letter-spacing: 0.01em; }
+    .container { max-width: 1120px; margin: 0 auto; }
+    section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.35rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm); }
+    section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+    button {
+      padding: 0.48rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    }
+    button:hover { background: var(--accent-hover); }
+    button:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+    button.danger {
+      background: var(--surface);
+      color: var(--danger);
+      border: 1px solid var(--danger-border);
+      box-shadow: none;
+      font-weight: 600;
+    }
+    button.danger:hover {
+      background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+      border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+    }
+    button.ghost { background: var(--surface); border-color: var(--border); color: var(--text); box-shadow: none; }
+    button.ghost:hover { background: var(--surface2); border-color: color-mix(in srgb, var(--text) 12%, var(--border)); }
+    .btn-compact { padding: 0.38rem 0.65rem; font-size: 0.75rem; border-radius: 7px; }
+    .lang-switch {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .lang-switch button.lang-btn {
+      border-radius: 0;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.65rem;
+      box-shadow: none;
+    }
+    .lang-switch button.lang-btn:hover { background: var(--surface2); color: var(--text); }
+    .lang-switch button.lang-btn.active { background: var(--accent-soft); color: var(--accent); }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-bottom: 1rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
     .nav {
       display:flex;
-      gap:0.35rem;
+      gap:0.25rem;
       flex-wrap:wrap;
       border:1px solid var(--border);
-      border-radius: 999px;
-      padding: 0.25rem;
+      border-radius: 10px;
+      padding: 0.2rem;
       background: var(--surface);
-      box-shadow: 0 1px 0 rgba(0,0,0,0.02);
     }
-    .nav-btn { padding:0.55rem 0.8rem; border-radius: 999px; background: transparent; border:1px solid var(--border); color: var(--text); font-weight: 800; }
-    .nav-btn:hover { opacity: 1; background: color-mix(in srgb, var(--accent) 12%, transparent); }
-    .nav-btn.active { background: var(--accent); border-color: transparent; color: #fff; }
+    .nav-btn {
+      padding: 0.45rem 0.8rem;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.8125rem;
+      box-shadow: none;
+    }
+    .nav-btn:hover { opacity: 1; background: var(--surface2); color: var(--text); }
+    .nav-btn.active { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); color: var(--accent); }
     .tab-pane { display:none; }
     .tab-pane.active { display:block; }
     .subnav { display:flex; gap:0.5rem; margin: 0 0 1rem 0; flex-wrap:wrap; }
-    .subnav-btn { padding:0.45rem 0.7rem; border-radius:10px; background: transparent; border:1px solid var(--border); color: var(--text); font-weight: 700; }
-    .subnav-btn.active { background: var(--accent); border-color: transparent; color: #fff; }
+    .subnav-btn {
+      padding: 0.42rem 0.72rem;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.8125rem;
+      box-shadow: none;
+    }
+    .subnav-btn:hover { background: var(--surface2); color: var(--text); }
+    .subnav-btn.active {
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+      color: var(--accent);
+    }
     .subtab-pane { display:none; }
     .subtab-pane.active { display:block; }
     input[type="text"], textarea {
       width: 100%;
-      padding: 0.75rem 0.85rem;
-      border-radius: 14px;
+      padding: 0.62rem 0.75rem;
+      border-radius: 10px;
       border: 1px solid var(--border);
-      background: var(--surface2);
+      background: var(--surface-raised);
       color: var(--text);
       font-family: inherit;
       outline: none;
+      font-size: 0.875rem;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
     }
-    input[type="text"]:focus, textarea:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+    input[type="text"]:focus, textarea:focus {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
     textarea { min-height: 96px; margin-top: 0.5rem; }
     .row { display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; }
     .result-box { margin-top: 0.9rem; padding: 0.9rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; font-family: var(--mono); font-size: 0.86rem; white-space: pre-wrap; max-height: 340px; overflow-y: auto; }
@@ -148,11 +258,11 @@
     .trace-item details > summary:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
     .trace-item details[open] > summary { border-bottom: 0; }
     .profile-card {
-      margin-bottom: 0.9rem;
+      margin-bottom: 0.85rem;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--surface2);
-      padding: 0.75rem 0.8rem;
+      border-radius: var(--radius);
+      background: var(--surface-raised);
+      padding: 0.75rem 0.85rem;
     }
     .profile-head {
       display: flex;
@@ -180,15 +290,17 @@
       background: transparent;
       white-space: nowrap;
     }
-    .profile-title { font-size: 0.84rem; font-weight: 900; color: var(--text); letter-spacing: 0.01em; }
+    .profile-title { font-size: 0.8125rem; font-weight: 600; color: var(--text); letter-spacing: 0.01em; }
     .profile-pill {
-      font-size: 0.74rem;
-      font-weight: 900;
-      color: var(--accent);
-      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 0.15rem 0.45rem;
+      padding: 0.12rem 0.42rem;
       white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .profile-help { color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-bottom: 0.55rem; }
     #profileDetails[open] .profile-caret { transform: rotate(90deg); }
@@ -248,27 +360,29 @@
     }
     .hero-blurb {
       color: var(--muted);
-      font-size: 0.95rem;
+      font-size: 0.875rem;
       line-height: 1.5;
       max-width: 62rem;
-      margin-bottom: 0.95rem;
+      margin-bottom: 0.85rem;
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.6rem 0.75rem;
-      background: color-mix(in srgb, var(--surface2) 70%, var(--surface));
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 0.7rem 0.9rem;
+      background: var(--surface-raised);
     }
     .section-lead {
       color: var(--muted);
-      font-size: 0.82rem;
-      line-height: 1.4;
-      margin: -0.35rem 0 1rem 0;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      margin: -0.2rem 0 1rem 0;
+      max-width: 52rem;
     }
     .subh {
-      font-size: 0.72rem;
-      font-weight: 800;
+      font-size: 0.8rem;
+      font-weight: 600;
       color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      text-transform: none;
+      letter-spacing: 0.01em;
       margin: 1rem 0 0.45rem 0;
     }
     .subh:first-of-type { margin-top: 0; }
@@ -279,32 +393,55 @@
     }
     .workbench-layout {
       display: grid;
-      grid-template-columns: 290px 1fr;
-      gap: 0.9rem;
+      grid-template-columns: minmax(260px, 300px) 1fr;
+      gap: 1rem;
       align-items: start;
-      margin-top: 0.9rem;
+      margin-top: 0.85rem;
     }
     .panel {
       border: 1px solid var(--border);
-      border-radius: 14px;
-      background: var(--surface2);
-      padding: 0.75rem;
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 0.85rem 0.9rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel.panel-threads {
+      background: var(--surface-raised);
+    }
+    .panel.panel-chat {
+      background: var(--surface);
     }
     .panel-head {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:0.55rem;
-      margin-bottom:0.55rem;
-      padding-bottom:0.45rem;
-      border-bottom:1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.65rem;
+      margin-bottom: 0.55rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
     }
     .panel-title {
-      font-size:0.78rem;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:0.06em;
-      font-weight:900;
+      font-size: 0.6875rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-weight: 600;
+    }
+    .conversation-heading {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.32;
+      color: var(--text);
+    }
+    .conversation-heading .conversation-lead {
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .conversation-heading .conversation-brand {
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: -0.025em;
     }
     .badge-soft {
       font-size:0.72rem;
@@ -317,55 +454,55 @@
       white-space:nowrap;
     }
     .thread-item {
-      padding: 0.5rem 0.55rem;
-      border-radius: 12px;
+      padding: 0.48rem 0.55rem;
+      border-radius: 10px;
       border: 1px solid transparent;
       cursor: pointer;
-      margin-bottom: 0.45rem;
+      margin-bottom: 0.4rem;
     }
-    .thread-item:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .thread-item:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
     .thread-item.active {
-      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
     }
-    .thread-title { font-weight: 900; font-size: 0.93rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .thread-meta { color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
+    .thread-title { font-weight: 600; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+    .thread-meta { color: var(--muted); font-size: 0.75rem; margin-top: 0.12rem; font-variant-numeric: tabular-nums; }
     .transcript {
       max-height: 520px;
       overflow-y: auto;
       padding-right: 0.25rem;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      padding: 0.55rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-raised);
+      padding: 0.55rem 0.6rem;
       margin-bottom: 0.55rem;
     }
     .msg {
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 0.7rem 0.8rem;
-      margin-bottom: 0.6rem;
+      border-radius: 10px;
+      padding: 0.62rem 0.72rem;
+      margin-bottom: 0.5rem;
       background: var(--surface);
     }
     .msg.user {
-      border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-      background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+      border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+      background: color-mix(in srgb, var(--accent) 5%, var(--surface));
     }
     .msg.assistant {
-      border-color: color-mix(in srgb, var(--border) 82%, #10b981 18%);
-      background: color-mix(in srgb, #10b981 6%, var(--surface));
+      border-color: var(--border);
+      background: var(--surface);
     }
-    .msg-head { display:flex; justify-content:space-between; gap:0.75rem; align-items:baseline; margin-bottom:0.35rem; }
-    .msg-role { font-weight: 950; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-    .msg.user .msg-role { color: color-mix(in srgb, var(--accent) 75%, var(--muted)); }
-    .msg.assistant .msg-role { color: color-mix(in srgb, #10b981 72%, var(--muted)); }
+    .msg-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; margin-bottom: 0.32rem; }
+    .msg-role { font-weight: 600; font-size: 0.75rem; text-transform: none; letter-spacing: 0.04em; color: var(--muted); }
+    .msg.user .msg-role { color: color-mix(in srgb, var(--accent) 50%, var(--muted)); }
+    .msg.assistant .msg-role { color: var(--muted); }
     .msg-time { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
-    .msg-body { font-family: inherit; white-space: pre-wrap; overflow-wrap:anywhere; word-break: break-word; font-size: 0.98rem; line-height: 1.55; }
+    .msg-body { font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; font-size: 0.9375rem; line-height: 1.55; color: var(--text); }
     .composer-wrap {
       border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface);
-      padding: 0.55rem;
+      border-radius: 10px;
+      background: var(--surface-raised);
+      padding: 0.5rem 0.55rem;
     }
     .composer-help {
       color: var(--muted);
@@ -401,93 +538,99 @@
   <div class="container">
     <div class="topbar">
       <div>
-        <h1>Proactive CSM Assistant</h1>
-        <p class="subtitle">CSM Copilot for inbox triage and doc-grounded replies</p>
+        <h1 data-i18n="appTitle">Sova — CSM Radar Agent 24/7</h1>
+        <p class="subtitle" data-i18n="appSubtitle">Inbox radar · doc-grounded answers · drafts on demand</p>
       </div>
       <div class="row" style="justify-content:flex-end;">
-        <button class="ghost" id="themeToggle" onclick="toggleTheme()">Theme</button>
+        <div class="lang-switch" id="langSwitch" title="">
+          <button type="button" class="lang-btn" data-lang="en" onclick="setUiLang('en')">EN</button>
+          <button type="button" class="lang-btn" data-lang="ko" onclick="setUiLang('ko')">한국어</button>
+        </div>
+        <button class="ghost" type="button" id="themeToggle" onclick="toggleTheme()">Light</button>
         <div class="nav">
-          <button class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')">Workbench</button>
-          <button class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')">Cron</button>
-          <button class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')">Knowledge</button>
-          <button class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')">Run History</button>
+          <button type="button" class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')" data-i18n="tabWorkbench">Workbench</button>
+          <button type="button" class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')" data-i18n="tabCron">Cron</button>
+          <button type="button" class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')" data-i18n="tabKnowledge">Knowledge</button>
+          <button type="button" class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')" data-i18n="tabHistory">Run history</button>
         </div>
       </div>
     </div>
-    <p class="hero-blurb">
-      Triage client requests, ground answers in your uploaded docs, and draft responses with citations.
+    <p class="hero-blurb" data-i18n="heroBlurb">
+      Scan the queue against your KB, cite sources, and draft only when you ask.
     </p>
 
   <div class="tab-pane active" id="tab-agent">
     <section>
-      <h2>CSM workbench</h2>
-      <p class="section-lead">Probe the inbox, run a task with the prompt box, then continue in conversation if you need refinements. Trace and run history stay available for audit.</p>
+      <h2 data-i18n="workbenchTitle">Workbench</h2>
+      <p class="section-lead" data-i18n="workbenchLead">Pull inbox signal, run a task in the thread, and keep Trace + Run history for audit.</p>
       <details id="profileDetails" class="profile-card" open>
         <summary>
           <div class="profile-head">
             <div class="profile-head-left">
               <span class="profile-caret">▸</span>
-              <span class="profile-title">Agent profile (customize your vendor/product context)</span>
-              <span class="profile-toggle-btn">Configure</span>
+              <span class="profile-title" data-i18n="profileCardTitle">Agent profile</span>
+              <span class="profile-toggle-btn" data-i18n="profileConfigure">Configure</span>
             </div>
-            <span class="profile-pill">applies to all runs</span>
+            <span class="profile-pill" data-i18n="profilePill">All runs</span>
           </div>
         </summary>
         <div style="margin-top:0.6rem;">
-          <p class="profile-help">Set your own company/vendor and product lines here. The agent uses this profile in its system prompt for every run.</p>
+          <p class="profile-help" data-i18n="profileHelp">Set vendor and product context. The agent uses this in its system prompt for every run.</p>
           <div class="row" style="margin-bottom:0.5rem;">
-            <input id="profileVendorName" type="text" placeholder="Vendor name (e.g. Appier)" style="min-width:240px;flex:1;" />
-            <input id="profileRoleTitle" type="text" placeholder="Role title (e.g. CSM Assistant)" style="min-width:260px;flex:1;" />
+            <input id="profileVendorName" type="text" data-i18n-placeholder="vendorPlaceholder" placeholder="Vendor name" style="min-width:240px;flex:1;" />
+            <input id="profileRoleTitle" type="text" data-i18n-placeholder="rolePlaceholder" placeholder="Role title" style="min-width:260px;flex:1;" />
           </div>
-          <textarea id="profileProductContext" placeholder="Product lines / scope hints (comma-separated)"></textarea>
+          <textarea id="profileProductContext" data-i18n-placeholder="productPlaceholder" placeholder="Product lines / scope (comma-separated)"></textarea>
           <div class="row" style="margin-top:0.5rem;">
-            <button class="ghost" onclick="saveAgentProfile()">Save profile</button>
-            <span id="profileSaveStatus" style="color:var(--muted);font-size:0.82rem;">Using saved profile.</span>
+            <button type="button" class="ghost" onclick="saveAgentProfile()" data-i18n="saveProfile">Save profile</button>
+            <span id="profileSaveStatus" style="color:var(--muted);font-size:0.82rem;" data-i18n="profileLoaded">Loaded saved profile.</span>
           </div>
         </div>
       </details>
       <div class="workbench-layout">
-        <div class="panel">
+        <div class="panel panel-threads">
           <div class="panel-head">
-            <strong class="panel-title">Threads</strong>
-            <div class="row" style="gap:0.4rem;">
-              <button class="ghost" style="padding:0.35rem 0.55rem;border-radius:12px;" onclick="createThread()">New</button>
-              <button class="danger" style="padding:0.35rem 0.55rem;border-radius:12px;" onclick="deleteActiveThread()">Delete</button>
+            <strong class="panel-title" data-i18n="threads">Threads</strong>
+            <div class="row" style="gap:0.35rem;">
+              <button type="button" class="ghost btn-compact" onclick="createThread()" data-i18n="newThread">New</button>
+              <button type="button" class="danger btn-compact" onclick="deleteActiveThread()" data-i18n="deleteThread">Delete</button>
             </div>
           </div>
-          <input id="threadSearch" type="text" placeholder="Search threads..." style="padding:0.55rem 0.65rem;border-radius:12px;margin-bottom:0.55rem;" oninput="loadThreads()" />
-          <div id="threadList"><div class="empty" style="padding:1rem 0;">Loading…</div></div>
+          <input id="threadSearch" type="text" data-i18n-placeholder="searchThreads" placeholder="Search threads…" style="padding:0.55rem 0.65rem;border-radius:10px;margin-bottom:0.55rem;" oninput="loadThreads()" />
+          <div id="threadList"><div class="empty" style="padding:1rem 0;" data-i18n="loading">Loading…</div></div>
         </div>
 
-        <div class="panel">
+        <div class="panel panel-chat">
           <div class="panel-head">
-            <div>
-              <div style="font-weight:950;">Transcript</div>
-              <div id="threadHint" style="color:var(--muted);font-size:0.78rem;">Select a thread to start.</div>
+            <div style="min-width:0;">
+              <div class="conversation-heading" data-i18n-html="conversationTitleHtml">
+                <span class="conversation-lead">Conversation with</span> <span class="conversation-brand">Sova</span>
+              </div>
+              <div id="threadHint" style="color:var(--muted);font-size:0.75rem;margin-top:0.25rem;line-height:1.35;" data-i18n="selectThread">Select a thread to start.</div>
             </div>
-            <div class="row" style="gap:0.45rem;">
-              <div id="processingIndicator" class="processing-indicator"><span class="spinner"></span><span id="processingText">Processing…</span></div>
-              <button onclick="probeThread()">Probe inbox</button>
-              <button class="ghost" onclick="sendThreadMessage()">Send</button>
+            <div class="row" style="gap:0.4rem;flex-shrink:0;">
+              <div id="processingIndicator" class="processing-indicator"><span class="spinner"></span><span id="processingText" data-i18n="processing">Working…</span></div>
+              <button type="button" onclick="probeThread()" data-i18n="probeInbox">Probe inbox</button>
+              <button type="button" class="ghost btn-compact" onclick="sendThreadMessage()" data-i18n="send">Send</button>
             </div>
           </div>
-          <div id="transcript" class="transcript"><div class="empty">No thread selected.</div></div>
-          <div class="subh">Message</div>
+          <div id="transcript" class="transcript"><div class="empty" data-i18n="noThreadSelected">No thread selected.</div></div>
+          <div class="subh" data-i18n="messageLabel">Message</div>
           <div class="composer-wrap">
-            <textarea id="composer" placeholder="Ask for action items, draft reply, or paste a client thread for doc-backed answers…" style="margin-top:0;"></textarea>
-            <div class="composer-help">Press Enter to send, Shift+Enter for newline.</div>
+            <textarea id="composer" data-i18n-placeholder="composerPlaceholder" placeholder="Ask for action items, draft a reply, or paste a client thread…" style="margin-top:0;"></textarea>
+            <div class="composer-help" data-i18n="composerHelp">Enter to send · Shift+Enter for new line</div>
           </div>
 
           <details id="traceDetails" style="margin-top:0.75rem;">
-            <summary style="cursor:pointer;color:var(--muted);font-weight:900;"><span class="section-caret">▸</span>Run trace</summary>
+            <summary style="cursor:pointer;color:var(--muted);font-weight:700;"><span class="section-caret">▸</span><span data-i18n="runTrace">Run trace</span></summary>
             <div class="trace-controls">
-              <label style="color:var(--muted);font-weight:900;">Show</label>
+              <label style="color:var(--muted);font-weight:700;" data-i18n="show">Show</label>
               <select id="traceFilter" onchange="rerenderTraceFiltered()">
-                <option value="important">Important</option>
-                <option value="tools">Tools only</option>
-                <option value="all">All events</option>
+                <option value="important" data-i18n="traceImportant">Important</option>
+                <option value="tools" data-i18n="traceTools">Tools only</option>
+                <option value="all" data-i18n="traceAll">All events</option>
               </select>
-              <button class="ghost" onclick="clearTraceUI()">Clear</button>
+              <button type="button" class="ghost" onclick="clearTraceUI()" data-i18n="clear">Clear</button>
             </div>
             <div id="runTrace" class="trace-list" style="display:block;"></div>
           </details>
@@ -498,15 +641,15 @@
 
   <div class="tab-pane" id="tab-cron">
     <section>
-      <h2>Cron Jobs</h2>
+      <h2 data-i18n="cronTitle">Cron jobs</h2>
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-        <input type="text" id="cronName" placeholder="Job name">
-        <input type="text" id="cronExpr" placeholder="0 * * * *">
-        <button onclick="addCron()">Add</button>
+        <input type="text" id="cronName" data-i18n-placeholder="cronNamePh" placeholder="Job name">
+        <input type="text" id="cronExpr" data-i18n-placeholder="cronExprPh" placeholder="0 * * * *">
+        <button type="button" onclick="addCron()" data-i18n="add">Add</button>
       </div>
       <div id="cronList"></div>
       <details style="margin-top:0.75rem;">
-        <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span>Recent cron summaries</summary>
+        <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span><span data-i18n="recentCron">Recent cron summaries</span></summary>
         <div id="cronSummary" class="result-box" style="display:block;max-height:220px;"></div>
       </details>
     </section>
@@ -514,24 +657,24 @@
 
   <div class="tab-pane" id="tab-knowledge">
     <div class="subnav">
-      <button class="subnav-btn active" data-subtab="subtab-upload" onclick="showSubtab('subtab-upload')">Upload</button>
-      <button class="subnav-btn" data-subtab="subtab-rc" onclick="showSubtab('subtab-rc')">RC URLs</button>
+      <button type="button" class="subnav-btn active" data-subtab="subtab-upload" onclick="showSubtab('subtab-upload')" data-i18n="subtabUpload">Upload</button>
+      <button type="button" class="subnav-btn" data-subtab="subtab-rc" onclick="showSubtab('subtab-rc')" data-i18n="subtabRc">RC URLs</button>
     </div>
 
     <div id="subtab-upload" class="subtab-pane active">
       <section>
-        <h2>Document Upload</h2>
+        <h2 data-i18n="docUpload">Document upload</h2>
         <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
           <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" multiple />
-          <button onclick="uploadDoc()">Upload selected</button>
-          <button class="ghost" onclick="reindexKb()">Reindex docs</button>
+          <button type="button" onclick="uploadDoc()" data-i18n="uploadSelected">Upload</button>
+          <button type="button" class="ghost" onclick="reindexKb()" data-i18n="reindexDocs">Reindex</button>
         </div>
-        <p style="margin-top:0.55rem;color:var(--muted);font-size:0.82rem;">
-          <strong>Reindex docs</strong> rebuilds search indexes for all uploaded files. Use this when a document shows failed indexing status or when answers seem to miss uploaded sources.
+        <p class="reindex-help" style="margin-top:0.55rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="reindexHelpHtml">
+          <strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.
         </p>
         <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
         <details style="margin-top:0.75rem;">
-          <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span>Persisted docs (registry)</summary>
+          <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span><span data-i18n="persistedDocs">Saved documents</span></summary>
           <div id="docRegistry" class="result-box" style="display:block;max-height:260px;"></div>
         </details>
       </section>
@@ -539,16 +682,16 @@
 
     <div id="subtab-rc" class="subtab-pane">
       <section>
-        <h2>RC URLs (Web Search Sources)</h2>
+        <h2 data-i18n="rcTitle">RC URLs (web sources)</h2>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-          <input id="rcUrlInput" type="text" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-          <button onclick="addRcUrl()">Add</button>
-          <button onclick="discoverRcUrls()">Discover subpages (≤10)</button>
+          <input id="rcUrlInput" type="text" data-i18n-placeholder="rcUrlPh" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+          <button type="button" onclick="addRcUrl()" data-i18n="rcAdd">Add</button>
+          <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Discover subpages (≤10)</button>
         </div>
         <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
         <div id="rcUrlList" style="margin-top:0.75rem;"></div>
-        <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;">
-          When an RC URL is <strong>enabled</strong>, the agent may use OpenRouter web search to fetch relevant docs from that domain during runs.
+        <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcHintHtml">
+          When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.
         </p>
       </section>
     </div>
@@ -556,45 +699,380 @@
 
   <div class="tab-pane" id="tab-interactions">
     <section>
-      <h2>Run History</h2>
+      <h2 data-i18n="historyTitle">Run history</h2>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
-        <span style="font-size:0.8rem;color:var(--muted);">Recent runs</span>
+        <span style="font-size:0.8rem;color:var(--muted);" data-i18n="recentRuns">Recent runs</span>
         <div style="display:flex;gap:0.5rem;">
-          <button onclick="optimizeDataStore()">Optimize DB</button>
-          <button onclick="compactHistory()">Summarize older</button>
-          <button class="danger" onclick="clearHistory()">Clear history</button>
+          <button type="button" onclick="optimizeDataStore()" data-i18n="optimizeDb">Optimize DB</button>
+          <button type="button" onclick="compactHistory()" data-i18n="summarizeOlder">Summarize older</button>
+          <button type="button" class="danger" onclick="clearHistory()" data-i18n="clearHistory">Clear history</button>
         </div>
       </div>
       <details class="opt-card" open style="margin-bottom:0.6rem;">
-        <summary class="opt-summary"><span class="opt-caret">▸</span><span>DB optimize settings</span></summary>
-        <div class="opt-help">Adjust retention days and cleanup options, then click <strong>Optimize DB</strong>.</div>
+        <summary class="opt-summary"><span class="opt-caret">▸</span><span data-i18n="dbOptTitle">Database cleanup</span></summary>
+        <div class="opt-help" data-i18n-html="dbOptHelpHtml">Adjust retention, then run <strong>Optimize DB</strong>.</div>
         <div class="opt-grid">
           <div class="opt-field">
-            <label for="keepInteractionsDays">Keep interactions (days)</label>
+            <label for="keepInteractionsDays" data-i18n="labelKeepInteractions">Keep interactions (days)</label>
             <input id="keepInteractionsDays" type="number" min="0" value="30" />
           </div>
           <div class="opt-field">
-            <label for="keepMemoryDays">Keep memory rows (days)</label>
+            <label for="keepMemoryDays" data-i18n="labelKeepMemory">Keep memory rows (days)</label>
             <input id="keepMemoryDays" type="number" min="0" value="60" />
           </div>
           <div class="opt-field">
-            <label for="keepFeedbackDays">Keep feedback rows (days)</label>
+            <label for="keepFeedbackDays" data-i18n="labelKeepFeedback">Keep feedback rows (days)</label>
             <input id="keepFeedbackDays" type="number" min="0" value="120" />
           </div>
         </div>
         <div class="row">
-          <label style="font-size:0.8rem;color:var(--muted);"><input id="optDeleteReports" type="checkbox" checked /> delete report outputs</label>
-          <label style="font-size:0.8rem;color:var(--muted);"><input id="optVacuum" type="checkbox" checked /> vacuum db</label>
-          <label style="font-size:0.8rem;color:var(--muted);"><input id="optPurgeMemory" type="checkbox" /> purge memory table</label>
+          <label style="font-size:0.8rem;color:var(--muted);"><input id="optDeleteReports" type="checkbox" checked /> <span data-i18n="optDeleteReports">Delete report files</span></label>
+          <label style="font-size:0.8rem;color:var(--muted);"><input id="optVacuum" type="checkbox" checked /> <span data-i18n="optVacuum">Vacuum database</span></label>
+          <label style="font-size:0.8rem;color:var(--muted);"><input id="optPurgeMemory" type="checkbox" /> <span data-i18n="optPurgeMemory">Purge memory table</span></label>
         </div>
         <div id="maintenanceStats" style="margin-top:0.45rem;color:var(--muted);font-size:0.78rem;"></div>
       </details>
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.55rem;">Tip: expand a run and submit feedback (correct/incorrect/useful/noisy). Feedback updates self-evolution memory.</p>
-      <div id="interactions"><div class="empty">Loading...</div></div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.55rem;" data-i18n="historyTip">Tip: expand a run and submit feedback. Feedback updates learning memory.</p>
+      <div id="interactions"><div class="empty" data-i18n="loading">Loading…</div></div>
     </section>
   </div>
 
   <script>
+    /** UI strings only — does not affect assistant reply language. */
+    const I18N = {
+      en: {
+        docTitle: 'Sova — CSM Radar Agent 24/7',
+        appTitle: 'Sova — CSM Radar Agent 24/7',
+        appSubtitle: 'Inbox signal · knowledge-backed answers · drafts when you need them',
+        heroBlurb: 'Review the queue against your knowledge base, keep citations, and request drafts only when you need them.',
+        themeModeLight: 'Light',
+        themeModeDark: 'Dark',
+        tabWorkbench: 'Workbench',
+        tabCron: 'Cron',
+        tabKnowledge: 'Knowledge',
+        tabHistory: 'Run history',
+        workbenchTitle: 'Workbench',
+        workbenchLead: 'Monitor inbox threads, run agent tasks here, and retain Trace and Run history for audits.',
+        profileCardTitle: 'Agent profile',
+        profileConfigure: 'Configure',
+        profilePill: 'Applies to all runs',
+        profileHelp: 'Vendor and product context is merged into the system prompt on every run.',
+        vendorPlaceholder: 'Vendor name',
+        rolePlaceholder: 'Role title (e.g. CSM)',
+        productPlaceholder: 'Product lines / scope (comma-separated)',
+        saveProfile: 'Save profile',
+        profileLoaded: 'Saved profile loaded.',
+        profileDefault: 'Using defaults (saved profile unavailable).',
+        profileSaving: 'Saving…',
+        profileSaved: 'Saved. New runs will use this profile.',
+        threads: 'Threads',
+        newThread: 'New thread',
+        deleteThread: 'Delete',
+        searchThreads: 'Search threads…',
+        loading: 'Loading…',
+        noThreads: 'No threads yet. Create one to begin.',
+        conversationTitleHtml: '<span class="conversation-lead">Conversation with</span> <span class="conversation-brand">Sova</span>',
+        selectThread: 'Select a thread to begin.',
+        threadNumber: 'Thread #{id}',
+        probeInbox: 'Scan inbox',
+        send: 'Send',
+        processing: 'Working…',
+        probing: 'Probing inbox…',
+        assistantWorking: 'Arvo Agent is working…',
+        noThreadSelected: 'No thread selected.',
+        noMessages: 'No messages yet.',
+        messageLabel: 'Message',
+        composerPlaceholder: 'Ask for action items, draft a reply, or paste a client thread…',
+        composerHelp: 'Enter to send · Shift+Enter for a new line',
+        runTrace: 'Run trace',
+        show: 'Show',
+        traceImportant: 'Important',
+        traceTools: 'Tools only',
+        traceAll: 'All events',
+        clear: 'Clear',
+        selectThreadFirst: 'Select a thread first.',
+        roleUser: 'User',
+        roleAssistant: 'Arvo Agent',
+        roleSystem: 'System',
+        cronTitle: 'Cron jobs',
+        cronNamePh: 'Job name',
+        cronExprPh: '0 * * * *',
+        add: 'Add',
+        recentCron: 'Recent cron summaries',
+        noCronJobs: 'No cron jobs.',
+        noCronRuns: 'No cron runs yet.',
+        docUpload: 'Document upload',
+        uploadSelected: 'Upload',
+        reindexDocs: 'Reindex',
+        reindexHelpHtml: '<strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.',
+        persistedDocs: 'Saved documents',
+        noDocsYet: 'No documents yet.',
+        subtabUpload: 'Upload',
+        subtabRc: 'RC URLs',
+        rcTitle: 'RC URLs (web sources)',
+        rcUrlPh: 'https://docs.example.com/…',
+        rcAdd: 'Add',
+        rcDiscover: 'Discover subpages (≤10)',
+        rcHintHtml: 'When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.',
+        noRcUrls: 'No RC URLs saved.',
+        enabled: 'enabled',
+        remove: 'Remove',
+        delete: 'Delete',
+        historyTitle: 'Run history',
+        recentRuns: 'Recent runs',
+        optimizeDb: 'Optimize DB',
+        summarizeOlder: 'Summarize older',
+        clearHistory: 'Clear history',
+        dbOptTitle: 'Database cleanup',
+        dbOptHelpHtml: 'Adjust retention, then run <strong>Optimize DB</strong>.',
+        labelKeepInteractions: 'Keep interactions (days)',
+        labelKeepMemory: 'Keep memory rows (days)',
+        labelKeepFeedback: 'Keep feedback rows (days)',
+        optDeleteReports: 'Delete report files',
+        optVacuum: 'Vacuum database',
+        optPurgeMemory: 'Purge memory table',
+        maintenanceStatsFail: 'Could not load database stats.',
+        historyTip: 'Tip: expand a run and submit feedback. Feedback updates learning memory.',
+        noRunHistory: 'No run history yet.',
+        noToolCalls: 'No tool calls recorded',
+        expandDetails: 'Expand details',
+        emptyPrompt: '(empty prompt)',
+        emptyOutput: '(empty output)',
+        userPrompt: 'User prompt',
+        finalOutput: 'Final output',
+        feedbackCorrect: 'Correct',
+        feedbackIncorrect: 'Incorrect',
+        feedbackUseful: 'Useful',
+        feedbackNoisy: 'Noisy',
+        cronEnabled: 'Enabled',
+        reindexConfirm: 'Reindex all uploaded documents now?',
+        reindexWorking: 'Reindexing… ({sec}s)',
+        reindexDone: 'Reindex complete in {sec}s. Indexed {count} document(s).',
+        reindexServerOld: 'Reindex is unavailable on this server build. Restart the app, then try again.',
+        selectFiles: 'Select one or more files to upload.',
+        uploadBatch: 'Uploading file {i} / {n}: {name}',
+        uploadSummary: 'Completed: {ok} succeeded, {fail} failed.',
+        success: 'Success',
+        failed: 'Failed',
+        saving: 'Saving…',
+        saved: 'Saved.',
+        discoverShort: 'Discovering…',
+        enterUrl: 'Enter a URL',
+        enterBaseUrl: 'Enter a base URL to discover from',
+        cronNeedName: 'Job name and schedule are required.',
+        deleteKbConfirm: 'Delete this document?',
+        removeUrlConfirm: 'Remove this URL?',
+        deleteThreadConfirm: 'Delete thread {id}? All messages in it will be removed.',
+        langHelp: 'UI language only — assistant replies follow your message language.',
+        optimizeConfirm: 'Run database cleanup now? This may delete older rows and report files.',
+        clearHistoryConfirm: 'Delete all run history?',
+        compactConfirm: 'Summarize and trim interactions older than 7 days?',
+        feedbackSaved: 'Feedback saved. Learning memory updated.',
+        feedbackFail: 'Could not save feedback.',
+        optimizeFail: 'Optimize failed.',
+        deleteFail: 'Delete failed.',
+        threadTitlePrompt: 'Thread title (optional):',
+        correctionPrompt: 'Optional correction / what should change?',
+        discoveredUrls: 'Discovered {n} URLs (saved as disabled):',
+        preparingUpload: 'Uploading {n} file(s)…',
+      },
+      ko: {
+        docTitle: 'Sova — CSM Radar Agent 24/7',
+        appTitle: 'Sova — CSM Radar Agent 24/7',
+        appSubtitle: 'Inbox 신호 · 문서 기반 답변 · 필요 시에만 Draft',
+        heroBlurb: '큐를 지식 베이스와 대조해 검토하고, 출처를 유지하세요. Draft는 필요할 때만 요청하면 됩니다.',
+        themeModeLight: 'Light',
+        themeModeDark: 'Dark',
+        tabWorkbench: 'Workbench',
+        tabCron: 'Cron',
+        tabKnowledge: 'Knowledge',
+        tabHistory: 'Run history',
+        workbenchTitle: 'Workbench',
+        workbenchLead: 'Inbox 스레드를 모니터링하고 여기서 에이전트 작업을 실행하세요. Trace·Run history는 감사용으로 보관됩니다.',
+        profileCardTitle: 'Agent 프로필',
+        profileConfigure: '설정',
+        profilePill: '모든 Run에 적용',
+        profileHelp: 'Vendor·Product 컨텍스트는 매 Run의 system prompt에 반영됩니다.',
+        vendorPlaceholder: 'Vendor 이름',
+        rolePlaceholder: 'Role (예: CSM)',
+        productPlaceholder: 'Product / scope (comma-separated)',
+        saveProfile: '저장',
+        profileLoaded: '저장된 프로필을 불러왔습니다.',
+        profileDefault: '기본값 사용 (저장 프로필을 불러오지 못함)',
+        profileSaving: 'Saving…',
+        profileSaved: '저장됨. 이후 Run에 적용됩니다.',
+        threads: 'Threads',
+        newThread: '새 스레드',
+        deleteThread: '삭제',
+        searchThreads: 'Search threads…',
+        loading: 'Loading…',
+        noThreads: '스레드가 없습니다. 새로 만드세요.',
+        conversationTitleHtml: '<span class="conversation-brand">Sova</span> <span class="conversation-lead">와의 대화</span>',
+        selectThread: '시작할 스레드를 선택하세요.',
+        threadNumber: 'Thread #{id}',
+        probeInbox: 'Inbox 스캔',
+        send: '전송',
+        processing: '처리 중…',
+        probing: 'Inbox 확인 중…',
+        assistantWorking: 'Arvo Agent 처리 중…',
+        noThreadSelected: '선택된 Thread 없음',
+        noMessages: '메시지 없음',
+        messageLabel: '메시지',
+        composerPlaceholder: '액션 아이템, Draft 요청, 또는 고객 스레드 붙여넣기…',
+        composerHelp: 'Enter 전송 · Shift+Enter 줄바꿈',
+        runTrace: 'Trace',
+        show: '필터',
+        traceImportant: 'Important만',
+        traceTools: 'Tools만',
+        traceAll: '전체 이벤트',
+        clear: 'Clear',
+        selectThreadFirst: 'Thread를 먼저 선택하세요.',
+        roleUser: 'User',
+        roleAssistant: 'Arvo Agent',
+        roleSystem: 'System',
+        cronTitle: 'Cron',
+        cronNamePh: 'Job 이름',
+        cronExprPh: '0 * * * *',
+        add: 'Add',
+        recentCron: '최근 Cron 요약',
+        noCronJobs: 'Cron Job 없음',
+        noCronRuns: 'Cron 실행 기록 없음',
+        docUpload: '문서 Upload',
+        uploadSelected: 'Upload',
+        reindexDocs: 'Reindex',
+        reindexHelpHtml: '<strong>Reindex</strong>로 업로드 파일 전체의 search index를 다시 만듭니다. 색인 실패·출처 누락 시.',
+        persistedDocs: '저장된 문서',
+        noDocsYet: '문서 없음',
+        subtabUpload: 'Upload',
+        subtabRc: 'RC URLs',
+        rcTitle: 'RC URLs (web)',
+        rcUrlPh: 'https://docs.example.com/…',
+        rcAdd: 'Add',
+        rcDiscover: 'Discover subpages (≤10)',
+        rcHintHtml: 'RC URL이 <strong>enabled</strong>면 Run 중 해당 도메인 web search를 쓸 수 있어요.',
+        noRcUrls: '저장된 RC URL 없음',
+        enabled: 'On',
+        remove: 'Remove',
+        delete: 'Delete',
+        historyTitle: 'Run history',
+        recentRuns: '최근 Run',
+        optimizeDb: 'Optimize DB',
+        summarizeOlder: '오래된 것 요약',
+        clearHistory: '기록 삭제',
+        dbOptTitle: 'DB cleanup',
+        dbOptHelpHtml: 'Retention 조정 후 <strong>Optimize DB</strong> 실행.',
+        labelKeepInteractions: 'Interactions 보관 (일)',
+        labelKeepMemory: 'Memory rows 보관 (일)',
+        labelKeepFeedback: 'Feedback rows 보관 (일)',
+        optDeleteReports: 'Report 파일 삭제',
+        optVacuum: 'VACUUM',
+        optPurgeMemory: 'Memory 테이블 purge',
+        maintenanceStatsFail: 'DB stats 로드 실패',
+        historyTip: 'Run을 펼쳐 피드백 — learning memory 반영',
+        noRunHistory: 'Run history 없음',
+        noToolCalls: 'Tool call 기록 없음',
+        expandDetails: '펼치기',
+        emptyPrompt: '(empty)',
+        emptyOutput: '(empty)',
+        userPrompt: 'User prompt',
+        finalOutput: 'Final output',
+        feedbackCorrect: 'OK',
+        feedbackIncorrect: 'NG',
+        feedbackUseful: 'Good',
+        feedbackNoisy: 'Noise',
+        cronEnabled: 'On',
+        reindexConfirm: '업로드 문서 전부 Reindex할까요?',
+        reindexWorking: 'Reindex… ({sec}s)',
+        reindexDone: '{sec}s · 문서 {count}개 indexed',
+        reindexServerOld: '이 빌드에서는 Reindex 불가. 앱 재시작 후 재시도.',
+        selectFiles: 'Upload할 파일을 선택하세요',
+        uploadBatch: 'Upload {i} / {n}: {name}',
+        uploadSummary: '완료 · 성공 {ok} / 실패 {fail}',
+        success: 'Success',
+        failed: 'Failed',
+        saving: 'Saving…',
+        saved: 'Saved',
+        discoverShort: 'Discovering…',
+        enterUrl: 'URL 입력',
+        enterBaseUrl: 'Base URL 입력',
+        cronNeedName: 'Job 이름 + cron 식 필요',
+        deleteKbConfirm: '이 문서 삭제할까요?',
+        removeUrlConfirm: '이 URL 제거할까요?',
+        deleteThreadConfirm: 'Thread {id} 삭제? 메시지 전부 삭제됩니다.',
+        langHelp: 'UI만 한/영. 답장 언어는 메시지 따름 (Arvo와 무관).',
+        optimizeConfirm: 'DB cleanup 실행? 오래된 row·report 파일 삭제될 수 있음',
+        clearHistoryConfirm: 'Run history 전부 삭제?',
+        compactConfirm: '7일 지난 interaction 요약·정리?',
+        feedbackSaved: 'Saved. Learning memory 갱신됨',
+        feedbackFail: '피드백 저장 실패',
+        optimizeFail: 'Optimize 실패',
+        deleteFail: '삭제 실패',
+        threadTitlePrompt: 'Thread 제목 (optional)',
+        correctionPrompt: '수정 포인트 (optional)',
+        discoveredUrls: 'URL {n}개 발견 (disabled로 저장):',
+        preparingUpload: 'Upload 준비… ({n} files)',
+      },
+    };
+
+    function uiFmt(key, vars) {
+      let s = uiText(key);
+      Object.keys(vars || {}).forEach((k) => {
+        s = s.split(`{${k}}`).join(String(vars[k]));
+      });
+      return s;
+    }
+
+    let _uiLang = (localStorage.getItem('ui_locale') === 'ko' ? 'ko' : 'en');
+
+    function uiText(key) {
+      const pack = I18N[_uiLang] || I18N.en;
+      return pack[key] ?? I18N.en[key] ?? key;
+    }
+
+    function applyUiLang() {
+      document.documentElement.lang = _uiLang === 'ko' ? 'ko' : 'en';
+      document.querySelectorAll('[data-i18n]').forEach((node) => {
+        const k = node.getAttribute('data-i18n');
+        if (k) node.textContent = uiText(k);
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach((node) => {
+        const k = node.getAttribute('data-i18n-html');
+        if (k) node.innerHTML = uiText(k);
+      });
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+        const k = node.getAttribute('data-i18n-placeholder');
+        if (k) node.placeholder = uiText(k);
+      });
+      document.title = uiText('docTitle');
+      const tf = document.getElementById('traceFilter');
+      if (tf && tf.options && tf.options.length >= 3) {
+        tf.options[0].text = uiText('traceImportant');
+        tf.options[1].text = uiText('traceTools');
+        tf.options[2].text = uiText('traceAll');
+      }
+      const theme = document.documentElement.getAttribute('data-theme') || 'light';
+      const thBtn = document.getElementById('themeToggle');
+      if (thBtn) thBtn.textContent = theme === 'dark' ? uiText('themeModeDark') : uiText('themeModeLight');
+      document.querySelectorAll('.lang-btn').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-lang') === _uiLang);
+      });
+      const ls = document.getElementById('langSwitch');
+      if (ls) ls.setAttribute('title', uiText('langHelp'));
+    }
+
+    function setUiLang(code) {
+      _uiLang = code === 'ko' ? 'ko' : 'en';
+      localStorage.setItem('ui_locale', _uiLang);
+      applyUiLang();
+      loadThreads();
+      loadThreadMessages();
+      loadDocRegistry();
+      loadRcUrls();
+      loadInteractions();
+      loadCronJobs();
+      loadCronSummary();
+    }
+
     async function fetchJson(path, opts = {}) {
       const r = await fetch(path, opts);
       if (!r.ok) throw new Error(await r.text());
@@ -613,7 +1091,7 @@
       const data = await fetchJson('/threads?limit=50' + (q ? `&q=${encodeURIComponent(q)}` : ''));
       const el = document.getElementById('threadList');
       if (!data.length) {
-        el.innerHTML = '<div class="empty" style="padding:1rem 0;">No threads yet. Click “New”.</div>';
+        el.innerHTML = `<div class="empty" style="padding:1rem 0;">${escapeHtml(uiText('noThreads'))}</div>`;
         _activeThreadId = null;
         return;
       }
@@ -629,7 +1107,7 @@
       }
     }
     async function createThread() {
-      const title = (prompt('Thread title (optional):') || '').trim();
+      const title = (prompt(uiText('threadTitlePrompt')) || '').trim();
       const t = await fetchJson('/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -646,35 +1124,36 @@
     }
     async function deleteActiveThread() {
       if (!_activeThreadId) return;
-      if (!confirm(`Delete thread #${_activeThreadId}? This removes all messages in it.`)) return;
+      if (!confirm(uiFmt('deleteThreadConfirm', { id: String(_activeThreadId) }))) return;
       try {
         await fetchJson(`/threads/${encodeURIComponent(_activeThreadId)}`, { method: 'DELETE' });
         _activeThreadId = null;
         await loadThreads();
         await loadThreadMessages();
       } catch (e) {
-        alert('Delete failed: ' + e.message);
+        alert(uiText('deleteFail') + ': ' + e.message);
       }
     }
     async function loadThreadMessages() {
       const hint = document.getElementById('threadHint');
       const el = document.getElementById('transcript');
       if (!_activeThreadId) {
-        if (hint) hint.textContent = 'Select a thread to start.';
-        el.innerHTML = '<div class="empty">No thread selected.</div>';
+        if (hint) hint.textContent = uiText('selectThread');
+        el.innerHTML = `<div class="empty">${escapeHtml(uiText('noThreadSelected'))}</div>`;
         return;
       }
-      if (hint) hint.textContent = `Thread #${_activeThreadId}`;
+      if (hint) hint.textContent = uiText('threadNumber').replace(/\{id\}/g, String(_activeThreadId));
       const msgs = await fetchJson(`/threads/${encodeURIComponent(_activeThreadId)}/messages?limit=200`);
       if (!msgs.length) {
-        el.innerHTML = '<div class="empty">No messages yet.</div>';
+        el.innerHTML = `<div class="empty">${escapeHtml(uiText('noMessages'))}</div>`;
         return;
       }
       el.innerHTML = msgs.map(m => {
         const role = String(m.role || 'system');
+        const roleLabel = role === 'user' ? uiText('roleUser') : role === 'assistant' ? uiText('roleAssistant') : uiText('roleSystem');
         return `<div class="msg ${escapeHtml(role)}">
           <div class="msg-head">
-            <div class="msg-role">${escapeHtml(role)}</div>
+            <div class="msg-role">${escapeHtml(roleLabel)}</div>
             <div class="msg-time">${escapeHtml(_fmtTime(m.created_at || ''))}</div>
           </div>
           <div class="msg-body">${escapeHtml(m.content || '')}</div>
@@ -684,10 +1163,10 @@
     }
     async function _sendToThread({ text, probe }) {
       if (!_activeThreadId) {
-        alert('Select a thread first.');
+        alert(uiText('selectThreadFirst'));
         return;
       }
-      setProcessingUI(true, probe ? 'Probing inbox…' : 'Assistant is processing…');
+      setProcessingUI(true, probe ? uiText('probing') : uiText('assistantWorking'));
       startTraceUI();
       try {
         const started = await fetchJson('/threads/send', {
@@ -722,10 +1201,10 @@
         document.getElementById('profileVendorName').value = p.vendor_name || '';
         document.getElementById('profileProductContext').value = p.product_context || '';
         document.getElementById('profileRoleTitle').value = p.role_title || '';
-        if (status) status.textContent = 'Loaded saved profile.';
+        if (status) status.textContent = uiText('profileLoaded');
       } catch (e) {
         console.warn('Failed to load agent profile:', e);
-        if (status) status.textContent = 'Using defaults (failed to load saved profile).';
+        if (status) status.textContent = uiText('profileDefault');
       }
     }
     async function saveAgentProfile() {
@@ -735,14 +1214,14 @@
         product_context: (document.getElementById('profileProductContext').value || '').trim(),
         role_title: (document.getElementById('profileRoleTitle').value || '').trim(),
       };
-      status.textContent = 'Saving...';
+      status.textContent = uiText('profileSaving');
       try {
         await fetchJson('/agent/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        status.textContent = 'Saved. New runs will use this profile.';
+        status.textContent = uiText('profileSaved');
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
       }
@@ -750,17 +1229,17 @@
     async function uploadDoc() {
       const fileInput = document.getElementById('uploadFile');
       const files = Array.from(fileInput.files || []);
-      if (!files.length) { alert('Select one or more files to upload.'); return; }
+      if (!files.length) { alert(uiText('selectFiles')); return; }
 
       const el = document.getElementById('uploadResult');
       el.style.display = 'block';
-      el.textContent = `Uploading ${files.length} file(s)...`;
+      el.textContent = uiFmt('preparingUpload', { n: String(files.length) });
 
       const ok = [];
       const fail = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        el.textContent = `Uploading ${i + 1}/${files.length}: ${file.name}`;
+        el.textContent = uiFmt('uploadBatch', { i: String(i + 1), n: String(files.length), name: file.name });
         const form = new FormData();
         form.append('file', file);
         try {
@@ -774,36 +1253,36 @@
       }
 
       const lines = [];
-      lines.push(`Completed: ${ok.length} succeeded, ${fail.length} failed.`);
-      if (ok.length) lines.push('', 'Success:', ...ok);
-      if (fail.length) lines.push('', 'Failed:', ...fail);
+      lines.push(uiFmt('uploadSummary', { ok: String(ok.length), fail: String(fail.length) }));
+      if (ok.length) lines.push('', uiText('success') + ':', ...ok);
+      if (fail.length) lines.push('', uiText('failed') + ':', ...fail);
       el.textContent = lines.join('\n');
       fileInput.value = '';
       loadDocRegistry();
     }
     async function reindexKb() {
       const el = document.getElementById('uploadResult');
-      if (!confirm('Reindex all uploaded documents now?')) return;
+      if (!confirm(uiText('reindexConfirm'))) return;
       el.style.display = 'block';
       let sec = 0;
-      el.textContent = 'Reindexing all uploaded docs... (0s)';
+      el.textContent = uiFmt('reindexWorking', { sec: '0' });
       const timer = setInterval(() => {
         sec += 1;
-        el.textContent = `Reindexing all uploaded docs... (${sec}s)`;
+        el.textContent = uiFmt('reindexWorking', { sec: String(sec) });
       }, 1000);
       try {
         const res = await fetchJson('/kb/reindex', { method: 'POST' });
         const count = Number(res.indexed_docs || 0);
         clearInterval(timer);
-        el.textContent = `Reindex complete in ${sec}s. Indexed ${count} document(s).`;
+        el.textContent = uiFmt('reindexDone', { sec: String(sec), count: String(count) });
         loadDocRegistry();
       } catch (e) {
         clearInterval(timer);
         const msg = String(e.message || '');
         if (msg.includes('Not Found') || msg.includes('"detail":"Not Found"')) {
-          el.textContent = 'Reindex is unavailable on the running server. Restart the app to load the latest backend route (/kb/reindex), then try again.';
+          el.textContent = uiText('reindexServerOld');
         } else {
-          el.textContent = 'Reindex failed: ' + msg;
+          el.textContent = uiText('failed') + ': ' + msg;
         }
       }
     }
@@ -811,18 +1290,18 @@
     async function loadDocRegistry() {
       const data = await fetchJson('/kb/documents?limit=200');
       const el = document.getElementById('docRegistry');
-      if (!data.length) { el.textContent = 'No docs ingested yet.'; return; }
+      if (!data.length) { el.textContent = uiText('noDocsYet'); return; }
       el.innerHTML = data.map(d => {
         const loc = d.url ? d.url : (d.path || '');
         const title = d.title || '';
         const lang = d.language || '';
         const scope = d.scope || '';
-        return `<div style="margin-bottom:0.65rem;padding-bottom:0.65rem;border-bottom:1px dashed var(--border)"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;"><div style="min-width:0;"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span><br><code style="font-size:0.78rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:560px;">${escapeHtml(loc)}</code><br><span style="color:var(--muted);font-size:0.78rem;">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span></div><button class="danger" style="padding:0.4rem 0.6rem;border-radius:10px;" onclick="deleteKbDoc(${d.id})">Delete</button></div></div>`;
+        return `<div style="margin-bottom:0.65rem;padding-bottom:0.65rem;border-bottom:1px dashed var(--border)"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;"><div style="min-width:0;"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span><br><code style="font-size:0.78rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:560px;">${escapeHtml(loc)}</code><br><span style="color:var(--muted);font-size:0.78rem;">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span></div><button type="button" class="danger" style="padding:0.4rem 0.6rem;border-radius:8px;" onclick="deleteKbDoc(${d.id})">${escapeHtml(uiText('delete'))}</button></div></div>`;
       }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.35rem 0;">');
     }
 
     async function deleteKbDoc(id) {
-      if (!confirm('Delete KB document id=' + id + '?')) return;
+      if (!confirm(uiText('deleteKbConfirm'))) return;
       try {
         await fetchJson(`/kb/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
         loadDocRegistry();
@@ -833,28 +1312,28 @@
     async function loadRcUrls() {
       const data = await fetchJson('/rc/urls?limit=200');
       const el = document.getElementById('rcUrlList');
-      if (!data.length) { el.innerHTML = '<div class="empty">No RC URLs saved.</div>'; return; }
+      if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRcUrls'))}</div>`; return; }
       el.innerHTML = data.map(r => {
         const checked = r.enabled ? 'checked' : '';
         return `<div class="cron-item" style="gap:0.75rem;">
           <label style="display:flex;align-items:center;gap:0.35rem;">
-            <input type="checkbox" ${checked} onchange="toggleRcUrl('${escapeHtml(r.url)}', this.checked)"> enabled
+            <input type="checkbox" ${checked} onchange="toggleRcUrl('${escapeHtml(r.url)}', this.checked)"> ${escapeHtml(uiText('enabled'))}
           </label>
           <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.url)}</code>
-          <button class="danger" onclick="deleteRcUrl('${escapeHtml(r.url)}')">Remove</button>
+          <button type="button" class="danger" onclick="deleteRcUrl('${escapeHtml(r.url)}')">${escapeHtml(uiText('remove'))}</button>
         </div>`;
       }).join('');
     }
     async function addRcUrl() {
       const url = document.getElementById('rcUrlInput').value.trim();
-      if (!url) { alert('Enter a URL'); return; }
+      if (!url) { alert(uiText('enterUrl')); return; }
       const el = document.getElementById('rcUrlResult');
       el.style.display = 'block';
-      el.textContent = 'Saving...';
+      el.textContent = uiText('saving');
       try {
         await fetchJson('/rc/urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled: true }) });
         document.getElementById('rcUrlInput').value = '';
-        el.textContent = 'Saved.';
+        el.textContent = uiText('saved');
         loadRcUrls();
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
@@ -869,7 +1348,7 @@
       loadRcUrls();
     }
     async function deleteRcUrl(url) {
-      if (!confirm('Remove ' + url + '?')) return;
+      if (!confirm(uiText('removeUrlConfirm'))) return;
       try {
         await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
       } catch (e) {
@@ -879,13 +1358,13 @@
     }
     async function discoverRcUrls() {
       const base_url = document.getElementById('rcUrlInput').value.trim();
-      if (!base_url) { alert('Enter a base URL to discover from'); return; }
+      if (!base_url) { alert(uiText('enterBaseUrl')); return; }
       const el = document.getElementById('rcUrlResult');
       el.style.display = 'block';
-      el.textContent = 'Discovering...';
+      el.textContent = uiText('discoverShort');
       try {
         const res = await fetchJson('/rc/discover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base_url, max_urls: 10 }) });
-        el.textContent = `Discovered ${res.discovered.length} URLs (saved as disabled):\\n` + (res.discovered || []).join('\\n');
+        el.textContent = uiFmt('discoveredUrls', { n: String((res.discovered || []).length) }) + '\n' + (res.discovered || []).join('\n');
         loadRcUrls();
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
@@ -894,7 +1373,7 @@
     async function addCron() {
       const name = document.getElementById('cronName').value.trim();
       const expr = document.getElementById('cronExpr').value.trim();
-      if (!name || !expr) { alert('Name and cron expression required'); return; }
+      if (!name || !expr) { alert(uiText('cronNeedName')); return; }
       try {
         await fetchJson('/cron', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, cron_expression: expr, timezone: 'Asia/Seoul' }) });
         loadCronJobs();
@@ -914,13 +1393,13 @@
     async function loadCronJobs() {
       const jobs = await fetchJson('/cron');
       const el = document.getElementById('cronList');
-      if (!jobs.length) { el.innerHTML = '<div class="empty">No cron jobs.</div>'; return; }
-      el.innerHTML = jobs.map(j => `<div class="cron-item"><span style="flex:1">${j.name}</span><code>${j.cron_expression}</code><label><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron('${j.name}', this.checked)"> Enabled</label><button class="danger" onclick="deleteCron('${j.name}')">Delete</button></div>`).join('');
+      if (!jobs.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noCronJobs'))}</div>`; return; }
+      el.innerHTML = jobs.map(j => `<div class="cron-item"><span style="flex:1">${j.name}</span><code>${j.cron_expression}</code><label><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron('${j.name}', this.checked)"> ${escapeHtml(uiText('cronEnabled'))}</label><button type="button" class="danger" onclick="deleteCron('${j.name}')">${escapeHtml(uiText('delete'))}</button></div>`).join('');
     }
     async function loadCronSummary() {
       const data = await fetchJson('/cron/summary?limit=20');
       const el = document.getElementById('cronSummary');
-      if (!data.length) { el.innerHTML = '<div class="empty">No cron runs yet.</div>'; return; }
+      if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noCronRuns'))}</div>`; return; }
       el.innerHTML = data.map(i => {
         const msg = (i.output_text || i.error_message || '').slice(0, 500);
         return `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
@@ -1014,7 +1493,8 @@
       if (status === 'error') pill.classList.add('error');
       pill.textContent = status;
     }
-    function setProcessingUI(on, text = 'Processing…') {
+    function setProcessingUI(on, text) {
+      if (text == null) text = uiText('processing');
       const el = document.getElementById('processingIndicator');
       const tx = document.getElementById('processingText');
       if (!el || !tx) return;
@@ -1022,19 +1502,19 @@
       el.classList.toggle('show', !!on);
     }
     function processingTextFromEvent(e) {
-      if (!e) return 'Assistant is processing…';
+      if (!e) return uiText('assistantWorking');
       const type = String(e.type || '');
       const title = String(e.title || '');
       if (type === 'tool_start') {
-        const t = title.replace('Tool start:', '').trim() || 'tool';
-        return `Using tool: ${t}…`;
+        const tn = title.replace('Tool start:', '').trim() || 'tool';
+        return _uiLang === 'ko' ? `도구 실행: ${tn}…` : `Using tool: ${tn}…`;
       }
-      if (type === 'tool_end') return 'Tool finished. Analyzing results…';
-      if (type === 'model_start') return 'Reasoning…';
-      if (type === 'model_end') return 'Drafting response…';
-      if (type === 'chain_start') return 'Planning next steps…';
-      if (type === 'chain_end') return 'Finalizing…';
-      return 'Assistant is processing…';
+      if (type === 'tool_end') return _uiLang === 'ko' ? '도구 완료. 결과 분석 중…' : 'Tool finished. Analyzing…';
+      if (type === 'model_start') return _uiLang === 'ko' ? '추론 중…' : 'Reasoning…';
+      if (type === 'model_end') return _uiLang === 'ko' ? '응답 작성 중…' : 'Drafting response…';
+      if (type === 'chain_start') return _uiLang === 'ko' ? '다음 단계 계획…' : 'Planning next steps…';
+      if (type === 'chain_end') return _uiLang === 'ko' ? '마무리 중…' : 'Finalizing…';
+      return uiText('assistantWorking');
     }
 
     function getInitialTheme() {
@@ -1046,7 +1526,7 @@
     function applyTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
       const btn = document.getElementById('themeToggle');
-      if (btn) btn.textContent = theme === 'dark' ? 'Dark' : 'Light';
+      if (btn) btn.textContent = theme === 'dark' ? uiText('themeModeDark') : uiText('themeModeLight');
     }
 
     function toggleTheme() {
@@ -1127,37 +1607,39 @@
     async function loadInteractions() {
       const data = await fetchJson('/interactions');
       const el = document.getElementById('interactions');
-      if (!data.length) { el.innerHTML = '<div class="empty">No run history yet.</div>'; return; }
+      if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRunHistory'))}</div>`; return; }
       el.innerHTML = data.map(i => {
         const md = parseInteractionMetadata(i.metadata);
         const tools = Array.isArray(md.tools_used) ? md.tools_used : [];
         const toolChips = tools.length
-          ? tools.map(t => `<span class="tool-chip">${escapeHtml(t)}</span>`).join('')
-          : '<span style="color:var(--muted);font-size:0.78rem;">No tool calls recorded</span>';
+          ? tools.map(w => `<span class="tool-chip">${escapeHtml(w)}</span>`).join('')
+          : `<span style="color:var(--muted);font-size:0.78rem;">${escapeHtml(uiText('noToolCalls'))}</span>`;
         const promptPreview = escapeHtml((i.input_text || '').slice(0, 220));
         const out = escapeHtml(i.output_text || i.error_message || '');
         const fullPrompt = escapeHtml(i.input_text || '');
+        const ep = escapeHtml(uiText('emptyPrompt'));
+        const eo = escapeHtml(uiText('emptyOutput'));
         return `
           <details class="interaction">
             <summary style="cursor:pointer;list-style:none;">
               <div style="display:flex;align-items:center;gap:0.35rem;color:var(--muted);font-size:0.78rem;font-weight:900;margin-bottom:0.25rem;">
-                <span class="section-caret">▸</span><span>Expand details</span>
+                <span class="section-caret">▸</span><span>${escapeHtml(uiText('expandDetails'))}</span>
               </div>
               <div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
-              <div style="font-size:0.84rem;font-family:var(--mono);white-space:pre-wrap;line-height:1.35;">${promptPreview || '(empty prompt)'}</div>
+              <div style="font-size:0.84rem;font-family:var(--mono);white-space:pre-wrap;line-height:1.35;">${promptPreview || ep}</div>
               <div style="margin-top:0.35rem;">${toolChips}</div>
             </summary>
             <div style="margin-top:0.65rem;">
               <div class="row" style="margin-bottom:0.55rem;">
-                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'correct')">Correct</button>
-                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'incorrect')">Incorrect</button>
-                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'useful')">Useful</button>
-                <button class="ghost" onclick="submitRunFeedback(${i.id}, 'noisy')">Noisy</button>
+                <button type="button" class="ghost" onclick="submitRunFeedback(${i.id}, 'correct')">${escapeHtml(uiText('feedbackCorrect'))}</button>
+                <button type="button" class="ghost" onclick="submitRunFeedback(${i.id}, 'incorrect')">${escapeHtml(uiText('feedbackIncorrect'))}</button>
+                <button type="button" class="ghost" onclick="submitRunFeedback(${i.id}, 'useful')">${escapeHtml(uiText('feedbackUseful'))}</button>
+                <button type="button" class="ghost" onclick="submitRunFeedback(${i.id}, 'noisy')">${escapeHtml(uiText('feedbackNoisy'))}</button>
               </div>
-              <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.25rem;">User prompt</div>
-              <pre style="white-space:pre-wrap;font-size:0.82rem;margin-bottom:0.55rem;">${fullPrompt || '(empty prompt)'}</pre>
-              <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.25rem;">Final output</div>
-              <pre style="white-space:pre-wrap;font-size:0.85rem;">${out || '(empty output)'}</pre>
+              <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.25rem;">${escapeHtml(uiText('userPrompt'))}</div>
+              <pre style="white-space:pre-wrap;font-size:0.82rem;margin-bottom:0.55rem;">${fullPrompt || ep}</pre>
+              <div style="color:var(--muted);font-size:0.78rem;margin-bottom:0.25rem;">${escapeHtml(uiText('finalOutput'))}</div>
+              <pre style="white-space:pre-wrap;font-size:0.85rem;">${out || eo}</pre>
             </div>
           </details>
         `;
@@ -1165,20 +1647,20 @@
     }
     async function submitRunFeedback(interactionId, verdict) {
       const needsText = verdict === 'incorrect' || verdict === 'noisy';
-      const correction = needsText ? (prompt('Optional correction / what should change?') || '').trim() : '';
+      const correction = needsText ? (prompt(uiText('correctionPrompt')) || '').trim() : '';
       try {
         await fetchJson('/memory/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ interaction_id: interactionId, verdict, correction })
         });
-        alert('Feedback saved. Self-evolution memory refreshed.');
+        alert(uiText('feedbackSaved'));
       } catch (e) {
-        alert('Failed to save feedback: ' + e.message);
+        alert(uiText('feedbackFail') + ': ' + e.message);
       }
     }
     async function optimizeDataStore() {
-      if (!confirm('Optimize DB now? This prunes older rows, vacuums DB, and can remove report output files.')) return;
+      if (!confirm(uiText('optimizeConfirm'))) return;
       try {
         const interactionsDays = Number(document.getElementById('keepInteractionsDays')?.value || 30);
         const memoryDays = Number(document.getElementById('keepMemoryDays')?.value || 60);
@@ -1201,7 +1683,7 @@
         loadMaintenanceStats();
         loadInteractions();
       } catch (e) {
-        alert('Optimize failed: ' + e.message);
+        alert(uiText('optimizeFail') + ': ' + e.message);
       }
     }
     async function loadMaintenanceStats() {
@@ -1212,19 +1694,18 @@
         const sizeMb = ((s.database_size_bytes || 0) / (1024 * 1024)).toFixed(2);
         el.textContent = `DB: ${sizeMb} MB | interactions=${s.agent_interactions || 0}, memory=${s.agent_memory || 0}, feedback=${s.agent_feedback || 0}, kb_docs=${s.kb_documents || 0}, rc_urls=${s.rc_urls || 0}`;
       } catch (e) {
-        el.textContent = 'Failed to load maintenance stats.';
+        el.textContent = uiText('maintenanceStatsFail');
       }
     }
-    // Initial loads
-    // Theme init
     applyTheme(getInitialTheme());
+    applyUiLang();
 
     loadAgentProfile();
     loadThreads();
     loadDocRegistry();
     loadRcUrls();
     async function clearHistory() {
-      if (!confirm('Delete all interaction history?')) return;
+      if (!confirm(uiText('clearHistoryConfirm'))) return;
       try {
         await fetchJson('/interactions', { method: 'DELETE' });
         loadInteractions();
@@ -1234,7 +1715,7 @@
     }
     async function compactHistory() {
       // Summarize and trim interactions older than 7 days
-      if (!confirm('Summarize and trim interactions older than 7 days?')) return;
+      if (!confirm(uiText('compactConfirm'))) return;
       const now = new Date();
       const cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       try {
@@ -1258,15 +1739,16 @@
     loadInteractions();
     loadMaintenanceStats();
 
-    // Composer UX: Enter sends, Shift+Enter inserts newline.
+    // Composer: Enter sends, Shift+Enter newline. Skip while IME composing (e.g. Korean input).
     const composerEl = document.getElementById('composer');
     if (composerEl) {
       composerEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendThreadMessage();
-        }
-      });
+        if (e.key !== 'Enter' || e.shiftKey) return;
+        if (e.isComposing || e.keyCode === 229) return;
+        e.preventDefault();
+        e.stopPropagation();
+        void sendThreadMessage();
+      }, true);
     }
   </script>
   </div>
