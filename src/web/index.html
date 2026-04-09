@@ -529,6 +529,327 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    .dashboard-page {
+      max-width: 100%;
+    }
+    .dashboard-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+    }
+    .dashboard-controls__left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      align-items: flex-end;
+      min-width: 0;
+    }
+    .dashboard-controls__right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      margin-left: auto;
+    }
+    .dashboard-filters {
+      gap: 0.85rem;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .dashboard-filters .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .dashboard-filters .filter-field label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    html[lang="ko"] .dashboard-filters .filter-field label {
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .dashboard-filters select {
+      min-width: 9.5rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+    .dashboard-feed {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+      background: var(--surface-raised);
+      padding: 0.65rem 0.75rem;
+      max-height: min(70vh, 720px);
+      overflow-y: auto;
+      margin-top: 0.65rem;
+    }
+    .dashboard-feed--list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+    .dashboard-feed--grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .dashboard-layout-bar {
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .dashboard-layout-bar .action-board-hint {
+      white-space: nowrap;
+    }
+    html[lang="ko"] .dashboard-layout-bar .action-board-hint {
+      letter-spacing: 0;
+    }
+    .dashboard-layout-bar button.active {
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .csm-action-card {
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 0.75rem 0.85rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+    .dashboard-feed--grid .csm-action-card {
+      min-height: 8.5rem;
+    }
+    .csm-action-card__top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.35rem;
+    }
+    .csm-action-card__cat {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      background: var(--surface2);
+    }
+    .csm-action-card__title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      color: var(--text);
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+    }
+    .csm-action-card__brief {
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--text);
+      margin: 0;
+    }
+    .csm-action-card__answer {
+      margin: 0;
+      border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border-subtle));
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+      padding: 0.5rem 0.6rem;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    .csm-action-card__tech {
+      margin: 0;
+      border: 1px solid color-mix(in srgb, #7c5cff 30%, var(--border-subtle));
+      border-radius: 10px;
+      background: color-mix(in srgb, #7c5cff 10%, var(--surface));
+      padding: 0.5rem 0.6rem;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    .csm-action-card__meta {
+      font-size: 0.6875rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .csm-action-card details {
+      font-size: 0.78rem;
+    }
+    .csm-action-card details summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .csm-action-card__summary-body {
+      margin: 0.35rem 0 0;
+      white-space: pre-wrap;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--text);
+      max-height: 11rem;
+      overflow-y: auto;
+    }
+    .csm-action-card ul {
+      margin: 0.15rem 0 0 1rem;
+      padding: 0;
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+    .csm-action-card__foot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: auto;
+      padding-top: 0.35rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .csm-legacy-card {
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 0.6rem 0.7rem;
+      background: color-mix(in srgb, var(--muted) 5%, var(--surface));
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .csm-legacy-card pre {
+      margin: 0.35rem 0 0;
+      font-size: 0.72rem;
+      white-space: pre-wrap;
+      max-height: 6rem;
+      overflow: hidden;
+      color: var(--text);
+    }
+    .dashboard-run-group {
+      margin-bottom: 1rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .dashboard-run-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .dashboard-run-group__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+    .dashboard-run-group__head .dashboard-run-dismiss {
+      margin-left: auto;
+    }
+    .dashboard-run-group__body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      padding-left: 0.15rem;
+    }
+    .csm-skipped-card {
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 0.65rem 0.75rem;
+      background: color-mix(in srgb, var(--muted) 6%, var(--surface));
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .csm-skipped-card .csm-skipped-note {
+      margin: 0.35rem 0 0;
+      white-space: pre-wrap;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .action-board-item {
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      background: var(--surface);
+      padding: 0.55rem 0.65rem;
+      margin-bottom: 0.5rem;
+    }
+    .action-board-item--error {
+      border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+      background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+    }
+    .action-board-card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.65rem;
+      margin-bottom: 0.4rem;
+    }
+    .action-board-badge {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.12rem 0.4rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--surface2);
+    }
+    .action-board-badge--error {
+      color: var(--danger);
+      border-color: var(--danger-border);
+      background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+    }
+    .action-board-meta {
+      font-size: 0.6875rem;
+      color: var(--muted);
+      margin-bottom: 0;
+      font-variant-numeric: tabular-nums;
+      flex: 1;
+      min-width: 12rem;
+    }
+    .action-board-body {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: var(--text);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .action-board-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+      margin-top: 0.55rem;
+    }
+    .action-board-hint {
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.35;
+    }
+    .action-board-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      width: 100%;
+      margin-bottom: 0.35rem;
+    }
     @media (max-width: 860px) {
       .workbench-layout { grid-template-columns: 1fr; }
     }
@@ -539,7 +860,7 @@
     <div class="topbar">
       <div>
         <h1 data-i18n="appTitle">Sova — CSM Radar Agent 24/7</h1>
-        <p class="subtitle" data-i18n="appSubtitle">Inbox radar · doc-grounded answers · drafts on demand</p>
+        <p class="subtitle" data-i18n="appSubtitle">Inbox triage · KB-backed next steps · email drafts only when you ask</p>
       </div>
       <div class="row" style="justify-content:flex-end;">
         <div class="lang-switch" id="langSwitch" title="">
@@ -549,6 +870,7 @@
         <button class="ghost" type="button" id="themeToggle" onclick="toggleTheme()">Light</button>
         <div class="nav">
           <button type="button" class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')" data-i18n="tabWorkbench">Workbench</button>
+          <button type="button" class="nav-btn" data-tab="tab-action-dashboard" onclick="showTab('tab-action-dashboard')" data-i18n="tabActionDashboard">Action dashboard</button>
           <button type="button" class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')" data-i18n="tabCron">Cron</button>
           <button type="button" class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')" data-i18n="tabKnowledge">Knowledge</button>
           <button type="button" class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')" data-i18n="tabHistory">Run history</button>
@@ -556,13 +878,13 @@
       </div>
     </div>
     <p class="hero-blurb" data-i18n="heroBlurb">
-      Scan the queue against your KB, cite sources, and draft only when you ask.
+      Triage the inbox against your KB, surface next steps for CSMs, and draft email only when you ask.
     </p>
 
   <div class="tab-pane active" id="tab-agent">
     <section>
       <h2 data-i18n="workbenchTitle">Workbench</h2>
-      <p class="section-lead" data-i18n="workbenchLead">Pull inbox signal, run a task in the thread, and keep Trace + Run history for audit.</p>
+      <p class="section-lead" data-i18n="workbenchLead">Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.</p>
       <details id="profileDetails" class="profile-card" open>
         <summary>
           <div class="profile-head">
@@ -587,6 +909,7 @@
           </div>
         </div>
       </details>
+
       <div class="workbench-layout">
         <div class="panel panel-threads">
           <div class="panel-head">
@@ -635,6 +958,46 @@
             <div id="runTrace" class="trace-list" style="display:block;"></div>
           </details>
         </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane" id="tab-action-dashboard">
+    <section class="dashboard-page">
+      <h2 data-i18n="actionBoardTitle">Action dashboard</h2>
+      <p class="section-lead" data-i18n="actionBoardLead">Structured actions for CSM review after each inbox probe: title, agent brief, and optional thread summary. Full model output stays in Run history.</p>
+      <div class="dashboard-controls">
+        <div class="dashboard-controls__left row dashboard-filters">
+          <div class="filter-field">
+            <label for="dashboardFilterSource" data-i18n="dashboardFilterSource">Source</label>
+            <select id="dashboardFilterSource" onchange="loadActionBoard(true)">
+              <option value="all">All sources</option>
+              <option value="cron">Cron</option>
+              <option value="thread_probe">Thread probe</option>
+              <option value="manual_probe">Manual probe</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="dashboardFilterStatus" data-i18n="dashboardFilterStatus">Status</label>
+            <select id="dashboardFilterStatus" onchange="loadActionBoard(true)">
+              <option value="all">All</option>
+              <option value="completed">Completed</option>
+              <option value="error">Error</option>
+            </select>
+          </div>
+        </div>
+        <div class="dashboard-controls__right row dashboard-layout-bar">
+          <span class="action-board-hint" data-i18n="dashboardLayoutLabel">Layout</span>
+          <button type="button" class="ghost btn-compact" id="dashLayoutList" onclick="setDashboardLayout('list')" data-i18n-title="dashboardLayoutListTitle" title="List (grouped by run)">List</button>
+          <button type="button" class="ghost btn-compact" id="dashLayoutGrid" onclick="setDashboardLayout('grid')" data-i18n-title="dashboardLayoutGridTitle" title="Grid (Finder-style tiles)">Grid</button>
+        </div>
+      </div>
+      <div id="actionBoardFeed" class="dashboard-feed dashboard-feed--list"><div class="empty" style="padding:0.75rem 0;" data-i18n="loading">Loading…</div></div>
+      <div class="action-board-toolbar">
+        <button type="button" class="ghost btn-compact" onclick="loadActionBoard(true)" data-i18n="actionBoardRefresh">Refresh</button>
+        <button type="button" class="ghost btn-compact" id="dashboardLoadMoreBtn" style="display:none;" onclick="loadActionBoard(false)" data-i18n="dashboardLoadMore">Load more</button>
+        <span class="action-board-hint" data-i18n="actionBoardHelp">Full detail and feedback stay under Run history.</span>
+        <span class="action-board-hint" data-i18n="dashboardPollingHint" style="margin-left:auto;">Refreshes every 60s while this tab is open.</span>
       </div>
     </section>
   </div>
@@ -743,20 +1106,21 @@
       en: {
         docTitle: 'Sova — CSM Radar Agent 24/7',
         appTitle: 'Sova — CSM Radar Agent 24/7',
-        appSubtitle: 'Inbox signal · knowledge-backed answers · drafts when you need them',
-        heroBlurb: 'Review the queue against your knowledge base, keep citations, and request drafts only when you need them.',
+        appSubtitle: 'Inbox triage · KB-backed next steps · email drafts only when you ask',
+        heroBlurb: 'Triage the queue against your knowledge base, surface action items for CSMs, and request email drafts only when you need them.',
         themeModeLight: 'Light',
         themeModeDark: 'Dark',
         tabWorkbench: 'Workbench',
         tabCron: 'Cron',
         tabKnowledge: 'Knowledge',
         tabHistory: 'Run history',
+        tabActionDashboard: 'Action dashboard',
         workbenchTitle: 'Workbench',
-        workbenchLead: 'Monitor inbox threads, run agent tasks here, and retain Trace and Run history for audits.',
+        workbenchLead: 'Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.',
         profileCardTitle: 'Agent profile',
         profileConfigure: 'Configure',
         profilePill: 'Applies to all runs',
-        profileHelp: 'Vendor and product context is merged into the system prompt on every run.',
+        profileHelp: 'Vendor and product context is merged into the system prompt on every run (CSM assistant behavior).',
         vendorPlaceholder: 'Vendor name',
         rolePlaceholder: 'Role title (e.g. CSM)',
         productPlaceholder: 'Product lines / scope (comma-separated)',
@@ -778,7 +1142,7 @@
         send: 'Send',
         processing: 'Working…',
         probing: 'Probing inbox…',
-        assistantWorking: 'Arvo Agent is working…',
+        assistantWorking: 'Sova Agent is working…',
         noThreadSelected: 'No thread selected.',
         noMessages: 'No messages yet.',
         messageLabel: 'Message',
@@ -792,7 +1156,7 @@
         clear: 'Clear',
         selectThreadFirst: 'Select a thread first.',
         roleUser: 'User',
-        roleAssistant: 'Arvo Agent',
+        roleAssistant: 'Sova Agent',
         roleSystem: 'System',
         cronTitle: 'Cron jobs',
         cronNamePh: 'Job name',
@@ -875,24 +1239,63 @@
         correctionPrompt: 'Optional correction / what should change?',
         discoveredUrls: 'Discovered {n} URLs (saved as disabled):',
         preparingUpload: 'Uploading {n} file(s)…',
+        actionBoardTitle: 'Action dashboard',
+        actionBoardLead: 'Structured actions for CSM review after each inbox probe: title, agent brief, and optional thread summary. Full model output stays in Run history.',
+        actionBoardRefresh: 'Refresh',
+        actionBoardHelp: 'Full detail and feedback stay under Run history.',
+        actionBoardEmpty: 'No inbox reviews yet. Run Scan inbox, a thread probe, or a cron job.',
+        actionBoardFail: 'Could not load action board',
+        dashboardFilterSource: 'Source',
+        dashboardFilterStatus: 'Status',
+        dashboardSourceAll: 'All sources',
+        dashboardSourceCron: 'Cron',
+        dashboardSourceThread: 'Thread probe',
+        dashboardSourceManual: 'Manual probe',
+        dashboardStatusAll: 'All',
+        dashboardStatusCompleted: 'Completed',
+        dashboardStatusError: 'Error',
+        dashboardLoadMore: 'Load more',
+        dashboardOpenThread: 'Open thread',
+        dashboardViewInHistory: 'View in Run history',
+        dashboardPollingHint: 'Auto-refresh every 60s on this tab.',
+        dashboardLayoutLabel: 'Layout',
+        dashboardLayoutListTitle: 'List — grouped by probe run',
+        dashboardLayoutGridTitle: 'Grid — Finder-style tiles',
+        dashboardCuratedAnswer: 'Curated answer for CSM',
+        dashboardTechnicalRationale: 'Technical rationale',
+        dashboardEscalationGuidance: 'Escalation guidance',
+        dashboardThreadSummary: 'Thread summary',
+        dashboardNextSteps: 'Next steps',
+        dashboardReferences: 'References',
+        dashboardSkippedTitle: 'No dashboard items',
+        dashboardLegacyTitle: 'Unstructured output',
+        dashboardParseError: 'Brief unavailable (parse)',
+        dashboardProbeError: 'Probe failed',
+        dashboardDismissTask: 'Remove',
+        dashboardDismissEntireRun: 'Dismiss run',
+        dashboardDismissFromBoard: 'Remove from dashboard',
+        dashboardDismissConfirmAction: 'Remove this task from the Action dashboard? The run stays in Run history.',
+        dashboardDismissConfirmRun: 'Remove this from the Action dashboard? The interaction stays in Run history.',
+        dashboardDismissFail: 'Could not remove',
       },
       ko: {
         docTitle: 'Sova — CSM Radar Agent 24/7',
         appTitle: 'Sova — CSM Radar Agent 24/7',
-        appSubtitle: 'Inbox 신호 · 문서 기반 답변 · 필요 시에만 Draft',
-        heroBlurb: '큐를 지식 베이스와 대조해 검토하고, 출처를 유지하세요. Draft는 필요할 때만 요청하면 됩니다.',
+        appSubtitle: 'Inbox 트리아지 · KB 기반 다음 단계 · 이메일 Draft는 요청 시에만',
+        heroBlurb: '큐를 지식 베이스와 대조해 트리아지하고, CSM용 액션 아이템을 정리하세요. 이메일 Draft는 필요할 때만 요청하면 됩니다.',
         themeModeLight: 'Light',
         themeModeDark: 'Dark',
         tabWorkbench: 'Workbench',
         tabCron: 'Cron',
         tabKnowledge: 'Knowledge',
         tabHistory: 'Run history',
+        tabActionDashboard: 'Action dashboard',
         workbenchTitle: 'Workbench',
-        workbenchLead: 'Inbox 스레드를 모니터링하고 여기서 에이전트 작업을 실행하세요. Trace·Run history는 감사용으로 보관됩니다.',
+        workbenchLead: '스레드·대화는 Workbench에서. Inbox 리뷰 Run은 Action dashboard 탭에서 확인하세요. Trace·Run history는 감사용입니다.',
         profileCardTitle: 'Agent 프로필',
         profileConfigure: '설정',
         profilePill: '모든 Run에 적용',
-        profileHelp: 'Vendor·Product 컨텍스트는 매 Run의 system prompt에 반영됩니다.',
+        profileHelp: 'Vendor·Product 컨텍스트는 매 Run의 system prompt에 반영됩니다 (CSM 어시스턴트 동작).',
         vendorPlaceholder: 'Vendor 이름',
         rolePlaceholder: 'Role (예: CSM)',
         productPlaceholder: 'Product / scope (comma-separated)',
@@ -914,7 +1317,7 @@
         send: '전송',
         processing: '처리 중…',
         probing: 'Inbox 확인 중…',
-        assistantWorking: 'Arvo Agent 처리 중…',
+        assistantWorking: 'Sova Agent 처리 중…',
         noThreadSelected: '선택된 Thread 없음',
         noMessages: '메시지 없음',
         messageLabel: '메시지',
@@ -928,7 +1331,7 @@
         clear: 'Clear',
         selectThreadFirst: 'Thread를 먼저 선택하세요.',
         roleUser: 'User',
-        roleAssistant: 'Arvo Agent',
+        roleAssistant: 'Sova Agent',
         roleSystem: 'System',
         cronTitle: 'Cron',
         cronNamePh: 'Job 이름',
@@ -999,7 +1402,7 @@
         deleteKbConfirm: '이 문서 삭제할까요?',
         removeUrlConfirm: '이 URL 제거할까요?',
         deleteThreadConfirm: 'Thread {id} 삭제? 메시지 전부 삭제됩니다.',
-        langHelp: 'UI만 한/영. 답장 언어는 메시지 따름 (Arvo와 무관).',
+        langHelp: 'UI만 한/영. 답장 언어는 메시지 따름 (Sova와 무관).',
         optimizeConfirm: 'DB cleanup 실행? 오래된 row·report 파일 삭제될 수 있음',
         clearHistoryConfirm: 'Run history 전부 삭제?',
         compactConfirm: '7일 지난 interaction 요약·정리?',
@@ -1011,6 +1414,44 @@
         correctionPrompt: '수정 포인트 (optional)',
         discoveredUrls: 'URL {n}개 발견 (disabled로 저장):',
         preparingUpload: 'Upload 준비… ({n} files)',
+        actionBoardTitle: 'Action dashboard',
+        actionBoardLead: 'Inbox Probe마다 CSM 검토용 구조화 액션(제목·브리프·스레드 요약)이 쌓입니다. 전체 모델 출력은 Run history에 있습니다.',
+        actionBoardRefresh: '새로고침',
+        actionBoardHelp: '상세·피드백은 Run history에서 확인하세요.',
+        actionBoardEmpty: '아직 inbox 리뷰가 없습니다. Inbox 스캔, 스레드 Probe, 또는 Cron을 실행하세요.',
+        actionBoardFail: 'Action dashboard를 불러오지 못했습니다',
+        dashboardFilterSource: '출처',
+        dashboardFilterStatus: '상태',
+        dashboardSourceAll: '전체',
+        dashboardSourceCron: 'Cron',
+        dashboardSourceThread: '스레드 Probe',
+        dashboardSourceManual: '수동 Probe',
+        dashboardStatusAll: '전체',
+        dashboardStatusCompleted: '완료',
+        dashboardStatusError: '오류',
+        dashboardLoadMore: '더 보기',
+        dashboardOpenThread: '스레드 열기',
+        dashboardViewInHistory: 'Run history에서 보기',
+        dashboardPollingHint: '이 탭에서 60초마다 자동 새로고침.',
+        dashboardLayoutLabel: '레이아웃',
+        dashboardLayoutListTitle: '목록 — Probe 실행별 그룹',
+        dashboardLayoutGridTitle: '그리드 — Finder 스타일 타일',
+        dashboardCuratedAnswer: 'CSM용 큐레이션 답변',
+        dashboardTechnicalRationale: '기술적 근거',
+        dashboardEscalationGuidance: '에스컬레이션 가이드',
+        dashboardThreadSummary: '스레드 요약',
+        dashboardNextSteps: '다음 단계',
+        dashboardReferences: '참고',
+        dashboardSkippedTitle: '대시보드 항목 없음',
+        dashboardLegacyTitle: '비구조 출력',
+        dashboardParseError: '브리프 파싱 실패',
+        dashboardProbeError: 'Probe 실패',
+        dashboardDismissTask: '삭제',
+        dashboardDismissEntireRun: '실행 전체 제거',
+        dashboardDismissFromBoard: '대시보드에서 제거',
+        dashboardDismissConfirmAction: '이 작업을 Action dashboard에서 제거할까요? Run history의 기록은 유지됩니다.',
+        dashboardDismissConfirmRun: 'Action dashboard에서 제거할까요? Run history의 interaction은 유지됩니다.',
+        dashboardDismissFail: '제거하지 못했습니다',
       },
     };
 
@@ -1043,6 +1484,10 @@
         const k = node.getAttribute('data-i18n-placeholder');
         if (k) node.placeholder = uiText(k);
       });
+      document.querySelectorAll('[data-i18n-title]').forEach((node) => {
+        const k = node.getAttribute('data-i18n-title');
+        if (k) node.setAttribute('title', uiText(k));
+      });
       document.title = uiText('docTitle');
       const tf = document.getElementById('traceFilter');
       if (tf && tf.options && tf.options.length >= 3) {
@@ -1058,6 +1503,19 @@
       });
       const ls = document.getElementById('langSwitch');
       if (ls) ls.setAttribute('title', uiText('langHelp'));
+      const dfs = document.getElementById('dashboardFilterSource');
+      if (dfs && dfs.options && dfs.options.length >= 4) {
+        dfs.options[0].text = uiText('dashboardSourceAll');
+        dfs.options[1].text = uiText('dashboardSourceCron');
+        dfs.options[2].text = uiText('dashboardSourceThread');
+        dfs.options[3].text = uiText('dashboardSourceManual');
+      }
+      const dst = document.getElementById('dashboardFilterStatus');
+      if (dst && dst.options && dst.options.length >= 3) {
+        dst.options[0].text = uiText('dashboardStatusAll');
+        dst.options[1].text = uiText('dashboardStatusCompleted');
+        dst.options[2].text = uiText('dashboardStatusError');
+      }
     }
 
     function setUiLang(code) {
@@ -1071,6 +1529,7 @@
       loadInteractions();
       loadCronJobs();
       loadCronSummary();
+      if (document.getElementById('tab-action-dashboard')?.classList.contains('active')) void loadActionBoard(true);
     }
 
     async function fetchJson(path, opts = {}) {
@@ -1080,6 +1539,13 @@
     }
 
     let _activeThreadId = null;
+    let _dashboardOffset = 0;
+    let _dashboardProbeRows = [];
+    let _dashboardPollTimer = null;
+    const DASHBOARD_TAB_ID = 'tab-action-dashboard';
+    const DASHBOARD_HASH = 'action-dashboard';
+    const DASHBOARD_LAYOUT_KEY = 'sova_action_dashboard_layout';
+    const TAB_TO_HASH = { [DASHBOARD_TAB_ID]: DASHBOARD_HASH };
     function _fmtTime(ts) {
       try { return new Date(ts).toLocaleString(); } catch { return ''; }
     }
@@ -1178,6 +1644,7 @@
         await pollRun(started.run_id);
         await loadThreadMessages(); // shows assistant message after completion
         loadInteractions();
+        void loadActionBoard(true);
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {
@@ -1548,13 +2015,333 @@
       try { return JSON.parse(raw); } catch { return {}; }
     }
 
-    function showTab(tabId) {
+    function _stopDashboardPolling() {
+      if (_dashboardPollTimer) {
+        clearInterval(_dashboardPollTimer);
+        _dashboardPollTimer = null;
+      }
+    }
+
+    function _startDashboardPolling() {
+      _stopDashboardPolling();
+      _dashboardPollTimer = window.setInterval(() => {
+        const pane = document.getElementById(DASHBOARD_TAB_ID);
+        if (pane && pane.classList.contains('active')) void loadActionBoard(true);
+      }, 60000);
+    }
+
+    function showTab(tabId, opts) {
+      const syncHash = !opts || opts.syncHash !== false;
       document.querySelectorAll('.tab-pane').forEach(p => {
         p.classList.toggle('active', p.id === tabId);
       });
       document.querySelectorAll('.nav-btn').forEach(b => {
         b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
       });
+      if (syncHash) {
+        const h = TAB_TO_HASH[tabId];
+        const path = window.location.pathname + window.location.search;
+        if (h) history.replaceState(null, '', path + '#' + h);
+        else history.replaceState(null, '', path);
+      }
+      _stopDashboardPolling();
+      if (tabId === DASHBOARD_TAB_ID) {
+        void loadActionBoard(true);
+        _startDashboardPolling();
+      }
+    }
+
+    function tabIdFromHash() {
+      const raw = (location.hash || '').replace(/^#\/?/, '');
+      if (raw === DASHBOARD_HASH) return DASHBOARD_TAB_ID;
+      return null;
+    }
+
+    function getDashboardLayout() {
+      try {
+        const v = localStorage.getItem(DASHBOARD_LAYOUT_KEY);
+        return v === 'grid' ? 'grid' : 'list';
+      } catch {
+        return 'list';
+      }
+    }
+
+    function applyDashboardFeedLayoutClass() {
+      const el = document.getElementById('actionBoardFeed');
+      if (!el) return;
+      el.classList.remove('dashboard-feed--list', 'dashboard-feed--grid');
+      el.classList.add(getDashboardLayout() === 'grid' ? 'dashboard-feed--grid' : 'dashboard-feed--list');
+    }
+
+    function syncDashboardLayoutButtons() {
+      const mode = getDashboardLayout();
+      const bL = document.getElementById('dashLayoutList');
+      const bG = document.getElementById('dashLayoutGrid');
+      if (bL) bL.classList.toggle('active', mode === 'list');
+      if (bG) bG.classList.toggle('active', mode === 'grid');
+    }
+
+    function setDashboardLayout(mode) {
+      const m = mode === 'grid' ? 'grid' : 'list';
+      try {
+        localStorage.setItem(DASHBOARD_LAYOUT_KEY, m);
+      } catch { /* ignore */ }
+      syncDashboardLayoutButtons();
+      applyDashboardFeedLayoutClass();
+      if (_dashboardProbeRows && _dashboardProbeRows.length) {
+        const el = document.getElementById('actionBoardFeed');
+        if (el) el.innerHTML = renderDashboardFeedHtml(_dashboardProbeRows);
+      }
+    }
+
+    function dashboardProbeMetaLine(row) {
+      const when = new Date(row.created_at).toLocaleString();
+      const tt = String(row.trigger_type || '');
+      const st = String(row.status || '');
+      return `${when} · ${tt} · ${st}`;
+    }
+
+    function dashboardCardFoot(row, md, opts) {
+      const iid = Number(row.id);
+      const tid = md.thread_id != null ? Number(md.thread_id) : NaN;
+      const parts = [];
+      if (Number.isFinite(tid)) {
+        parts.push(
+          `<button type="button" class="ghost btn-compact" onclick="openThreadFromDashboard(${tid})">${escapeHtml(uiText('dashboardOpenThread'))}</button>`
+        );
+      }
+      if (Number.isFinite(iid)) {
+        parts.push(
+          `<button type="button" class="ghost btn-compact" onclick="goToInteractionInHistory(${iid})">${escapeHtml(uiText('dashboardViewInHistory'))}</button>`
+        );
+      }
+      if (opts && typeof opts.actionIndex === 'number') {
+        parts.push(
+          `<button type="button" class="danger btn-compact" onclick="dismissDashboardAction(${iid}, ${opts.actionIndex})">${escapeHtml(uiText('dashboardDismissTask'))}</button>`
+        );
+      } else if (opts && opts.dismissWholeRun) {
+        parts.push(
+          `<button type="button" class="danger btn-compact" onclick="dismissDashboardProbeRun(${iid})">${escapeHtml(uiText('dashboardDismissFromBoard'))}</button>`
+        );
+      }
+      return parts.length ? `<div class="csm-action-card__foot">${parts.join('')}</div>` : '';
+    }
+
+    function renderProbeErrorCard(row, md) {
+      const iid = Number(row.id);
+      const msg = escapeHtml(String(row.error_message || row.output_text || '—'));
+      const foot = dashboardCardFoot(row, md, { dismissWholeRun: true });
+      return `<div class="csm-legacy-card action-board-item action-board-item--error">
+        <strong>${escapeHtml(uiText('dashboardProbeError'))}</strong>
+        <span class="csm-action-card__meta" style="display:block;margin-top:0.2rem;">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</span>
+        <pre>${msg}</pre>
+        ${foot}
+      </div>`;
+    }
+
+    function renderCsmActionCard(row, action, md, actionIndex) {
+      const cat = escapeHtml(String(action.category || 'general'));
+      const title = escapeHtml(String(action.title || '—'));
+      const brief = String(action.brief || '').trim();
+      const curatedAnswer = String(action.curated_answer || '').trim();
+      const technicalRationale = String(action.technical_rationale || '').trim();
+      const escalationGuidance = String(action.escalation_guidance || '').trim();
+      const summary = String(action.thread_summary || '').trim();
+      const steps = Array.isArray(action.next_steps) ? action.next_steps : [];
+      const refs = Array.isArray(action.references) ? action.references : [];
+      const iid = Number(row.id);
+      const answerBlock = curatedAnswer
+        ? `<div><strong>${escapeHtml(uiText('dashboardCuratedAnswer'))}</strong><p class="csm-action-card__answer">${escapeHtml(curatedAnswer)}</p></div>`
+        : '';
+      const rationaleBlock = technicalRationale
+        ? `<div><strong>${escapeHtml(uiText('dashboardTechnicalRationale'))}</strong><p class="csm-action-card__tech">${escapeHtml(technicalRationale)}</p></div>`
+        : '';
+      const escalationBlock = escalationGuidance
+        ? `<div><strong>${escapeHtml(uiText('dashboardEscalationGuidance'))}</strong><p class="csm-action-card__tech">${escapeHtml(escalationGuidance)}</p></div>`
+        : '';
+      const summaryBlock = summary
+        ? `<details><summary>${escapeHtml(uiText('dashboardThreadSummary'))}</summary><div class="csm-action-card__summary-body">${escapeHtml(summary)}</div></details>`
+        : '';
+      const stepsBlock = steps.length
+        ? `<div><strong>${escapeHtml(uiText('dashboardNextSteps'))}</strong><ul>${steps.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
+        : '';
+      const refsBlock = refs.length
+        ? `<div><strong>${escapeHtml(uiText('dashboardReferences'))}</strong><ul>${refs.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
+        : '';
+      const foot = dashboardCardFoot(row, md, { actionIndex });
+      const metaLine = `<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      return `<article class="csm-action-card">
+        <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
+        <h3 class="csm-action-card__title">${title}</h3>
+        ${brief ? `<p class="csm-action-card__brief">${escapeHtml(brief)}</p>` : ''}
+        ${answerBlock}
+        ${rationaleBlock}
+        ${escalationBlock}
+        ${summaryBlock}
+        ${stepsBlock}
+        ${refsBlock}
+        ${metaLine}
+        ${foot}
+      </article>`;
+    }
+
+    function renderSkippedCard(row, md) {
+      const note = String(md.csm_skipped_note || '').trim();
+      const iid = Number(row.id);
+      const foot = dashboardCardFoot(row, md, { dismissWholeRun: true });
+      return `<div class="csm-skipped-card">
+        <strong>${escapeHtml(uiText('dashboardSkippedTitle'))}</strong>
+        <span class="csm-action-card__meta" style="display:block;margin-top:0.25rem;">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</span>
+        ${note ? `<p class="csm-skipped-note">${escapeHtml(note)}</p>` : ''}
+        ${foot}
+      </div>`;
+    }
+
+    function renderLegacyProbeCard(row, md) {
+      const iid = Number(row.id);
+      const raw = String(row.output_text || row.error_message || '—');
+      const body = escapeHtml(raw.slice(0, 1200));
+      const pe = md.csm_actions_parse_error ? String(md.csm_actions_parse_error) : '';
+      const errBadge = pe
+        ? ` <span class="action-board-badge">${escapeHtml(uiText('dashboardParseError'))}</span>`
+        : '';
+      const foot = dashboardCardFoot(row, md, { dismissWholeRun: true });
+      return `<div class="csm-legacy-card action-board-item">
+        <strong>${escapeHtml(uiText('dashboardLegacyTitle'))}${errBadge}</strong>
+        <span class="csm-action-card__meta" style="display:block;margin-top:0.2rem;">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}${pe ? escapeHtml(' · ' + pe) : ''}</span>
+        <pre>${body}${raw.length > 1200 ? '\n…' : ''}</pre>
+        ${foot}
+      </div>`;
+    }
+
+    function renderOneProbeRow(row, layout) {
+      const md = parseInteractionMetadata(row.metadata);
+      if (row.status === 'error') {
+        return renderProbeErrorCard(row, md);
+      }
+      const actions = md.csm_actions;
+      if (Array.isArray(actions) && actions.length) {
+        const cards = actions.map((a, i) => renderCsmActionCard(row, a, md, i)).join('');
+        if (layout === 'grid') return cards;
+        const iid = Number(row.id);
+        const badgeCls = 'action-board-badge';
+        const head = `<div class="dashboard-run-group__head">
+          <span class="${badgeCls}">#${escapeHtml(String(iid || ''))}</span>
+          <span class="action-board-meta">${escapeHtml(dashboardProbeMetaLine(row))}</span>
+          <button type="button" class="danger btn-compact dashboard-run-dismiss" onclick="dismissDashboardProbeRun(${iid})">${escapeHtml(uiText('dashboardDismissEntireRun'))}</button>
+        </div>`;
+        return `<div class="dashboard-run-group">${head}<div class="dashboard-run-group__body">${cards}</div></div>`;
+      }
+      if (md.csm_skipped_note) {
+        return renderSkippedCard(row, md);
+      }
+      return renderLegacyProbeCard(row, md);
+    }
+
+    function renderDashboardFeedHtml(rows) {
+      const layout = getDashboardLayout();
+      if (!rows || !rows.length) {
+        return `<div class="empty">${escapeHtml(uiText('actionBoardEmpty'))}</div>`;
+      }
+      return rows.map((row) => renderOneProbeRow(row, layout)).join('');
+    }
+
+    async function openThreadFromDashboard(threadId) {
+      const id = Number(threadId);
+      if (!id) return;
+      _activeThreadId = id;
+      showTab('tab-agent');
+      await loadThreads();
+      await loadThreadMessages();
+    }
+
+    async function goToInteractionInHistory(interactionId) {
+      const id = Number(interactionId);
+      if (!id) return;
+      showTab('tab-interactions');
+      await loadInteractions();
+      requestAnimationFrame(() => {
+        const node = document.getElementById('interaction-' + id);
+        if (node) {
+          node.open = true;
+          node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    }
+
+    async function dismissDashboardProbeRun(interactionId) {
+      const id = Number(interactionId);
+      if (!id) return;
+      if (!confirm(uiText('dashboardDismissConfirmRun'))) return;
+      try {
+        const r = await fetch(`/dashboard/probe-runs/${id}`, { method: 'DELETE' });
+        if (!r.ok) throw new Error(await r.text());
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardDismissFail')}: ${e.message}`);
+      }
+    }
+
+    async function dismissDashboardAction(interactionId, actionIndex) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      if (!id || !Number.isFinite(idx) || idx < 0) return;
+      if (!confirm(uiText('dashboardDismissConfirmAction'))) return;
+      try {
+        const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}`, { method: 'DELETE' });
+        if (!r.ok) throw new Error(await r.text());
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardDismissFail')}: ${e.message}`);
+      }
+    }
+
+    async function loadActionBoard(reset) {
+      const el = document.getElementById('actionBoardFeed');
+      const moreBtn = document.getElementById('dashboardLoadMoreBtn');
+      if (!el) return;
+      const limit = 20;
+      if (reset) {
+        _dashboardOffset = 0;
+        _dashboardProbeRows = [];
+        el.innerHTML = `<div class="empty" style="padding:0.75rem 0;">${escapeHtml(uiText('loading'))}</div>`;
+      }
+      applyDashboardFeedLayoutClass();
+      syncDashboardLayoutButtons();
+      const srcEl = document.getElementById('dashboardFilterSource');
+      const stEl = document.getElementById('dashboardFilterStatus');
+      const source = (srcEl && srcEl.value) || 'all';
+      const status = (stEl && stEl.value) || 'all';
+      try {
+        const qs = new URLSearchParams({
+          limit: String(limit),
+          offset: String(_dashboardOffset),
+          source,
+          status,
+        });
+        const pack = await fetchJson('/dashboard/probe-runs?' + qs.toString());
+        const items = pack.items || [];
+        if (reset) {
+          _dashboardProbeRows = items;
+        } else {
+          _dashboardProbeRows = (_dashboardProbeRows || []).concat(items);
+        }
+        if (reset && !items.length) {
+          el.innerHTML = `<div class="empty">${escapeHtml(uiText('actionBoardEmpty'))}</div>`;
+          if (moreBtn) moreBtn.style.display = 'none';
+          return;
+        }
+        if (!reset && !items.length) {
+          if (moreBtn) moreBtn.style.display = 'none';
+          return;
+        }
+        el.innerHTML = renderDashboardFeedHtml(_dashboardProbeRows);
+        _dashboardOffset += items.length;
+        if (moreBtn) moreBtn.style.display = pack.has_more ? 'inline-block' : 'none';
+      } catch (e) {
+        if (reset) el.innerHTML = `<div class="empty">${escapeHtml(uiText('actionBoardFail'))}: ${escapeHtml(e.message)}</div>`;
+        if (moreBtn) moreBtn.style.display = 'none';
+      }
     }
 
     function showSubtab(subtabId) {
@@ -1620,7 +2407,7 @@
         const ep = escapeHtml(uiText('emptyPrompt'));
         const eo = escapeHtml(uiText('emptyOutput'));
         return `
-          <details class="interaction">
+          <details class="interaction" id="interaction-${i.id}">
             <summary style="cursor:pointer;list-style:none;">
               <div style="display:flex;align-items:center;gap:0.35rem;color:var(--muted);font-size:0.78rem;font-weight:900;margin-bottom:0.25rem;">
                 <span class="section-caret">▸</span><span>${escapeHtml(uiText('expandDetails'))}</span>
@@ -1699,6 +2486,8 @@
     }
     applyTheme(getInitialTheme());
     applyUiLang();
+    syncDashboardLayoutButtons();
+    applyDashboardFeedLayoutClass();
 
     loadAgentProfile();
     loadThreads();
@@ -1738,6 +2527,13 @@
     loadCronSummary();
     loadInteractions();
     loadMaintenanceStats();
+
+    window.addEventListener('popstate', () => {
+      const t = tabIdFromHash();
+      showTab(t || 'tab-agent', { syncHash: false });
+    });
+    const _initialTab = tabIdFromHash();
+    if (_initialTab) showTab(_initialTab, { syncHash: false });
 
     // Composer: Enter sends, Shift+Enter newline. Skip while IME composing (e.g. Korean input).
     const composerEl = document.getElementById('composer');

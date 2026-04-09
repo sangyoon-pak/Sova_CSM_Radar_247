@@ -10,11 +10,15 @@ _scheduler: BackgroundScheduler | None = None
 
 
 def _run_probe_job(name: str = "default"):
+    from src.agent.probe_actions import merge_csm_actions_metadata
     from src.agent.prompts import PROBE_TRIGGER_MESSAGE
     from src.agent.email_agent import run_agent
     try:
-        output = run_agent(PROBE_TRIGGER_MESSAGE)
-        database.log_interaction(f"cron:{name}", PROBE_TRIGGER_MESSAGE, output, "completed")
+        output = run_agent(PROBE_TRIGGER_MESSAGE, probe=True)
+        meta = merge_csm_actions_metadata(output, {})
+        database.log_interaction(
+            f"cron:{name}", PROBE_TRIGGER_MESSAGE, output, "completed", metadata=meta
+        )
     except Exception as e:
         database.log_interaction(f"cron:{name}", PROBE_TRIGGER_MESSAGE, "", "error", str(e))
 

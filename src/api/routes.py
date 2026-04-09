@@ -11,6 +11,7 @@ from datetime import datetime
 
 from src.agent.email_agent import run_agent
 from src.agent.memory import compact_memory, refresh_learning_instructions
+from src.agent.probe_actions import format_probe_thread_reply, merge_csm_actions_metadata
 from src.agent.prompts import PROBE_TRIGGER_MESSAGE
 from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
@@ -100,13 +101,16 @@ def run_agent_endpoint(req: RunAgentRequest):
             res = run_web_search(query=input_text, model=settings.llm_model_for_main, url=req.web_url)
             output = res.text or "No web search output."
         else:
-            output = run_agent(input_text)
+            output = run_agent(input_text, probe=req.probe)
+        meta: dict = {"tools_used": [], "events": []}
+        if req.probe:
+            meta = merge_csm_actions_metadata(output, meta)
         database.log_interaction(
             "manual" if not req.probe else "manual_probe",
             input_text[:500],
             output,
             "completed",
-            metadata={"tools_used": [], "events": []},
+            metadata=meta,
         )
         return RunAgentResponse(output=output, status="completed")
     except Exception as e:
@@ -131,7 +135,7 @@ def run_agent_async_endpoint(req: RunAgentRequest):
                 output = res.text or "No web search output."
                 run_state.add_event(run_id, "model_end", "Web search finished", (output or "")[:1000])
             else:
-                output = run_agent(input_text, callbacks=[cb])
+                output = run_agent(input_text, callbacks=[cb], probe=req.probe)
             run_state.complete_run(run_id, output)
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
@@ -140,6 +144,8 @@ def run_agent_async_endpoint(req: RunAgentRequest):
                 "tools_used": _tools_used_from_events(events),
                 "events": events,
             }
+            if req.probe:
+                metadata = merge_csm_actions_metadata(output, metadata)
             database.log_interaction(trigger_type, input_text[:500], output, "completed", metadata=metadata)
         except Exception as e:
             run_state.fail_run(run_id, str(e))
@@ -384,6 +390,74 @@ def list_interactions(limit: int = 50, offset: int = 0):
     return database.get_interactions(limit=limit, offset=offset)
 
 
+@router.get("/dashboard/probe-runs")
+def list_probe_runs(
+    limit: int = 20,
+    offset: int = 0,
+    source: str = "all",
+    status: str = "all",
+):
+    """
+    Recent inbox review runs (cron probes, thread Scan inbox, manual API probe).
+    """
+    if limit < 1:
+        limit = 20
+    if limit > 100:
+        limit = 100
+    if offset < 0:
+        offset = 0
+    src = (source or "all").strip().lower()
+    if src not in ("all", "cron", "thread_probe", "manual_probe"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid source. Use: all, cron, thread_probe, manual_probe.",
+        )
+    st = (status or "all").strip().lower()
+    if st not in ("all", "completed", "error"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid status. Use: all, completed, error.",
+        )
+    items = database.list_probe_interactions(
+        limit=limit,
+        offset=offset,
+        source=src,
+        status_filter=st,
+    )
+    return {
+        "items": items,
+        "limit": limit,
+        "offset": offset,
+        "has_more": len(items) >= limit,
+    }
+
+
+@router.delete("/dashboard/probe-runs/{interaction_id}/actions/{action_index}")
+def dismiss_dashboard_probe_action(interaction_id: int, action_index: int):
+    """Remove one structured CSM action from a probe run; hides the run when none remain."""
+    if action_index < 0:
+        raise HTTPException(status_code=400, detail="Invalid action index.")
+    ok = database.remove_csm_dashboard_action(interaction_id, action_index)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Interaction not found, not a probe run, or invalid action index.",
+        )
+    return {"ok": True}
+
+
+@router.delete("/dashboard/probe-runs/{interaction_id}")
+def dismiss_dashboard_probe_run(interaction_id: int):
+    """Hide an inbox review run from the Action dashboard (metadata); row remains in Run history."""
+    ok = database.dismiss_probe_from_dashboard(interaction_id)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Interaction not found or not an inbox review run.",
+        )
+    return {"ok": True}
+
+
 @router.delete("/interactions")
 def delete_interactions(before: str | None = None):
     """
@@ -531,7 +605,7 @@ def send_thread_message(req: ThreadSendRequest):
     def _worker():
         cb = _UITraceCallback(run_id)
         try:
-            output = run_agent(input_text, callbacks=[cb])
+            output = run_agent(input_text, callbacks=[cb], probe=req.probe)
             run_state.complete_run(run_id, output)
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
@@ -542,10 +616,15 @@ def send_thread_message(req: ThreadSendRequest):
                 "thread_id": req.thread_id,
                 "user_message_id": user_msg.get("id"),
             }
+            if req.probe:
+                metadata = merge_csm_actions_metadata(output, metadata)
+                assistant_body = format_probe_thread_reply(output, metadata)
+            else:
+                assistant_body = output
             database.add_message(
                 thread_id=req.thread_id,
                 role="assistant",
-                content=output,
+                content=assistant_body,
                 metadata=metadata,
             )
             database.log_interaction(

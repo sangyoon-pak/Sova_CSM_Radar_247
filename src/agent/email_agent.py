@@ -1,4 +1,4 @@
-"""Local email draft agent using LangChain."""
+"""Proactive CSM assistant (LangChain): inbox triage, KB tools, drafts on explicit request."""
 import os
 import re
 import json
@@ -10,7 +10,7 @@ from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
-from src.agent.prompts import render_email_agent_system
+from src.agent.prompts import render_email_agent_system, PROBE_MODE_SYSTEM_APPEND
 from src.db import database
 
 
@@ -163,7 +163,7 @@ def search_rc_web(query: str) -> str:
     from src.agent.tools.rc_web_search import search_rc_web as _search
     return _search(query=query)
 
-def create_agent_executor():
+def create_agent_executor(*, probe: bool = False):
     llm = _get_llm()
     tools = [fetch_inbox_emails, search_product_docs, search_rc_web]
     profile = database.get_agent_profile_settings()
@@ -174,12 +174,16 @@ def create_agent_executor():
         role_title=profile["role_title"],
         learning_instructions=learning,
     )
+    if probe:
+        system_prompt = system_prompt.rstrip() + "\n\n" + PROBE_MODE_SYSTEM_APPEND.strip()
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
 
 
 def run_agent(
     input_text: str,
     callbacks: Sequence | None = None,
+    *,
+    probe: bool = False,
 ) -> str:
     _ensure_langsmith_env()
 
@@ -202,7 +206,7 @@ def run_agent(
                 pass
         return out
 
-    agent = create_agent_executor()
+    agent = create_agent_executor(probe=probe)
     config = {"callbacks": list(callbacks)} if callbacks else None
     result = agent.invoke({"messages": [HumanMessage(content=input_text)]}, config=config)
     messages = result.get("messages", [])
@@ -213,6 +217,10 @@ def run_agent(
             break
     if not draft:
         return str(result)
+
+    # Probe output should stay bullet-oriented; citation pass encourages formal numbered replies.
+    if probe:
+        return draft
 
     # NotebookLM-style enforcement: ensure each numbered item has citations.
     if _draft_needs_citations(draft):

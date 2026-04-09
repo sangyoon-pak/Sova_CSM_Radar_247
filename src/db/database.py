@@ -81,6 +81,163 @@ def get_interactions(limit: int = 50, offset: int = 0):
     return [dict(r) for r in rows]
 
 
+def _is_probe_dashboard_trigger(trigger_type: str | None) -> bool:
+    t = (trigger_type or "").strip()
+    if t.startswith("cron:"):
+        return True
+    if t == "thread_probe":
+        return True
+    if t.startswith("manual_probe"):
+        return True
+    return False
+
+
+def get_interaction_by_id(interaction_id: int) -> dict | None:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        """SELECT id, created_at, trigger_type, input_text, output_text, status, error_message, metadata
+           FROM agent_interactions WHERE id = ?""",
+        (interaction_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def _parse_interaction_metadata(raw: str | None) -> dict:
+    if not raw:
+        return {}
+    try:
+        out = json.loads(raw)
+        return out if isinstance(out, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def dismiss_probe_from_dashboard(interaction_id: int) -> bool:
+    """
+    Hide a probe run from the Action dashboard (metadata flag). Row stays in DB for Run history.
+    """
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (interaction_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        md["csm_dashboard_removed"] = True
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), interaction_id),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
+def remove_csm_dashboard_action(interaction_id: int, action_index: int) -> bool:
+    """Remove one item from metadata.csm_actions; hide run from dashboard if none left."""
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (interaction_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        actions = md.get("csm_actions")
+        if not isinstance(actions, list) or action_index < 0 or action_index >= len(actions):
+            conn.close()
+            return False
+        actions = list(actions)
+        actions.pop(action_index)
+        md["csm_actions"] = actions
+        if len(actions) == 0:
+            md["csm_dashboard_removed"] = True
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), interaction_id),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
+def list_probe_interactions(
+    *,
+    limit: int = 30,
+    offset: int = 0,
+    source: str = "all",
+    status_filter: str | None = None,
+) -> list[dict]:
+    """
+    Inbox review runs: cron:*, thread_probe, manual_probe.
+    source: all | cron | thread_probe | manual_probe
+    status_filter: None or 'all' = any status; 'completed' | 'error' to filter.
+    """
+    src = (source or "all").strip().lower()
+    if src not in ("all", "cron", "thread_probe", "manual_probe"):
+        src = "all"
+    st = (status_filter or "").strip().lower()
+    if st in ("", "all"):
+        st = None
+    elif st not in ("completed", "error"):
+        st = None
+
+    if src == "cron":
+        where = "trigger_type LIKE 'cron:%'"
+        params: list = []
+    elif src == "thread_probe":
+        where = "trigger_type = 'thread_probe'"
+        params = []
+    elif src == "manual_probe":
+        where = "(trigger_type = 'manual_probe' OR trigger_type LIKE 'manual_probe_%')"
+        params = []
+    else:
+        where = (
+            "(trigger_type LIKE 'cron:%' OR trigger_type = 'thread_probe' "
+            "OR trigger_type LIKE 'manual_probe%')"
+        )
+        params = []
+
+    if st:
+        where = f"({where}) AND status = ?"
+        params.append(st)
+
+    # CSM dismissed probe runs stay in DB but are hidden from the Action dashboard.
+    where = (
+        f"({where}) AND NOT (COALESCE(json_extract(metadata, '$.csm_dashboard_removed'), 0) = 1)"
+    )
+
+    sql = f"""SELECT id, created_at, trigger_type, input_text, output_text, status, error_message, metadata
+              FROM agent_interactions
+              WHERE {where}
+              ORDER BY created_at DESC
+              LIMIT ? OFFSET ?"""
+    params.extend([limit, offset])
+
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(sql, tuple(params)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_interactions_before(before: datetime, limit: int = 200):
     """Fetch interactions created before the given datetime, newest first."""
     conn = _conn()

@@ -16,7 +16,7 @@ from src.config import settings
 from src.db import database
 
 
-MEMORY_COMPACTION_PROMPT = """You are compressing an email agent's past interactions into a concise, durable memory.
+MEMORY_COMPACTION_PROMPT = """You are compressing a CSM assistant's past interactions into a concise, durable memory.
 
 You will receive a list of interactions (each with created_at, trigger_type, input_text, output_text).
 Your goal is to extract only the reusable knowledge that will still be useful in future runs, such as:
@@ -24,7 +24,7 @@ Your goal is to extract only the reusable knowledge that will still be useful in
 - Important decisions, conclusions, or troubleshooting steps that might be needed again.
 - Recurrent client questions and the high-level answers.
 
-Do NOT repeat full emails or drafts. Do NOT include private or unnecessary detail.
+Do NOT repeat full emails, long drafts, or full action-board dumps. Do NOT include private or unnecessary detail.
 Write 3-10 bullet points capturing only the enduring, reusable information.
 
 Return the bullets as plain text, each bullet starting with '- '."""
