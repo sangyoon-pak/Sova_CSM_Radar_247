@@ -5,6 +5,48 @@ import json
 import re
 from typing import Any
 
+_GMAIL_TID_RE = re.compile(r"^[a-zA-Z0-9_-]{6,128}$")
+
+
+def _GMAIL_THREAD_ID_OK(s: str) -> bool:
+    return bool(s and _GMAIL_TID_RE.match(s.strip()))
+
+
+_MEETING_ONLY_PAT = re.compile(
+    r"(?i)\b("
+    r"meeting|invite|invitation|intro(duction)?|kick[\s-]?off|sync|catch[\s-]?up|"
+    r"calendar|availability|schedule|scheduled|reschedul|zoom|meet|teams|webex|"
+    r"미팅|회의|소개\s*세션|소개\s*미팅|일정|캘린더|초대|줌|팀즈"
+    r")\b"
+)
+_TECH_OR_ACTION_PAT = re.compile(
+    r"(?i)\b("
+    r"api|sdk|error|bug|issue|troubleshoot|integration|config|payload|webhook|"
+    r"data|export|report|cid|user[_ -]?id|push|campaign|attribute|query|sql|"
+    r"장애|오류|이슈|설정|연동|리포트|데이터|문의|해결|원인|확인\s*요청"
+    r")\b"
+)
+
+
+def _looks_non_actionable_meeting_invite(a: dict[str, Any]) -> bool:
+    """
+    Guardrail: skip cards that are only scheduling/intro invites with no product issue.
+    This runs server-side after model output to reduce noisy dashboard cards.
+    """
+    text = " ".join(
+        [
+            str(a.get("title") or ""),
+            str(a.get("brief") or ""),
+            str(a.get("client_query_digest") or ""),
+            str(a.get("thread_summary") or ""),
+        ]
+    )
+    if not text.strip():
+        return False
+    has_meeting = bool(_MEETING_ONLY_PAT.search(text))
+    has_tech = bool(_TECH_OR_ACTION_PAT.search(text))
+    return has_meeting and not has_tech
+
 
 def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
@@ -14,6 +56,8 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
         if not isinstance(a, dict):
             continue
         if a.get("include_on_dashboard") is False:
+            continue
+        if _looks_non_actionable_meeting_invite(a):
             continue
         steps = a.get("next_steps") or []
         if not isinstance(steps, list):
@@ -40,6 +84,41 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
             or a.get("escalation_plan")
             or ""
         )
+        client_digest = str(
+            a.get("client_query_digest")
+            or a.get("client_ask_summary")
+            or a.get("client_query_summary")
+            or ""
+        )[:4000]
+        sub_raw = a.get("subquery_answers") or a.get("subqueries") or []
+        sub_pairs: list[dict[str, str]] = []
+        if isinstance(sub_raw, list):
+            for item in sub_raw[:20]:
+                if not isinstance(item, dict):
+                    continue
+                sq = str(
+                    item.get("subquery")
+                    or item.get("question")
+                    or item.get("q")
+                    or item.get("topic")
+                    or ""
+                ).strip()[:800]
+                ans = str(
+                    item.get("answer")
+                    or item.get("response")
+                    or item.get("a")
+                    or ""
+                ).strip()[:4500]
+                if sq or ans:
+                    sub_pairs.append({"subquery": sq, "answer": ans})
+        gid = str(a.get("gmail_thread_id") or a.get("email_thread_id") or "").strip()
+        if gid and not _GMAIL_THREAD_ID_OK(gid):
+            gid = ""
+        e_from = str(a.get("email_from") or a.get("from") or "").strip()[:400]
+        e_subj = str(a.get("email_subject") or a.get("subject") or "").strip()[:400]
+        st = str(a.get("status") or "").strip().lower()
+        if st not in {"not_started", "in_progress", "completed"}:
+            st = "not_started"
         out.append(
             {
                 "title": str(a.get("title") or f"Action {i + 1}")[:240],
@@ -47,13 +126,42 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
                 "curated_answer": str(curated)[:3000],
                 "technical_rationale": str(tech)[:3500],
                 "escalation_guidance": str(escalate)[:2500],
+                "client_query_digest": client_digest,
+                "subquery_answers": sub_pairs,
                 "thread_summary": str(a.get("thread_summary") or "")[:4000],
+                "gmail_thread_id": gid[:128] if gid else "",
+                "email_from": e_from,
+                "email_subject": e_subj,
+                "status": st,
                 "category": str(a.get("category") or "general")[:120],
                 "next_steps": [str(x)[:800] for x in steps[:15]],
                 "references": [str(x)[:800] for x in refs[:12]],
             }
         )
     return out
+
+
+def _action_fingerprint(a: dict[str, Any]) -> str:
+    """Stable digest for update detection on the same Gmail thread."""
+    parts = [
+        str(a.get("title") or "").strip(),
+        str(a.get("brief") or "").strip(),
+        str(a.get("client_query_digest") or "").strip(),
+        str(a.get("thread_summary") or "").strip(),
+        str(a.get("curated_answer") or "").strip(),
+    ]
+    return "||".join(parts)
+
+
+def _dedupe_key(a: dict[str, Any]) -> str:
+    gid = str(a.get("gmail_thread_id") or "").strip()
+    if gid:
+        return f"gid:{gid}"
+    ef = str(a.get("email_from") or "").strip().lower()
+    es = str(a.get("email_subject") or "").strip().lower()
+    if ef and es:
+        return f"fs:{ef}||{es}"
+    return ""
 
 
 def parse_probe_dashboard_json(text: str) -> dict[str, Any]:
@@ -110,11 +218,109 @@ def parse_probe_dashboard_json(text: str) -> dict[str, Any]:
     return {"actions": [], "skipped_note": None, "parse_error": "no_valid_json_actions_block"}
 
 
-def merge_csm_actions_metadata(output_text: str, base_metadata: dict | None) -> dict:
+def format_action_review_chat_prefix(
+    snapshot: dict[str, Any],
+    *,
+    source_interaction_id: int,
+    action_index: int,
+    probe_source_thread_id: int | None = None,
+) -> str:
+    """
+    Prepended to normal user messages in Workbench when the thread is an action-review chat,
+    so the model stays scoped to one dashboard action (no full-inbox triage unless asked).
+    """
+
+    def _clip(s: Any, n: int = 2000) -> str:
+        t = str(s or "").strip()
+        return t if len(t) <= n else t[: n - 1] + "…"
+
+    gid = str(snapshot.get("gmail_thread_id") or "").strip()
+    lines = [
+        "[Action review — discuss ONLY this dashboard item. Do not re-triage the whole inbox unless the user explicitly asks.]",
+        f"Probe interaction id: {int(source_interaction_id)} · action index: {int(action_index)}",
+    ]
+    if gid and _GMAIL_THREAD_ID_OK(gid):
+        lines.append(f"Gmail thread id (use fetch_gmail_thread with this id for full thread text): {gid}")
+    if probe_source_thread_id is not None:
+        lines.append(
+            f"Workbench thread where inbox probe was run (for reference only): {int(probe_source_thread_id)}"
+        )
+    lines.extend(
+        [
+            "",
+            f"Title: {_clip(snapshot.get('title'), 500)}",
+            f"Brief: {_clip(snapshot.get('brief'), 2000)}",
+            f"Curated answer: {_clip(snapshot.get('curated_answer'), 2500)}",
+            f"Technical rationale: {_clip(snapshot.get('technical_rationale'), 2500)}",
+            f"Escalation guidance: {_clip(snapshot.get('escalation_guidance'), 1500)}",
+            f"Client query (analyzed): {_clip(snapshot.get('client_query_digest'), 2500)}",
+            f"Thread summary: {_clip(snapshot.get('thread_summary'), 2000)}",
+        ]
+    )
+    subs = snapshot.get("subquery_answers")
+    if isinstance(subs, list) and subs:
+        lines.append("")
+        lines.append("Sub-question answers:")
+        for j, item in enumerate(subs[:15], start=1):
+            if not isinstance(item, dict):
+                continue
+            sq = _clip(item.get("subquery"), 600)
+            ans = _clip(item.get("answer"), 3000)
+            lines.append(f"{j}. Q: {sq}")
+            lines.append(f"   A: {ans}")
+    steps = snapshot.get("next_steps")
+    if isinstance(steps, list) and steps:
+        lines.append("")
+        lines.append("Next steps:")
+        for s in steps[:15]:
+            lines.append(f"- {_clip(s, 800)}")
+    refs = snapshot.get("references")
+    if isinstance(refs, list) and refs:
+        lines.append("")
+        lines.append("References:")
+        for r in refs[:15]:
+            lines.append(f"- {_clip(r, 900)}")
+    return "\n".join(lines)
+
+
+def merge_csm_actions_metadata(
+    output_text: str,
+    base_metadata: dict | None,
+    *,
+    existing_by_thread: dict[str, dict[str, Any]] | None = None,
+) -> dict:
     """Attach csm_actions + skipped_note + parse_error to interaction metadata."""
     md = dict(base_metadata or {})
     parsed = parse_probe_dashboard_json(output_text)
-    md["csm_actions"] = parsed["actions"]
+    actions = list(parsed["actions"] or [])
+    by_thread = existing_by_thread or {}
+    merged: list[dict[str, Any]] = []
+    skipped_unchanged = 0
+    for a in actions:
+        if not isinstance(a, dict):
+            continue
+        key = _dedupe_key(a)
+        if key and key in by_thread:
+            prev = by_thread.get(key) or {}
+            prev_status = str(prev.get("status") or "").strip().lower()
+            if prev_status not in {"not_started", "in_progress", "completed"}:
+                prev_status = "not_started"
+            same_fp = _action_fingerprint(a) == _action_fingerprint(prev)
+            if same_fp:
+                # No meaningful update for an existing thread card: skip this action.
+                skipped_unchanged += 1
+                continue
+            else:
+                # New update on same thread should reopen completed cards.
+                a["status"] = "in_progress" if prev_status == "completed" else prev_status
+        else:
+            a["status"] = "not_started"
+        merged.append(a)
+    md["csm_actions"] = merged
+    if not merged and skipped_unchanged > 0 and not parsed.get("skipped_note"):
+        md["csm_skipped_note"] = (
+            f"No meaningful updates across previously tracked threads ({skipped_unchanged} unchanged)."
+        )
     if parsed.get("skipped_note"):
         md["csm_skipped_note"] = parsed["skipped_note"]
     if parsed.get("parse_error"):

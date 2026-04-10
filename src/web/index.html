@@ -630,7 +630,72 @@
       min-width: 0;
     }
     .dashboard-feed--grid .csm-action-card {
-      min-height: 8.5rem;
+      min-height: auto;
+    }
+    .csm-action-card__main {
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+    /* Beats .csm-action-card details summary { color: accent } for the card headline row */
+    .csm-action-card .csm-action-card__main > summary {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      cursor: pointer;
+      list-style: none;
+      padding: 0.05rem 0 0;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .csm-action-card .csm-action-card__main > summary .csm-action-card__title {
+      color: var(--text);
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+    }
+    .csm-action-card__main > summary::-webkit-details-marker {
+      display: none;
+    }
+    .csm-action-card__main > summary::marker {
+      content: '';
+    }
+    .csm-action-card__chev {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--accent-soft) 85%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-top: 0.06rem;
+      transition: transform 0.18s ease, background 0.15s ease, border-color 0.15s ease;
+    }
+    .csm-action-card__main > summary:hover .csm-action-card__chev {
+      background: color-mix(in srgb, var(--accent-soft) 100%, var(--surface));
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    }
+    .csm-action-card__main[open] .csm-action-card__chev {
+      transform: rotate(90deg);
+    }
+    .csm-action-card__main-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      padding-top: 0.5rem;
+    }
+    /* Gap before rationale block when answers (and/or brief) sit above */
+    .csm-action-card__main > .csm-action-card__queries + .csm-action-card__main-inner,
+    .csm-action-card__main > .csm-action-card__brief + .csm-action-card__main-inner {
+      padding-top: 0.4rem;
     }
     .csm-action-card__top {
       display: flex;
@@ -666,17 +731,6 @@
       color: var(--text);
       margin: 0;
     }
-    .csm-action-card__answer {
-      margin: 0;
-      border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border-subtle));
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
-      padding: 0.5rem 0.6rem;
-      font-size: 0.8rem;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      color: var(--text);
-    }
     .csm-action-card__tech {
       margin: 0;
       border: 1px solid color-mix(in srgb, #7c5cff 30%, var(--border-subtle));
@@ -700,6 +754,60 @@
       cursor: pointer;
       color: var(--accent);
       font-weight: 600;
+    }
+    .csm-action-card__queries {
+      margin-top: 0.45rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--accent-soft) 38%, var(--surface));
+    }
+    /* First row of body under title: either brief or answers (or main-inner if neither) */
+    .csm-action-card__main > summary + .csm-action-card__brief {
+      margin-top: 0.5rem;
+    }
+    .csm-action-card__main > summary + .csm-action-card__queries {
+      margin-top: 0.5rem;
+    }
+    .csm-action-card__main > .csm-action-card__brief + .csm-action-card__queries {
+      margin-top: 0.4rem;
+    }
+    .csm-action-card__queries-title {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    html[lang="ko"] .csm-action-card__queries-title {
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .csm-query-block {
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .csm-query-block:first-of-type {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+    .csm-query-q {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      line-height: 1.42;
+      color: var(--text);
+      margin: 0 0 0.35rem;
+    }
+    .csm-query-a {
+      font-size: 0.8rem;
+      line-height: 1.48;
+      white-space: pre-wrap;
+      color: var(--text);
+      margin: 0;
     }
     .csm-action-card__summary-body {
       margin: 0.35rem 0 0;
@@ -965,7 +1073,7 @@
   <div class="tab-pane" id="tab-action-dashboard">
     <section class="dashboard-page">
       <h2 data-i18n="actionBoardTitle">Action dashboard</h2>
-      <p class="section-lead" data-i18n="actionBoardLead">Structured actions for CSM review after each inbox probe: title, agent brief, and optional thread summary. Full model output stays in Run history.</p>
+      <p class="section-lead" data-i18n="actionBoardLead">Structured actions for CSM review after each inbox probe. Full model output stays in Run history.</p>
       <div class="dashboard-controls">
         <div class="dashboard-controls__left row dashboard-filters">
           <div class="filter-field">
@@ -978,15 +1086,30 @@
             </select>
           </div>
           <div class="filter-field">
-            <label for="dashboardFilterStatus" data-i18n="dashboardFilterStatus">Status</label>
-            <select id="dashboardFilterStatus" onchange="loadActionBoard(true)">
-              <option value="all">All</option>
-              <option value="completed">Completed</option>
-              <option value="error">Error</option>
+            <label for="dashboardActionStatusFilter" data-i18n="dashboardActionStatusFilter">Action status</label>
+            <select id="dashboardActionStatusFilter" onchange="loadActionBoard(true)">
+              <option value="all" data-i18n="dashboardActionStatusAll">All actions</option>
+              <option value="not_started" data-i18n="dashboardActionStatusNotStarted">Not started</option>
+              <option value="in_progress" data-i18n="dashboardActionStatusInProgress">In progress</option>
+              <option value="completed" data-i18n="dashboardActionStatusCompleted">Completed</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="dashboardRunStatusFilter" data-i18n="dashboardRunStatusFilter">Run status</label>
+            <select id="dashboardRunStatusFilter" onchange="loadActionBoard(true)">
+              <option value="all" data-i18n="dashboardStatusAll">All</option>
+              <option value="completed" data-i18n="dashboardStatusCompleted">Completed</option>
+              <option value="error" data-i18n="dashboardStatusError">Error</option>
             </select>
           </div>
         </div>
         <div class="dashboard-controls__right row dashboard-layout-bar">
+          <label for="dashboardActionSort" class="action-board-hint" data-i18n="dashboardActionSort">Sort</label>
+          <select id="dashboardActionSort" onchange="loadActionBoard(true)">
+            <option value="updated_desc" data-i18n="dashboardSortUpdatedDesc">Newest update</option>
+            <option value="updated_asc" data-i18n="dashboardSortUpdatedAsc">Oldest update</option>
+            <option value="status" data-i18n="dashboardSortStatus">Status</option>
+          </select>
           <span class="action-board-hint" data-i18n="dashboardLayoutLabel">Layout</span>
           <button type="button" class="ghost btn-compact" id="dashLayoutList" onclick="setDashboardLayout('list')" data-i18n-title="dashboardLayoutListTitle" title="List (grouped by run)">List</button>
           <button type="button" class="ghost btn-compact" id="dashLayoutGrid" onclick="setDashboardLayout('grid')" data-i18n-title="dashboardLayoutGridTitle" title="Grid (Finder-style tiles)">Grid</button>
@@ -1226,7 +1349,7 @@
         cronNeedName: 'Job name and schedule are required.',
         deleteKbConfirm: 'Delete this document?',
         removeUrlConfirm: 'Remove this URL?',
-        deleteThreadConfirm: 'Delete thread {id}? All messages in it will be removed.',
+        deleteThreadConfirm: 'Delete thread {id}? All messages and linked run-history rows for this chat will be removed.',
         langHelp: 'UI language only — assistant replies follow your message language.',
         optimizeConfirm: 'Run database cleanup now? This may delete older rows and report files.',
         clearHistoryConfirm: 'Delete all run history?',
@@ -1240,13 +1363,15 @@
         discoveredUrls: 'Discovered {n} URLs (saved as disabled):',
         preparingUpload: 'Uploading {n} file(s)…',
         actionBoardTitle: 'Action dashboard',
-        actionBoardLead: 'Structured actions for CSM review after each inbox probe: title, agent brief, and optional thread summary. Full model output stays in Run history.',
+        actionBoardLead: 'Structured actions for CSM review after each inbox probe. Full model output stays in Run history.',
         actionBoardRefresh: 'Refresh',
         actionBoardHelp: 'Full detail and feedback stay under Run history.',
         actionBoardEmpty: 'No inbox reviews yet. Run Scan inbox, a thread probe, or a cron job.',
         actionBoardFail: 'Could not load action board',
         dashboardFilterSource: 'Source',
-        dashboardFilterStatus: 'Status',
+        dashboardRunStatusFilter: 'Run status',
+        dashboardActionStatusFilter: 'Action status',
+        dashboardActionSort: 'Sort',
         dashboardSourceAll: 'All sources',
         dashboardSourceCron: 'Cron',
         dashboardSourceThread: 'Thread probe',
@@ -1254,17 +1379,22 @@
         dashboardStatusAll: 'All',
         dashboardStatusCompleted: 'Completed',
         dashboardStatusError: 'Error',
+        dashboardActionStatusAll: 'All actions',
+        dashboardActionStatusNotStarted: 'Not started',
+        dashboardActionStatusInProgress: 'In progress',
+        dashboardActionStatusCompleted: 'Completed',
+        dashboardSortUpdatedDesc: 'Newest update',
+        dashboardSortUpdatedAsc: 'Oldest update',
+        dashboardSortStatus: 'Status',
         dashboardLoadMore: 'Load more',
-        dashboardOpenThread: 'Open thread',
         dashboardViewInHistory: 'View in Run history',
         dashboardPollingHint: 'Auto-refresh every 60s on this tab.',
         dashboardLayoutLabel: 'Layout',
         dashboardLayoutListTitle: 'List — grouped by probe run',
         dashboardLayoutGridTitle: 'Grid — Finder-style tiles',
-        dashboardCuratedAnswer: 'Curated answer for CSM',
+        dashboardAnswersToQueries: 'Answers to the queries',
         dashboardTechnicalRationale: 'Technical rationale',
         dashboardEscalationGuidance: 'Escalation guidance',
-        dashboardThreadSummary: 'Thread summary',
         dashboardNextSteps: 'Next steps',
         dashboardReferences: 'References',
         dashboardSkippedTitle: 'No dashboard items',
@@ -1277,6 +1407,10 @@
         dashboardDismissConfirmAction: 'Remove this task from the Action dashboard? The run stays in Run history.',
         dashboardDismissConfirmRun: 'Remove this from the Action dashboard? The interaction stays in Run history.',
         dashboardDismissFail: 'Could not remove',
+        dashboardDiscussAction: 'Discuss this action',
+        dashboardDiscussFail: 'Could not open action chat',
+        dashboardActionStatusLabel: 'Action status',
+        dashboardStatusUpdateFail: 'Could not update action status',
       },
       ko: {
         docTitle: 'Sova — CSM Radar Agent 24/7',
@@ -1401,7 +1535,7 @@
         cronNeedName: 'Job 이름 + cron 식 필요',
         deleteKbConfirm: '이 문서 삭제할까요?',
         removeUrlConfirm: '이 URL 제거할까요?',
-        deleteThreadConfirm: 'Thread {id} 삭제? 메시지 전부 삭제됩니다.',
+        deleteThreadConfirm: 'Thread {id} 삭제? 이 채팅 메시지와 연결된 실행 이력도 함께 삭제됩니다.',
         langHelp: 'UI만 한/영. 답장 언어는 메시지 따름 (Sova와 무관).',
         optimizeConfirm: 'DB cleanup 실행? 오래된 row·report 파일 삭제될 수 있음',
         clearHistoryConfirm: 'Run history 전부 삭제?',
@@ -1415,13 +1549,15 @@
         discoveredUrls: 'URL {n}개 발견 (disabled로 저장):',
         preparingUpload: 'Upload 준비… ({n} files)',
         actionBoardTitle: 'Action dashboard',
-        actionBoardLead: 'Inbox Probe마다 CSM 검토용 구조화 액션(제목·브리프·스레드 요약)이 쌓입니다. 전체 모델 출력은 Run history에 있습니다.',
+        actionBoardLead: 'Inbox Probe마다 CSM 검토용 구조화 액션이 쌓입니다. 전체 모델 출력은 Run history에 있습니다.',
         actionBoardRefresh: '새로고침',
         actionBoardHelp: '상세·피드백은 Run history에서 확인하세요.',
         actionBoardEmpty: '아직 inbox 리뷰가 없습니다. Inbox 스캔, 스레드 Probe, 또는 Cron을 실행하세요.',
         actionBoardFail: 'Action dashboard를 불러오지 못했습니다',
         dashboardFilterSource: '출처',
-        dashboardFilterStatus: '상태',
+        dashboardRunStatusFilter: '실행 상태',
+        dashboardActionStatusFilter: '작업 상태',
+        dashboardActionSort: '정렬',
         dashboardSourceAll: '전체',
         dashboardSourceCron: 'Cron',
         dashboardSourceThread: '스레드 Probe',
@@ -1429,17 +1565,22 @@
         dashboardStatusAll: '전체',
         dashboardStatusCompleted: '완료',
         dashboardStatusError: '오류',
+        dashboardActionStatusAll: '전체 작업',
+        dashboardActionStatusNotStarted: '시작 전',
+        dashboardActionStatusInProgress: '진행 중',
+        dashboardActionStatusCompleted: '완료',
+        dashboardSortUpdatedDesc: '최신 업데이트',
+        dashboardSortUpdatedAsc: '오래된 업데이트',
+        dashboardSortStatus: '상태',
         dashboardLoadMore: '더 보기',
-        dashboardOpenThread: '스레드 열기',
         dashboardViewInHistory: 'Run history에서 보기',
         dashboardPollingHint: '이 탭에서 60초마다 자동 새로고침.',
         dashboardLayoutLabel: '레이아웃',
         dashboardLayoutListTitle: '목록 — Probe 실행별 그룹',
         dashboardLayoutGridTitle: '그리드 — Finder 스타일 타일',
-        dashboardCuratedAnswer: 'CSM용 큐레이션 답변',
+        dashboardAnswersToQueries: '문의에 대한 답변',
         dashboardTechnicalRationale: '기술적 근거',
         dashboardEscalationGuidance: '에스컬레이션 가이드',
-        dashboardThreadSummary: '스레드 요약',
         dashboardNextSteps: '다음 단계',
         dashboardReferences: '참고',
         dashboardSkippedTitle: '대시보드 항목 없음',
@@ -1452,6 +1593,10 @@
         dashboardDismissConfirmAction: '이 작업을 Action dashboard에서 제거할까요? Run history의 기록은 유지됩니다.',
         dashboardDismissConfirmRun: 'Action dashboard에서 제거할까요? Run history의 interaction은 유지됩니다.',
         dashboardDismissFail: '제거하지 못했습니다',
+        dashboardDiscussAction: '이 작업만 논의',
+        dashboardDiscussFail: '액션 채팅을 열지 못했습니다',
+        dashboardActionStatusLabel: '작업 상태',
+        dashboardStatusUpdateFail: '작업 상태를 업데이트하지 못했습니다',
       },
     };
 
@@ -1510,11 +1655,24 @@
         dfs.options[2].text = uiText('dashboardSourceThread');
         dfs.options[3].text = uiText('dashboardSourceManual');
       }
-      const dst = document.getElementById('dashboardFilterStatus');
-      if (dst && dst.options && dst.options.length >= 3) {
-        dst.options[0].text = uiText('dashboardStatusAll');
-        dst.options[1].text = uiText('dashboardStatusCompleted');
-        dst.options[2].text = uiText('dashboardStatusError');
+      const drs = document.getElementById('dashboardRunStatusFilter');
+      if (drs && drs.options && drs.options.length >= 3) {
+        drs.options[0].text = uiText('dashboardStatusAll');
+        drs.options[1].text = uiText('dashboardStatusCompleted');
+        drs.options[2].text = uiText('dashboardStatusError');
+      }
+      const daf = document.getElementById('dashboardActionStatusFilter');
+      if (daf && daf.options && daf.options.length >= 4) {
+        daf.options[0].text = uiText('dashboardActionStatusAll');
+        daf.options[1].text = uiText('dashboardActionStatusNotStarted');
+        daf.options[2].text = uiText('dashboardActionStatusInProgress');
+        daf.options[3].text = uiText('dashboardActionStatusCompleted');
+      }
+      const das = document.getElementById('dashboardActionSort');
+      if (das && das.options && das.options.length >= 3) {
+        das.options[0].text = uiText('dashboardSortUpdatedDesc');
+        das.options[1].text = uiText('dashboardSortUpdatedAsc');
+        das.options[2].text = uiText('dashboardSortStatus');
       }
     }
 
@@ -2103,19 +2261,16 @@
 
     function dashboardCardFoot(row, md, opts) {
       const iid = Number(row.id);
-      const tid = md.thread_id != null ? Number(md.thread_id) : NaN;
       const parts = [];
-      if (Number.isFinite(tid)) {
-        parts.push(
-          `<button type="button" class="ghost btn-compact" onclick="openThreadFromDashboard(${tid})">${escapeHtml(uiText('dashboardOpenThread'))}</button>`
-        );
-      }
       if (Number.isFinite(iid)) {
         parts.push(
           `<button type="button" class="ghost btn-compact" onclick="goToInteractionInHistory(${iid})">${escapeHtml(uiText('dashboardViewInHistory'))}</button>`
         );
       }
       if (opts && typeof opts.actionIndex === 'number') {
+        parts.push(
+          `<button type="button" class="ghost btn-compact" onclick="openActionReviewChat(${iid}, ${opts.actionIndex})">${escapeHtml(uiText('dashboardDiscussAction'))}</button>`
+        );
         parts.push(
           `<button type="button" class="danger btn-compact" onclick="dismissDashboardAction(${iid}, ${opts.actionIndex})">${escapeHtml(uiText('dashboardDismissTask'))}</button>`
         );
@@ -2143,24 +2298,24 @@
       const cat = escapeHtml(String(action.category || 'general'));
       const title = escapeHtml(String(action.title || '—'));
       const brief = String(action.brief || '').trim();
-      const curatedAnswer = String(action.curated_answer || '').trim();
       const technicalRationale = String(action.technical_rationale || '').trim();
       const escalationGuidance = String(action.escalation_guidance || '').trim();
-      const summary = String(action.thread_summary || '').trim();
       const steps = Array.isArray(action.next_steps) ? action.next_steps : [];
       const refs = Array.isArray(action.references) ? action.references : [];
+      const subPairs = Array.isArray(action.subquery_answers) ? action.subquery_answers : [];
       const iid = Number(row.id);
-      const answerBlock = curatedAnswer
-        ? `<div><strong>${escapeHtml(uiText('dashboardCuratedAnswer'))}</strong><p class="csm-action-card__answer">${escapeHtml(curatedAnswer)}</p></div>`
-        : '';
       const rationaleBlock = technicalRationale
         ? `<div><strong>${escapeHtml(uiText('dashboardTechnicalRationale'))}</strong><p class="csm-action-card__tech">${escapeHtml(technicalRationale)}</p></div>`
         : '';
       const escalationBlock = escalationGuidance
         ? `<div><strong>${escapeHtml(uiText('dashboardEscalationGuidance'))}</strong><p class="csm-action-card__tech">${escapeHtml(escalationGuidance)}</p></div>`
         : '';
-      const summaryBlock = summary
-        ? `<details><summary>${escapeHtml(uiText('dashboardThreadSummary'))}</summary><div class="csm-action-card__summary-body">${escapeHtml(summary)}</div></details>`
+      const queriesBlock = subPairs.length
+        ? `<div class="csm-action-card__queries"><span class="csm-action-card__queries-title">${escapeHtml(uiText('dashboardAnswersToQueries'))}</span>${subPairs.map((p) => {
+            const sq = String((p && p.subquery) || '').trim();
+            const an = String((p && p.answer) || '').trim();
+            return `<div class="csm-query-block"><div class="csm-query-q">${escapeHtml(sq || '—')}</div><div class="csm-query-a">${escapeHtml(an)}</div></div>`;
+          }).join('')}</div>`
         : '';
       const stepsBlock = steps.length
         ? `<div><strong>${escapeHtml(uiText('dashboardNextSteps'))}</strong><ul>${steps.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
@@ -2169,20 +2324,117 @@
         ? `<div><strong>${escapeHtml(uiText('dashboardReferences'))}</strong><ul>${refs.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
         : '';
       const foot = dashboardCardFoot(row, md, { actionIndex });
-      const metaLine = `<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
-      return `<article class="csm-action-card">
-        <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
-        <h3 class="csm-action-card__title">${title}</h3>
-        ${brief ? `<p class="csm-action-card__brief">${escapeHtml(brief)}</p>` : ''}
-        ${answerBlock}
+      const actionStatus = normalizeActionStatus(action && action.status);
+      const statusOptions = [
+        ['not_started', uiText('dashboardActionStatusNotStarted')],
+        ['in_progress', uiText('dashboardActionStatusInProgress')],
+        ['completed', uiText('dashboardActionStatusCompleted')],
+      ].map(([v, label]) => `<option value="${escapeHtml(v)}"${v === actionStatus ? ' selected' : ''}>${escapeHtml(label)}</option>`).join('');
+      const statusControl = Number.isFinite(iid)
+        ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionStatusLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionStatus(${iid}, ${Number(actionIndex)}, this.value)">${statusOptions}</select></div>`
+        : '';
+      const gmailTid = String(action.gmail_thread_id || '').trim();
+      const gmailLine = gmailTid
+        ? `<div class="csm-action-card__meta" title="Gmail thread id — used when discussing this action">Gmail thread · ${escapeHtml(gmailTid)}</div>`
+        : '';
+      const subj = String(action.email_subject || '').trim();
+      const from = String(action.email_from || '').trim();
+      const subjLine = subj ? `<div class="csm-action-card__meta" title="Email subject">${escapeHtml(subj)}</div>` : '';
+      const fromLine = from ? `<div class="csm-action-card__meta" title="Email from">${escapeHtml(from)}</div>` : '';
+      const metaLine = `${statusControl}${gmailLine}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      /* Order: header → summary (title) → brief (overview) → answers → rationale / steps / … */
+      const briefBlock = brief
+        ? `<p class="csm-action-card__brief">${escapeHtml(brief)}</p>`
+        : '';
+      const bodyRest = `
         ${rationaleBlock}
         ${escalationBlock}
-        ${summaryBlock}
         ${stepsBlock}
         ${refsBlock}
-        ${metaLine}
+        ${subjLine}
+        ${fromLine}
+        ${metaLine}`;
+      return `<article class="csm-action-card">
+        <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
+        <details class="csm-action-card__main" open>
+          <summary>
+            <h3 class="csm-action-card__title">${title}</h3>
+            <span class="csm-action-card__chev" aria-hidden="true">▸</span>
+          </summary>
+          ${briefBlock}
+          ${queriesBlock}
+          <div class="csm-action-card__main-inner">${bodyRest}</div>
+        </details>
         ${foot}
       </article>`;
+    }
+
+    function normalizeActionStatus(v) {
+      const s = String(v || '').trim().toLowerCase();
+      if (s === 'in_progress' || s === 'completed') return s;
+      return 'not_started';
+    }
+
+    function statusSortRank(v) {
+      const s = normalizeActionStatus(v);
+      if (s === 'in_progress') return 1;
+      if (s === 'not_started') return 2;
+      return 3;
+    }
+
+    function getDashboardActionStatusFilter() {
+      const el = document.getElementById('dashboardActionStatusFilter');
+      const v = (el && el.value) || 'all';
+      return ['all', 'not_started', 'in_progress', 'completed'].includes(v) ? v : 'all';
+    }
+
+    function getDashboardActionSortMode() {
+      const el = document.getElementById('dashboardActionSort');
+      const v = (el && el.value) || 'updated_desc';
+      return ['updated_desc', 'updated_asc', 'status'].includes(v) ? v : 'updated_desc';
+    }
+
+    function flattenDedupDashboardActions(rows) {
+      const out = [];
+      const byThread = new Map();
+      for (const row of (rows || [])) {
+        const md = parseInteractionMetadata(row.metadata);
+        const actions = Array.isArray(md.csm_actions) ? md.csm_actions : [];
+        for (let i = 0; i < actions.length; i++) {
+          const a = actions[i];
+          if (!a || typeof a !== 'object') continue;
+          const item = { row, md, action: a, actionIndex: i };
+          const gid = String(a.gmail_thread_id || '').trim();
+          const subj = String(a.email_subject || '').trim().toLowerCase();
+          const from = String(a.email_from || '').trim().toLowerCase();
+          const key = gid ? ('gid:' + gid) : (subj && from ? ('fs:' + from + '||' + subj) : '');
+          if (!key) { out.push(item); continue; }
+          const prev = byThread.get(key);
+          if (!prev) {
+            byThread.set(key, item);
+            continue;
+          }
+          const tPrev = Date.parse(prev.row.created_at || '') || 0;
+          const tNow = Date.parse(row.created_at || '') || 0;
+          if (tNow >= tPrev) byThread.set(key, item);
+        }
+      }
+      out.push(...Array.from(byThread.values()));
+      const stFilter = getDashboardActionStatusFilter();
+      const filtered = out.filter((x) => stFilter === 'all' || normalizeActionStatus(x.action.status) === stFilter);
+      const sortMode = getDashboardActionSortMode();
+      filtered.sort((a, b) => {
+        const ta = Date.parse(a.row.created_at || '') || 0;
+        const tb = Date.parse(b.row.created_at || '') || 0;
+        if (sortMode === 'updated_asc') return ta - tb;
+        if (sortMode === 'status') {
+          const rs = statusSortRank(a.action.status) - statusSortRank(b.action.status);
+          if (rs !== 0) return rs;
+          return tb - ta;
+        }
+        return tb - ta;
+      });
+      return filtered;
     }
 
     function renderSkippedCard(row, md) {
@@ -2240,19 +2492,49 @@
 
     function renderDashboardFeedHtml(rows) {
       const layout = getDashboardLayout();
-      if (!rows || !rows.length) {
+      const cards = flattenDedupDashboardActions(rows);
+      if (!cards || !cards.length) {
         return `<div class="empty">${escapeHtml(uiText('actionBoardEmpty'))}</div>`;
       }
-      return rows.map((row) => renderOneProbeRow(row, layout)).join('');
+      return cards.map((x) => renderCsmActionCard(x.row, x.action, x.md, x.actionIndex)).join('');
     }
 
-    async function openThreadFromDashboard(threadId) {
-      const id = Number(threadId);
-      if (!id) return;
-      _activeThreadId = id;
-      showTab('tab-agent');
-      await loadThreads();
-      await loadThreadMessages();
+    async function setDashboardActionStatus(interactionId, actionIndex, status) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      if (!id || !Number.isFinite(idx) || idx < 0) return;
+      try {
+        const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: String(status || '') }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardStatusUpdateFail')}: ${e.message}`);
+      }
+    }
+
+    async function openActionReviewChat(interactionId, actionIndex) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      if (!id || !Number.isFinite(idx) || idx < 0) return;
+      try {
+        const pack = await fetchJson('/threads/action-review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ source_interaction_id: id, action_index: idx }),
+        });
+        const t = pack.thread;
+        if (!t || t.id == null) return;
+        _activeThreadId = Number(t.id);
+        showTab('tab-agent');
+        await loadThreads();
+        await loadThreadMessages();
+      } catch (e) {
+        alert(`${uiText('dashboardDiscussFail')}: ${e.message}`);
+      }
     }
 
     async function goToInteractionInHistory(interactionId) {
@@ -2309,7 +2591,7 @@
       applyDashboardFeedLayoutClass();
       syncDashboardLayoutButtons();
       const srcEl = document.getElementById('dashboardFilterSource');
-      const stEl = document.getElementById('dashboardFilterStatus');
+      const stEl = document.getElementById('dashboardRunStatusFilter');
       const source = (srcEl && srcEl.value) || 'all';
       const status = (stEl && stEl.value) || 'all';
       try {

@@ -92,6 +92,11 @@ def _is_probe_dashboard_trigger(trigger_type: str | None) -> bool:
     return False
 
 
+def is_dashboard_probe_trigger(trigger_type: str | None) -> bool:
+    """True for cron probes, thread Scan inbox, manual API probes (dashboard inbox review runs)."""
+    return _is_probe_dashboard_trigger(trigger_type)
+
+
 def get_interaction_by_id(interaction_id: int) -> dict | None:
     conn = _conn()
     conn.row_factory = sqlite3.Row
@@ -112,6 +117,13 @@ def _parse_interaction_metadata(raw: str | None) -> dict:
         return out if isinstance(out, dict) else {}
     except json.JSONDecodeError:
         return {}
+
+
+def parse_interaction_metadata(raw: str | None | dict) -> dict:
+    """Parse `agent_interactions.metadata` JSON (or pass through dict)."""
+    if isinstance(raw, dict):
+        return dict(raw)
+    return _parse_interaction_metadata(raw if isinstance(raw, str) else None)
 
 
 def dismiss_probe_from_dashboard(interaction_id: int) -> bool:
@@ -176,6 +188,76 @@ def remove_csm_dashboard_action(interaction_id: int, action_index: int) -> bool:
         conn.commit()
         conn.close()
         return True
+
+
+def set_csm_dashboard_action_status(interaction_id: int, action_index: int, status: str) -> bool:
+    """Set one action status in metadata.csm_actions."""
+    st = (status or "").strip().lower()
+    if st not in {"not_started", "in_progress", "completed"}:
+        return False
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (interaction_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        actions = md.get("csm_actions")
+        if not isinstance(actions, list) or action_index < 0 or action_index >= len(actions):
+            conn.close()
+            return False
+        actions = list(actions)
+        item = dict(actions[action_index] or {})
+        item["status"] = st
+        actions[action_index] = item
+        md["csm_actions"] = actions
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), interaction_id),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
+def latest_dashboard_actions_by_gmail_thread(limit: int = 800) -> dict[str, dict]:
+    """
+    Latest visible dashboard action per gmail_thread_id.
+    Used to carry user status and reopen completed cards when new thread updates arrive.
+    """
+    rows = list_probe_interactions(limit=limit, offset=0, source="all", status_filter="all")
+    out: dict[str, dict] = {}
+    for r in rows:
+        md = parse_interaction_metadata(r.get("metadata"))
+        acts = md.get("csm_actions")
+        if not isinstance(acts, list):
+            continue
+        for a in acts:
+            if not isinstance(a, dict):
+                continue
+            gid = str(a.get("gmail_thread_id") or "").strip()
+            ef = str(a.get("email_from") or "").strip().lower()
+            es = str(a.get("email_subject") or "").strip().lower()
+            keys: list[str] = []
+            if gid:
+                keys.append(f"gid:{gid}")
+            if ef and es:
+                keys.append(f"fs:{ef}||{es}")
+            if not keys:
+                continue
+            for k in keys:
+                if k in out:
+                    continue
+                out[k] = dict(a)
+    return out
 
 
 def list_probe_interactions(
@@ -848,6 +930,80 @@ def optimize_data_store(
     return {"deleted": deleted, "stats": db_stats()}
 
 
+def _normalize_thread_metadata_row(d: dict) -> dict:
+    meta = d.get("metadata")
+    if isinstance(meta, str) and meta.strip():
+        try:
+            d["metadata"] = json.loads(meta)
+        except json.JSONDecodeError:
+            d["metadata"] = {}
+    elif meta is None:
+        d["metadata"] = {}
+    return d
+
+
+def get_thread_by_id(thread_id: int) -> dict | None:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        """
+        SELECT id, created_at, updated_at, title, pinned, metadata
+        FROM conversation_threads WHERE id = ?
+        """,
+        (int(thread_id),),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return _normalize_thread_metadata_row(dict(row))
+
+
+def find_action_review_thread(source_interaction_id: int, action_index: int) -> dict | None:
+    """Return existing Workbench thread scoped to one probe action (dashboard card), if any."""
+    sid = int(source_interaction_id)
+    idx = int(action_index)
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        """
+        SELECT id, created_at, updated_at, title, pinned, metadata
+        FROM conversation_threads
+        WHERE json_extract(metadata, '$.kind') = 'action_review'
+          AND CAST(json_extract(metadata, '$.source_interaction_id') AS INTEGER) = ?
+          AND CAST(json_extract(metadata, '$.action_index') AS INTEGER) = ?
+        LIMIT 1
+        """,
+        (sid, idx),
+    ).fetchone()
+    conn.close()
+    if row:
+        return _normalize_thread_metadata_row(dict(row))
+    # Fallback if json_extract unavailable or legacy rows
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT id, created_at, updated_at, title, pinned, metadata
+        FROM conversation_threads
+        ORDER BY id DESC
+        LIMIT 800
+        """
+    ).fetchall()
+    conn.close()
+    for r in rows:
+        d = _normalize_thread_metadata_row(dict(r))
+        m = d.get("metadata") or {}
+        if not isinstance(m, dict):
+            continue
+        if (
+            m.get("kind") == "action_review"
+            and int(m.get("source_interaction_id") or -1) == sid
+            and int(m.get("action_index") or -1) == idx
+        ):
+            return d
+    return None
+
+
 def create_thread(*, title: str | None = None, pinned: bool = False, metadata: dict | None = None) -> dict:
     with _WRITE_LOCK:
         conn = _conn()
@@ -869,7 +1025,7 @@ def create_thread(*, title: str | None = None, pinned: bool = False, metadata: d
         row = conn.execute("SELECT * FROM conversation_threads ORDER BY id DESC LIMIT 1").fetchone()
         conn.commit()
         conn.close()
-        return dict(row) if row else {}
+        return _normalize_thread_metadata_row(dict(row)) if row else {}
 
 
 def list_threads(limit: int = 50, offset: int = 0, query: str | None = None) -> list[dict]:
@@ -951,8 +1107,9 @@ def list_messages(thread_id: int, limit: int = 200, offset: int = 0) -> list[dic
 
 def delete_thread(thread_id: int) -> dict:
     """
-    Delete a conversation thread and its messages.
-    (No foreign key constraints are enforced, so we delete messages first.)
+    Delete a conversation thread, its messages, and agent_interactions rows
+    whose metadata.thread_id points at this thread (Workbench memory + related run log).
+    Cron / dashboard probe interactions without that metadata are unchanged.
     """
     with _WRITE_LOCK:
         conn = _conn()
@@ -964,9 +1121,26 @@ def delete_thread(thread_id: int) -> dict:
         ).fetchone()
         if not row:
             conn.close()
-            return {"deleted": 0}
+            return {"deleted": 0, "deleted_messages": 0, "deleted_interactions": 0}
+        # Run history rows tied to this Workbench thread (thread_message / thread_probe sends).
+        c0 = conn.execute(
+            """
+            DELETE FROM agent_interactions
+            WHERE json_extract(metadata, '$.thread_id') IS NOT NULL
+              AND (
+                CAST(json_extract(metadata, '$.thread_id') AS INTEGER) = ?
+                OR CAST(json_extract(metadata, '$.thread_id') AS TEXT) = ?
+              )
+            """,
+            (tid, str(tid)),
+        )
         c1 = conn.execute("DELETE FROM conversation_messages WHERE thread_id = ?", (tid,))
         c2 = conn.execute("DELETE FROM conversation_threads WHERE id = ?", (tid,))
         conn.commit()
         conn.close()
-        return {"deleted": int(c2.rowcount or 0), "deleted_messages": int(c1.rowcount or 0), "thread": dict(row)}
+        return {
+            "deleted": int(c2.rowcount or 0),
+            "deleted_messages": int(c1.rowcount or 0),
+            "deleted_interactions": int(c0.rowcount or 0),
+            "thread": dict(row),
+        }

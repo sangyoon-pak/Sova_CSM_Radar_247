@@ -4,15 +4,19 @@ from threading import Thread
 
 from fastapi import HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
 
 from src.agent.email_agent import run_agent
 from src.agent.memory import compact_memory, refresh_learning_instructions
-from src.agent.probe_actions import format_probe_thread_reply, merge_csm_actions_metadata
-from src.agent.prompts import PROBE_TRIGGER_MESSAGE
+from src.agent.probe_actions import (
+    format_action_review_chat_prefix,
+    format_probe_thread_reply,
+    merge_csm_actions_metadata,
+)
+from src.agent.prompts import ACTION_REVIEW_SYSTEM_APPEND, PROBE_TRIGGER_MESSAGE
 from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
 from src.agent.tools.openrouter_web import run_web_search
@@ -104,7 +108,8 @@ def run_agent_endpoint(req: RunAgentRequest):
             output = run_agent(input_text, probe=req.probe)
         meta: dict = {"tools_used": [], "events": []}
         if req.probe:
-            meta = merge_csm_actions_metadata(output, meta)
+            existing = database.latest_dashboard_actions_by_gmail_thread()
+            meta = merge_csm_actions_metadata(output, meta, existing_by_thread=existing)
         database.log_interaction(
             "manual" if not req.probe else "manual_probe",
             input_text[:500],
@@ -145,7 +150,8 @@ def run_agent_async_endpoint(req: RunAgentRequest):
                 "events": events,
             }
             if req.probe:
-                metadata = merge_csm_actions_metadata(output, metadata)
+                existing = database.latest_dashboard_actions_by_gmail_thread()
+                metadata = merge_csm_actions_metadata(output, metadata, existing_by_thread=existing)
             database.log_interaction(trigger_type, input_text[:500], output, "completed", metadata=metadata)
         except Exception as e:
             run_state.fail_run(run_id, str(e))
@@ -446,6 +452,24 @@ def dismiss_dashboard_probe_action(interaction_id: int, action_index: int):
     return {"ok": True}
 
 
+class DashboardActionStatusRequest(BaseModel):
+    status: str
+
+
+@router.patch("/dashboard/probe-runs/{interaction_id}/actions/{action_index}/status")
+def set_dashboard_probe_action_status(interaction_id: int, action_index: int, req: DashboardActionStatusRequest):
+    """Update one dashboard action status: not_started | in_progress | completed."""
+    if action_index < 0:
+        raise HTTPException(status_code=400, detail="Invalid action index.")
+    ok = database.set_csm_dashboard_action_status(interaction_id, action_index, req.status)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Interaction/action not found, not a probe run, or invalid status.",
+        )
+    return {"ok": True}
+
+
 @router.delete("/dashboard/probe-runs/{interaction_id}")
 def dismiss_dashboard_probe_run(interaction_id: int):
     """Hide an inbox review run from the Action dashboard (metadata); row remains in Run history."""
@@ -499,6 +523,13 @@ class OptimizeRequest(BaseModel):
 class ThreadCreateRequest(BaseModel):
     title: str | None = None
     pinned: bool = False
+    metadata: dict | None = None
+
+
+class ActionReviewThreadRequest(BaseModel):
+    """Open or create a Workbench thread scoped to one Action dashboard card (probe interaction + action index)."""
+    source_interaction_id: int
+    action_index: int = Field(ge=0)
 
 
 class ThreadSendRequest(BaseModel):
@@ -568,7 +599,60 @@ def list_threads(limit: int = 50, offset: int = 0, q: str | None = None):
 
 @router.post("/threads")
 def create_thread(req: ThreadCreateRequest):
-    return database.create_thread(title=req.title, pinned=req.pinned)
+    return database.create_thread(title=req.title, pinned=req.pinned, metadata=req.metadata)
+
+
+@router.post("/threads/action-review")
+def ensure_action_review_thread(req: ActionReviewThreadRequest):
+    existing = database.find_action_review_thread(req.source_interaction_id, req.action_index)
+    if existing:
+        return {"thread": existing, "created": False}
+    row = database.get_interaction_by_id(req.source_interaction_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Interaction not found.")
+    if not database.is_dashboard_probe_trigger(row.get("trigger_type")):
+        raise HTTPException(
+            status_code=400,
+            detail="Not an inbox review interaction; action review threads are only for probe runs.",
+        )
+    md = database.parse_interaction_metadata(row.get("metadata"))
+    actions = md.get("csm_actions")
+    if not isinstance(actions, list) or req.action_index < 0 or req.action_index >= len(actions):
+        raise HTTPException(status_code=400, detail="Invalid action index for this interaction.")
+    snap = dict(actions[req.action_index])
+    title_base = str(snap.get("title") or "Action").strip()[:120]
+    thread_md: dict = {
+        "kind": "action_review",
+        "source_interaction_id": int(req.source_interaction_id),
+        "action_index": int(req.action_index),
+        "action_snapshot": snap,
+    }
+    ptid = md.get("thread_id")
+    if ptid is not None:
+        try:
+            thread_md["probe_source_thread_id"] = int(ptid)
+        except (TypeError, ValueError):
+            pass
+    th = database.create_thread(
+        title=f"{title_base} · Action review",
+        metadata=thread_md,
+    )
+    tid = th.get("id")
+    if tid:
+        seed = format_action_review_chat_prefix(
+            snap,
+            source_interaction_id=int(req.source_interaction_id),
+            action_index=int(req.action_index),
+            probe_source_thread_id=thread_md.get("probe_source_thread_id"),
+        )
+        database.add_message(
+            thread_id=int(tid),
+            role="system",
+            content=seed
+            + "\n\n---\n(Chat in this thread is scoped to this action item. This is not the same thread as a general Workbench conversation.)",
+            metadata={"kind": "action_review_seed"},
+        )
+    return {"thread": th, "created": True}
 
 
 @router.get("/threads/{thread_id}/messages")
@@ -598,14 +682,27 @@ def send_thread_message(req: ThreadSendRequest):
         metadata={"kind": "probe" if req.probe else "message"},
     )
 
-    input_text = PROBE_TRIGGER_MESSAGE if req.probe else text
     trigger_type = "thread_probe" if req.probe else "thread_message"
-    run_id = run_state.create_run(trigger_type=trigger_type, input_text=input_text[:500])
+    log_input = PROBE_TRIGGER_MESSAGE if req.probe else (text[:500] if text else "")
+    run_id = run_state.create_run(trigger_type=trigger_type, input_text=log_input[:500])
+
+    th0 = database.get_thread_by_id(req.thread_id)
+    md0 = (th0 or {}).get("metadata") or {}
+    is_action_review = isinstance(md0, dict) and md0.get("kind") == "action_review"
+    system_append = ACTION_REVIEW_SYSTEM_APPEND if (not req.probe and is_action_review) else None
+    thread_history = None if req.probe else database.list_messages(req.thread_id, limit=200)
 
     def _worker():
         cb = _UITraceCallback(run_id)
         try:
-            output = run_agent(input_text, callbacks=[cb], probe=req.probe)
+            output = run_agent(
+                text or "",
+                callbacks=[cb],
+                probe=req.probe,
+                system_append=system_append,
+                conversation_messages=thread_history,
+                thread_is_action_review=is_action_review if not req.probe else False,
+            )
             run_state.complete_run(run_id, output)
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
@@ -617,7 +714,8 @@ def send_thread_message(req: ThreadSendRequest):
                 "user_message_id": user_msg.get("id"),
             }
             if req.probe:
-                metadata = merge_csm_actions_metadata(output, metadata)
+                existing = database.latest_dashboard_actions_by_gmail_thread()
+                metadata = merge_csm_actions_metadata(output, metadata, existing_by_thread=existing)
                 assistant_body = format_probe_thread_reply(output, metadata)
             else:
                 assistant_body = output
@@ -629,7 +727,7 @@ def send_thread_message(req: ThreadSendRequest):
             )
             database.log_interaction(
                 trigger_type,
-                input_text[:500],
+                log_input[:500],
                 output,
                 "completed",
                 metadata=metadata,
@@ -653,7 +751,7 @@ def send_thread_message(req: ThreadSendRequest):
             )
             database.log_interaction(
                 trigger_type,
-                input_text[:500],
+                log_input[:500],
                 "",
                 "error",
                 error_message=str(e),

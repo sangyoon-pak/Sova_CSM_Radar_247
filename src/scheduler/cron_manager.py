@@ -15,7 +15,8 @@ def _run_probe_job(name: str = "default"):
     from src.agent.email_agent import run_agent
     try:
         output = run_agent(PROBE_TRIGGER_MESSAGE, probe=True)
-        meta = merge_csm_actions_metadata(output, {})
+        existing = database.latest_dashboard_actions_by_gmail_thread()
+        meta = merge_csm_actions_metadata(output, {}, existing_by_thread=existing)
         database.log_interaction(
             f"cron:{name}", PROBE_TRIGGER_MESSAGE, output, "completed", metadata=meta
         )

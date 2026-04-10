@@ -5,12 +5,12 @@ import json
 from collections.abc import Sequence
 
 from langchain_core.tools import tool
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
-from src.agent.prompts import render_email_agent_system, PROBE_MODE_SYSTEM_APPEND
+from src.agent.prompts import PROBE_MODE_SYSTEM_APPEND, render_email_agent_system
 from src.db import database
 
 
@@ -73,6 +73,66 @@ def _route_user_request(text: str) -> str:
     return "agent_run"
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
+
+
+def _flatten_ai_content(content) -> str:
+    """LangChain may use str or list of blocks for AIMessage.content."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                if block.get("type") == "text":
+                    parts.append(str(block.get("text") or ""))
+                elif "text" in block:
+                    parts.append(str(block["text"]))
+            else:
+                parts.append(str(block))
+        return "".join(parts)
+    return str(content)
+
+
+def db_conversation_to_langchain(rows: list[dict]) -> list:
+    """
+    Map persisted thread rows to LangChain messages. Only this thread's rows should be passed —
+    the agent then sees that thread as its conversational context (no cross-thread mixing).
+    """
+    out: list = []
+    for row in rows or []:
+        role = (row.get("role") or "").strip().lower()
+        content = row.get("content")
+        if content is None:
+            continue
+        text = str(content).strip()
+        if not text:
+            continue
+        if role == "system":
+            out.append(SystemMessage(content=text))
+        elif role == "user":
+            out.append(HumanMessage(content=text))
+        elif role == "assistant":
+            out.append(AIMessage(content=text))
+    return out
+
+
+def _collect_probe_assistant_output(messages: list) -> str:
+    """
+    In probe mode the model may emit valid ```json``` in an earlier assistant turn and then
+    paste raw inbox text in the last turn — parsing only the last AIMessage misses the JSON.
+    Join all assistant text so parse_probe_dashboard_json can find the fenced block.
+    """
+    chunks: list[str] = []
+    for m in messages:
+        if isinstance(m, AIMessage):
+            t = _flatten_ai_content(m.content).strip()
+            if t:
+                chunks.append(t)
+    return "\n\n".join(chunks)
 
 
 def _extract_source_tags_from_messages(messages: list) -> list[str]:
@@ -151,6 +211,13 @@ def fetch_inbox_emails(search: str = "in:inbox category:primary newer_than:2d", 
 
 
 @tool
+def fetch_gmail_thread(thread_id: str) -> str:
+    """Fetch the full Gmail thread (all messages) by Gmail thread id. Id appears as `thread_id` in fetch_inbox_emails output; use when discussing one dashboard action."""
+    from src.agent.tools.gmail_tool import fetch_gmail_thread as _fetch_thread
+    return _fetch_thread(thread_id)
+
+
+@tool
 def search_product_docs(query: str) -> str:
     """Search product documentation for relevant context."""
     from src.agent.tools.search_agent import search_with_agent
@@ -163,9 +230,13 @@ def search_rc_web(query: str) -> str:
     from src.agent.tools.rc_web_search import search_rc_web as _search
     return _search(query=query)
 
-def create_agent_executor(*, probe: bool = False):
+def create_agent_executor(
+    *,
+    probe: bool = False,
+    system_append: str | None = None,
+):
     llm = _get_llm()
-    tools = [fetch_inbox_emails, search_product_docs, search_rc_web]
+    tools = [fetch_inbox_emails, fetch_gmail_thread, search_product_docs, search_rc_web]
     profile = database.get_agent_profile_settings()
     learning = database.get_runtime_learning_instructions()
     system_prompt = render_email_agent_system(
@@ -176,6 +247,9 @@ def create_agent_executor(*, probe: bool = False):
     )
     if probe:
         system_prompt = system_prompt.rstrip() + "\n\n" + PROBE_MODE_SYSTEM_APPEND.strip()
+    extra = (system_append or "").strip()
+    if extra:
+        system_prompt = system_prompt.rstrip() + "\n\n" + extra
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
 
 
@@ -184,12 +258,28 @@ def run_agent(
     callbacks: Sequence | None = None,
     *,
     probe: bool = False,
+    system_append: str | None = None,
+    conversation_messages: list[dict] | None = None,
+    thread_is_action_review: bool = False,
 ) -> str:
     _ensure_langsmith_env()
 
+    # Latest user utterance (for routing) when using thread history
+    route_text = (input_text or "").strip()
+    if conversation_messages and not probe:
+        for row in reversed(conversation_messages):
+            if (row.get("role") or "").strip().lower() == "user":
+                c = row.get("content")
+                if c is not None and str(c).strip():
+                    route_text = str(c).strip()
+                    break
+
     # If the user is just asking to see recent/latest emails, do that directly.
     # This avoids accidental doc retrieval + drafting on short inbox-peek queries (Korean/English/etc).
-    if _route_user_request(input_text) == "inbox_peek":
+    # Action-review threads always run the full agent (fetch_gmail_thread, etc.).
+    _peek = _route_user_request(route_text) == "inbox_peek"
+    _action_review = thread_is_action_review or (input_text or "").lstrip().startswith("[Action review")
+    if _peek and not _action_review:
         from src.agent.tools.gmail_tool import fetch_inbox_emails as _fetch
         # Emit trace events (tool_start/tool_end) so the UI Trace inspector stays useful.
         cbs = list(callbacks) if callbacks else []
@@ -206,21 +296,29 @@ def run_agent(
                 pass
         return out
 
-    agent = create_agent_executor(probe=probe)
+    agent = create_agent_executor(probe=probe, system_append=system_append)
     config = {"callbacks": list(callbacks)} if callbacks else None
-    result = agent.invoke({"messages": [HumanMessage(content=input_text)]}, config=config)
+    if conversation_messages is not None and not probe:
+        lc_messages = db_conversation_to_langchain(conversation_messages)
+        if not lc_messages:
+            lc_messages = [HumanMessage(content=input_text or "(no message)")]
+        invoke_messages = lc_messages
+    else:
+        invoke_messages = [HumanMessage(content=input_text)]
+    result = agent.invoke({"messages": invoke_messages}, config=config)
     messages = result.get("messages", [])
     draft = None
     for m in reversed(messages):
         if isinstance(m, AIMessage) and m.content:
-            draft = str(m.content)
+            draft = _flatten_ai_content(m.content)
             break
     if not draft:
         return str(result)
 
     # Probe output should stay bullet-oriented; citation pass encourages formal numbered replies.
     if probe:
-        return draft
+        collected = _collect_probe_assistant_output(messages)
+        return collected if collected.strip() else draft
 
     # NotebookLM-style enforcement: ensure each numbered item has citations.
     if _draft_needs_citations(draft):
