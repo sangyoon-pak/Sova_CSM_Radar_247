@@ -1,6 +1,8 @@
-# LLM models (OpenRouter)
+# LLM models (OpenRouter / OpenAI-compatible)
 
-Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not** hard-coded in call sites; they come from settings (`src/config.py`), which read `.env`.
+Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not** hard-coded in call sites; they come from settings (`src/config.py`) and optional **Configure** DB overrides (see `src/runtime_config.py`).
+
+**Provider preset:** `LLM_PROVIDER_PRESET` — `openrouter` (default), `openai` (direct OpenAI + `OPENAI_API_KEY`), or `gemini_openrouter` (Gemini model ids via OpenRouter). Same HTTP client; base URL and keys follow the preset (see `.env.example` and **Configure** in the UI).
 
 ## Environment variables
 

@@ -10,6 +10,7 @@ from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
+from src.runtime_config import effective_llm_model_main, effective_llm_model_search_json
 from src.agent.prompts import PROBE_MODE_SYSTEM_APPEND, render_email_agent_system
 from src.db import database
 
@@ -23,11 +24,12 @@ def _ensure_langsmith_env():
 
 
 def _get_llm():
-    return get_chat_llm(model=settings.llm_model_for_main, temperature=0.3)
+    return get_chat_llm(model=effective_llm_model_main(), temperature=0.3)
+
 
 def _llm_intent_router():
     # Deterministic classifier for UX routing (language-agnostic).
-    return get_chat_llm(model=settings.llm_model_for_search_json, temperature=0.0)
+    return get_chat_llm(model=effective_llm_model_search_json(), temperature=0.0)
 
 
 INTENT_ROUTE_PROMPT = """You route the user's request to the correct action.
@@ -180,7 +182,7 @@ def _add_citations_pass(*, draft: str, source_tags: list[str]) -> str:
     """
     if not draft or not source_tags:
         return draft
-    llm = get_chat_llm(model=settings.llm_model_for_main, temperature=0.0)
+    llm = get_chat_llm(model=effective_llm_model_main(), temperature=0.0)
     tags = "\n".join(f"- {t}" for t in source_tags)
     prompt = (
         "You are post-processing a draft email.\n"

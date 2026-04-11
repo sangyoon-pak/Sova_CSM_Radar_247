@@ -10,9 +10,12 @@ class Settings(BaseSettings):
 
     # LLM
     openrouter_api_key: str | None = Field(None, validation_alias="OPENROUTER_API_KEY")
+    openai_api_key: str | None = Field(None, validation_alias="OPENAI_API_KEY")
     openrouter_base_url: str = Field(
         "https://openrouter.ai/api/v1", validation_alias="OPENROUTER_BASE_URL"
     )
+    # openrouter | openai | gemini_openrouter (Gemini models via OpenRouter, same HTTP client)
+    llm_provider_preset: str = Field("openrouter", validation_alias="LLM_PROVIDER_PRESET")
     llm_model: str = Field("gpt-4o", validation_alias="LLM_MODEL")
     # Optional per-role overrides (OpenRouter model ids). All fall back to LLM_MODEL when unset.
     llm_model_main: str | None = Field(None, validation_alias="LLM_MODEL_MAIN")

@@ -1,4 +1,6 @@
 .env
+# Google OAuth client (download from Cloud Console; never commit)
+credentials.json
 __pycache__/
 *.pyc
 *.pyo

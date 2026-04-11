@@ -7,7 +7,14 @@ import re
 import subprocess
 from pathlib import Path
 
-from src.config import settings
+from src.runtime_config import (
+    effective_gog_account,
+    effective_gog_keyring_backend,
+    effective_gog_keyring_password,
+    effective_xdg_config_home,
+    gog_credentials_path_resolved,
+    gog_home_resolved,
+)
 
 _HANGUL_RE = re.compile(r"[\uac00-\ud7a3]")
 _LATIN_RE = re.compile(r"[A-Za-z]")
@@ -145,12 +152,11 @@ def _maybe_bootstrap_oauth(env: dict[str, str], project_root: Path) -> str | Non
 
     # Find a credentials.json to register (prefer explicit setting).
     candidates: list[Path] = []
-    explicit = settings.gog_credentials_path_resolved
+    explicit = gog_credentials_path_resolved()
     if explicit:
         candidates.append(explicit)
-    # Common in-repo locations.
+    # In-repo location (this project only; set GOG_CREDENTIALS_PATH for another path).
     candidates.append(project_root / "credentials.json")
-    candidates.append(project_root.parent / "openclaw_project" / "credentials.json")
     cred = next((p for p in candidates if p.exists()), None)
     if not cred:
         return (
@@ -186,7 +192,7 @@ def _maybe_bootstrap_oauth(env: dict[str, str], project_root: Path) -> str | Non
 
 def _gog_env() -> dict[str, str]:
     # If GOG_HOME is set, treat it as a self-contained gog home dir.
-    gog_home = settings.gog_home_resolved
+    gog_home = gog_home_resolved()
     if gog_home:
         home = str(gog_home.resolve())
         gog_bin_path = f"{home}/bin/gog"
@@ -195,16 +201,21 @@ def _gog_env() -> dict[str, str]:
         home = os.environ.get("HOME", os.path.expanduser("~"))
         gog_bin_path = "gog"
         path = f"{home}/.local/bin:{os.environ.get('PATH', '')}"
+    kr_pw = effective_gog_keyring_password()
+    xdg = effective_xdg_config_home()
+    if not xdg:
+        xdg = f"{home}/.config"
+    acct = effective_gog_account()
     env = {
         "HOME": home,
         "PATH": path,
         "GOG_HOME": home,
         "GOG_BIN": gog_bin_path,
         "GMAIL_SCRIPT_LOCAL": "1",
-        "GOG_KEYRING_BACKEND": settings.gog_keyring_backend or "file",
-        "GOG_KEYRING_PASSWORD": settings.gog_keyring_password or "openclaw-gmail",
-        "GOG_ACCOUNT": settings.gog_account or "sangyoon.park@appier.com",
-        "XDG_CONFIG_HOME": settings.xdg_config_home or f"{home}/.config",
+        "GOG_KEYRING_BACKEND": effective_gog_keyring_backend() or "file",
+        "GOG_KEYRING_PASSWORD": kr_pw,
+        "GOG_ACCOUNT": acct,
+        "XDG_CONFIG_HOME": xdg,
     }
     return env
 

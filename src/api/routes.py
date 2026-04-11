@@ -4,7 +4,7 @@ from threading import Thread
 
 from fastapi import HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
@@ -21,6 +21,7 @@ from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
 from src.agent.tools.openrouter_web import run_web_search
 from src.config import settings
+from src.runtime_config import effective_llm_model_main, runtime_settings_snapshot
 from src.db import database
 from src.api import run_state
 
@@ -102,7 +103,7 @@ def run_agent_endpoint(req: RunAgentRequest):
     try:
         input_text = PROBE_TRIGGER_MESSAGE if req.probe else (req.input or "Hello, what can you do?")
         if req.web:
-            res = run_web_search(query=input_text, model=settings.llm_model_for_main, url=req.web_url)
+            res = run_web_search(query=input_text, model=effective_llm_model_main(), url=req.web_url)
             output = res.text or "No web search output."
         else:
             output = run_agent(input_text, probe=req.probe)
@@ -136,7 +137,7 @@ def run_agent_async_endpoint(req: RunAgentRequest):
         try:
             if req.web:
                 run_state.add_event(run_id, "model_start", "Web search started")
-                res = run_web_search(query=input_text, model=settings.llm_model_for_main, url=req.web_url)
+                res = run_web_search(query=input_text, model=effective_llm_model_main(), url=req.web_url)
                 output = res.text or "No web search output."
                 run_state.add_event(run_id, "model_end", "Web search finished", (output or "")[:1000])
             else:
@@ -198,6 +199,48 @@ def set_agent_profile(req: AgentProfileRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+class RuntimeSettingsPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    llm_provider_preset: str | None = None
+    llm_model: str | None = None
+    llm_model_main: str | None = None
+    llm_model_search_json: str | None = None
+    llm_model_search_rerank: str | None = None
+    llm_model_memory: str | None = None
+    rag_embedding_provider: str | None = None
+    rag_embedding_model: str | None = None
+    openrouter_api_key: str | None = None
+    openrouter_base_url: str | None = None
+    gog_home: str | None = None
+    gog_account: str | None = None
+    gog_keyring_backend: str | None = None
+    gog_keyring_password: str | None = None
+    xdg_config_home: str | None = None
+    gog_credentials_path: str | None = None
+
+
+@router.get("/settings/runtime")
+def get_runtime_settings():
+    """Effective LLM / embedding / OpenRouter / gog settings for the Configure UI."""
+    return runtime_settings_snapshot()
+
+
+@router.patch("/settings/runtime")
+def patch_runtime_settings(req: RuntimeSettingsPatch):
+    """Persist overrides in app_settings. Empty string clears a key (fall back to .env)."""
+    raw = req.model_dump(exclude_unset=True)
+    for key, val in raw.items():
+        if val is None:
+            continue
+        s = str(val).strip()
+        if not s:
+            database.delete_app_setting(key)
+        else:
+            database.set_app_setting(key, s)
+    return runtime_settings_snapshot()
 
 
 @router.post("/docs/upload")
@@ -349,7 +392,7 @@ def discover_rc_urls(req: RCDiscoverRequest):
             "Prefer URLs on the same domain and within the same docs section/path.\n"
             "Base URL: {base}"
         ).format(n=n, base=base)
-        res = run_web_search(query=prompt, model=settings.llm_model_for_main, url=base, max_output_tokens=1200)
+        res = run_web_search(query=prompt, model=effective_llm_model_main(), url=base, max_output_tokens=1200)
         import json as _json
         import re as _re
         raw = (res.text or "").strip()

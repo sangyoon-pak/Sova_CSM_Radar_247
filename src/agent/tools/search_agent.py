@@ -10,6 +10,7 @@ from langchain_core.messages import HumanMessage
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
+from src.runtime_config import effective_llm_model_search_json, effective_llm_model_search_rerank
 from src.agent.tools.doc_search import (
     _single_scope_exclusive_query,
     _extract_product_hints,
@@ -129,12 +130,12 @@ def _extract_hard_terms(query: str) -> list[str]:
 
 def _llm_search_json():
     """LLM for structured JSON outputs: subquery split, sufficiency, refine."""
-    return get_chat_llm(model=settings.llm_model_for_search_json, temperature=0)
+    return get_chat_llm(model=effective_llm_model_search_json(), temperature=0)
 
 
 def _llm_search_rerank():
     """LLM for snippet scoring (rerank)."""
-    return get_chat_llm(model=settings.llm_model_for_search_rerank, temperature=0)
+    return get_chat_llm(model=effective_llm_model_search_rerank(), temperature=0)
 
 
 def _doc_key(m: dict) -> str:

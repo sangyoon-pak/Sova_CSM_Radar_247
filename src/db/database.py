@@ -618,6 +618,22 @@ def set_app_setting(key: str, value: str) -> None:
         conn.close()
 
 
+def delete_app_setting(key: str) -> None:
+    """Remove a key so runtime falls back to environment / defaults."""
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.execute("DELETE FROM app_settings WHERE key = ?", (key,))
+        conn.commit()
+        conn.close()
+
+
+def app_setting_is_set(key: str) -> bool:
+    conn = _conn()
+    row = conn.execute("SELECT 1 FROM app_settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    return row is not None
+
+
 def get_agent_profile_settings() -> dict:
     return {
         "vendor_name": get_app_setting("vendor_name", settings.agent_vendor_name) or settings.agent_vendor_name,

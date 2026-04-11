@@ -9,7 +9,7 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 from src.agent.tools.openrouter_web import run_web_search
-from src.config import settings
+from src.runtime_config import effective_llm_model_main
 from src.db import database
 
 
@@ -45,7 +45,7 @@ def search_rc_web(query: str, max_domains: int = 5, max_results_per_domain: int 
         )
         res = run_web_search(
             query=prompt,
-            model=settings.llm_model_for_main,
+            model=effective_llm_model_main(),
             url=base_url,
             max_results=max_results_per_domain,
             max_output_tokens=1400,

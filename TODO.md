@@ -1,26 +1,32 @@
 
-### UI
+## UI
  
-- EN/KR layout is different.  
-- env var setup for required API keys. Should be the first landing page for users to land with instructions as for how to set up the agent first ! 
-- On the first landing page, also we need a section for users to set up agent LLM models for each agent call given the current codebase.  all the LLM calls from each agent should be able to be configured by users themselves after setting the LLM provider's API. AFAIK, we have one main agent and subagents for doc retrieval, embedding, websearch etc ? 
 - make the list of RC documents uploaded and RC URL loaded as shrinkable so that you can see more. Also you should be able to select all to delete for convience. 
 - we should be able to delete RC documets upload and RC URL loaded in bulk by checkbox. 
 - we should be able to delete action cards in bulk by checkbox. 
-- Lets also include some good fancy logo for this Sova on the landing page and other pages on top next to the name of the agent. - CSM Radar Agent 24/7. Best if we can have an animated logo rather than static
 - system time to set by users on the UI.
 - change the font to fit this agent AI solution more. 
+- all the action cards by default should be folded and expanded only when users click it 
+- Agent architecture diagram. Users -> Agent -> subagent (Rag architecture, subquery engines, reranking etc) -> final agent -> answer
 
+### landing page   
+- On the first landing page, also we need a section for users to set up agent LLM models for each agent call given the current codebase.  all the LLM calls from each agent should be able to be configured by users themselves after setting the LLM provider's API. AFAIK, we have one main agent and subagents for doc retrieval, embedding, websearch etc ? 
+- disclaimer to be included 
+1) only agent is able to fetch from gmail inbox (gogcli). For other email service providers, it is up to users who want to develop the pipeline themselves. 
+- env var setup for required API keys. Should be the first landing page for users to land with instructions as for how to set up the agent first ! 
 
 
 
 
 
 ## Agent Utility 
+### Rag
+- currently the documents are scraped from the RC webpage in a structured manner (parsed into a markdown). what if users just upload less-refined pdf/docs files ? would that work too ? 
+
 ### Action dashboard/action cards : 
 
 - we have deployed for agent's self-evolution by users feedback on history. I think we should do that on the actionboard. Can we shift from users clicking likes/dislikes but actually give feedback to the agent in text by users themselves ? is this an ideal agent architecture ?
--  agent is creating redundant task for the same email thread when probing.. If it is the same email thread but updated as with newer email message, we should just update on the same task thread on the dashboard. Maybe we can tell if it is the same but extended card thread by email title. 
+
 - for the task cards on the actionboard, we should also include who is the client or at least client email domain so that we will know. + We should include the title of email thread
 - users should be able to change the status and view/sort  (in progress, completed, not started)
 

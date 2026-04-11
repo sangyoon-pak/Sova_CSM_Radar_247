@@ -4,7 +4,7 @@ import json
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agent.chat_llm import get_chat_llm
-from src.config import settings
+from src.runtime_config import effective_llm_model_search_json
 
 
 SYSTEM_PROMPT = """You analyze emails or user questions and extract search terms for document search.
@@ -30,7 +30,7 @@ Output ONLY a valid JSON array of strings, e.g. ["product_x", "user schema formu
 
 
 def extract_search_terms(query: str) -> list[str]:
-    llm = get_chat_llm(model=settings.llm_model_for_search_json, temperature=0)
+    llm = get_chat_llm(model=effective_llm_model_search_json(), temperature=0)
     msg = HumanMessage(content=query[:2000])
     response = llm.invoke([SystemMessage(content=SYSTEM_PROMPT), msg])
     text = response.content.strip()

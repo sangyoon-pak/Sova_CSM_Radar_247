@@ -16,7 +16,7 @@ Regenerate with: `python urls_to_md.py` (from `notebooklm_export/`).
 
 ## Legacy / Other Sources
 
-Copied from `openclaw_project/knowledge-base/` with the following edits for public use:
+Imported from an earlier internal KB snapshot with the following edits for public use:
 
 | File | Change |
 |------|--------|
@@ -36,4 +36,4 @@ Copied from `openclaw_project/knowledge-base/` with the following edits for publ
 
 ## Updating
 
-When `openclaw_project/knowledge-base/` is updated, re-copy and re-apply the same edits to 016 and 026 in this folder.
+When upstream product docs change, refresh the affected `.md` files and re-apply the same style of redactions (016 and 026 in particular) before sharing publicly.

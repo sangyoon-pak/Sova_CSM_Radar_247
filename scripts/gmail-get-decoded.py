@@ -91,16 +91,16 @@ def gog_env():
             "HOME": home,
             "PATH": path,
             "GOG_KEYRING_BACKEND": os.environ.get("GOG_KEYRING_BACKEND", "file"),
-            "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", "openclaw-gmail"),
-            "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", "sangyoon.park@appier.com"),
+            "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", ""),
+            "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", ""),
             "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config")),
         }
     return {
         "HOME": "/data",
         "PATH": "/data/.local/bin:" + os.environ.get("PATH", ""),
         "GOG_KEYRING_BACKEND": "file",
-        "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", "openclaw-gmail"),
-        "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", "sangyoon.park@appier.com"),
+        "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", ""),
+        "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", ""),
         "XDG_CONFIG_HOME": "/data/.config",
     }
 

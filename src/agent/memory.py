@@ -12,7 +12,7 @@ from typing import Sequence
 from langchain_core.messages import HumanMessage
 
 from src.agent.chat_llm import get_chat_llm
-from src.config import settings
+from src.runtime_config import effective_llm_model_memory
 from src.db import database
 
 
@@ -31,7 +31,7 @@ Return the bullets as plain text, each bullet starting with '- '."""
 
 
 def _get_llm():
-    return get_chat_llm(model=settings.llm_model_for_memory, temperature=0)
+    return get_chat_llm(model=effective_llm_model_memory(), temperature=0)
 
 
 def _format_interactions_for_compaction(interactions: Sequence[dict]) -> str:

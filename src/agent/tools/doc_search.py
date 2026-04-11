@@ -14,6 +14,12 @@ from pathlib import Path
 from typing import Any
 
 from src.config import settings
+from src.runtime_config import (
+    effective_chat_api_key,
+    effective_chat_base_url,
+    effective_rag_embedding_model,
+    effective_rag_embedding_provider,
+)
 
 try:
     from langchain_community.vectorstores import FAISS
@@ -102,8 +108,8 @@ def _kb_state(base_path: Path) -> tuple[int, int]:
 
 def _kb_fingerprint(base_path: Path) -> str:
     count, latest = _kb_state(base_path)
-    provider = (settings.rag_embedding_provider or "openrouter").strip().lower()
-    model = (settings.rag_embedding_model or "").strip()
+    provider = (effective_rag_embedding_provider() or "openrouter").strip().lower()
+    model = (effective_rag_embedding_model() or "").strip()
     return f"{count}:{latest}:{provider}:{model}"
 
 
@@ -137,19 +143,20 @@ def _split_into_chunks(text: str, chunk_size: int = _RAG_CHUNK_SIZE, overlap: in
 
 def _get_embeddings():
     global _EMBEDDINGS, _EMBED_CFG
-    provider = (settings.rag_embedding_provider or "openrouter").strip().lower()
-    model_name = (settings.rag_embedding_model or "").strip()
+    provider = (effective_rag_embedding_provider() or "openrouter").strip().lower()
+    model_name = (effective_rag_embedding_model() or "").strip()
     cfg = (provider, model_name)
     if _EMBEDDINGS is not None and _EMBED_CFG == cfg:
         return _EMBEDDINGS
 
     if provider == "openrouter":
-        if OpenAIEmbeddings is None or not settings.openrouter_api_key:
+        or_key = effective_chat_api_key()
+        if OpenAIEmbeddings is None or not or_key:
             return None
         _EMBEDDINGS = OpenAIEmbeddings(
             model=model_name or "openai/text-embedding-3-large",
-            api_key=settings.openrouter_api_key,
-            base_url=settings.openrouter_base_url,
+            api_key=or_key,
+            base_url=effective_chat_base_url(),
         )
         _EMBED_CFG = cfg
         return _EMBEDDINGS

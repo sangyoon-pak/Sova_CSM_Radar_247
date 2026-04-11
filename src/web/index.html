@@ -129,31 +129,105 @@
     .lang-switch button.lang-btn.active { background: var(--accent-soft); color: var(--accent); }
     .topbar {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 1rem;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.7rem;
       padding-bottom: 1rem;
       margin-bottom: 0.5rem;
       border-bottom: 1px solid var(--border-subtle);
     }
+    .topbar-title {
+      width: 100%;
+      min-width: 0;
+    }
+    .topbar-brand {
+      --topbar-logo: 2.4rem;
+      --topbar-logo-gap: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      min-width: 0;
+    }
+    /** Logo + bold title */
+    .topbar-brand__head {
+      display: flex;
+      align-items: center;
+      gap: var(--topbar-logo-gap);
+      min-width: 0;
+    }
+    .topbar-brand__head h1 {
+      margin: 0;
+      flex: 1;
+      min-width: 0;
+    }
+    /** Grey intro below the rule, aligned with the title (not under the orb). */
+    .topbar-brand__tagline {
+      margin: 0.45rem 0 0 0;
+      padding-left: calc(var(--topbar-logo) + var(--topbar-logo-gap));
+      max-width: 48rem;
+    }
+    /** Compact static mark — same gradient language as `.sova-orb` on Landing; no motion (header-safe). */
+    .sova-logo-mark {
+      flex-shrink: 0;
+      width: var(--topbar-logo, 2.4rem);
+      height: var(--topbar-logo, 2.4rem);
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #ffffff 0%, color-mix(in srgb, var(--accent) 58%, #fff) 26%, var(--accent) 100%);
+      box-shadow:
+        0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+        0 5px 14px rgba(22, 62, 106, 0.2);
+      position: relative;
+    }
+    .sova-logo-mark::after {
+      content: "S";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.08rem;
+      letter-spacing: 0.02em;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    .topbar-controls {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
     .nav {
-      display:flex;
-      gap:0.25rem;
-      flex-wrap:wrap;
-      border:1px solid var(--border);
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      max-width: min(100%, 78rem);
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.2rem;
       background: var(--surface);
     }
+    .nav::-webkit-scrollbar { height: 5px; }
+    .nav::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--muted) 35%, transparent);
+      border-radius: 4px;
+    }
     .nav-btn {
-      padding: 0.45rem 0.8rem;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      padding: 0.38rem 0.65rem;
       border-radius: 8px;
       background: transparent;
       border: 1px solid transparent;
       color: var(--muted);
       font-weight: 600;
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
       box-shadow: none;
     }
     .nav-btn:hover { opacity: 1; background: var(--surface2); color: var(--text); }
@@ -370,12 +444,256 @@
       padding: 0.7rem 0.9rem;
       background: var(--surface-raised);
     }
+    .landing-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr);
+      gap: 1rem;
+      align-items: stretch;
+      margin-top: 0.8rem;
+    }
+    .landing-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 1rem;
+    }
+    .landing-logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 220px;
+      background: linear-gradient(165deg, color-mix(in srgb, var(--accent-soft) 75%, var(--surface)), var(--surface));
+      border-radius: 14px;
+      border: 1px solid var(--border-subtle);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 0.85rem;
+    }
+    .sova-orb {
+      width: 88px;
+      height: 88px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #ffffff 0%, color-mix(in srgb, var(--accent) 58%, #fff) 26%, var(--accent) 100%);
+      box-shadow: 0 0 0 14px color-mix(in srgb, var(--accent) 12%, transparent), 0 14px 35px rgba(22, 62, 106, 0.28);
+      position: relative;
+      animation: sovaPulse 2.6s ease-in-out infinite;
+    }
+    .sova-orb::before {
+      content: "";
+      position: absolute;
+      inset: -16px;
+      border-radius: 999px;
+      border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--border));
+      animation: sovaSpin 10s linear infinite;
+      opacity: 0.8;
+    }
+    .sova-orb::after {
+      content: "S";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 2.1rem;
+      letter-spacing: 0.02em;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    @keyframes sovaPulse {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-3px) scale(1.03); }
+    }
+    @keyframes sovaSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .landing-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .landing-copy {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+      margin-bottom: 0.7rem;
+    }
+    .landing-copy code {
+      font-family: var(--mono);
+      font-size: 0.88em;
+      padding: 0.08em 0.28em;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--surface2) 92%, var(--border));
+    }
+    .landing-grid.landing-setup-grid {
+      grid-template-columns: 1fr;
+      margin-top: 0.65rem;
+    }
+    .landing-subtitle {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0.85rem 0 0.35rem 0;
+    }
+    .landing-subtitle:first-of-type { margin-top: 0.35rem; }
+    .landing-dl {
+      margin: 0;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+    .landing-dl dt {
+      margin-top: 0.45rem;
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      color: var(--text);
+    }
+    .landing-dl dt:first-child { margin-top: 0; }
+    .landing-dl dd {
+      margin: 0.15rem 0 0 0;
+      padding-left: 0;
+      color: var(--muted);
+    }
+    .landing-disclaimer {
+      margin-top: 0.75rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--muted) 5%, var(--surface));
+    }
+    .landing-disclaimer .landing-disclaimer__title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+    }
+    .landing-disclaimer p {
+      margin: 0;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .landing-grid.landing-extra {
+      margin-top: 0.85rem;
+    }
+    .landing-list {
+      display: grid;
+      gap: 0.45rem;
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .landing-list .item {
+      background: var(--surface-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 0.52rem 0.62rem;
+    }
+    .landing-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.85rem;
+    }
+    @media (max-width: 980px) {
+      .landing-grid { grid-template-columns: 1fr; }
+    }
+    .configure-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 52rem;
+    }
+    .configure-details {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .configure-details > summary {
+      cursor: pointer;
+      padding: 0.55rem 0.8rem;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .configure-details > summary::-webkit-details-marker { display: none; }
+    .configure-details[open] > summary {
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .configure-details__body {
+      padding: 0.75rem 0.85rem 0.85rem;
+    }
+    .configure-env-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      margin-top: 0.35rem;
+    }
+    .configure-env-table th,
+    .configure-env-table td {
+      border: 1px solid var(--border-subtle);
+      padding: 0.3rem 0.4rem;
+      text-align: left;
+      vertical-align: top;
+      word-break: break-word;
+    }
+    .configure-env-table th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .configure-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      margin-bottom: 0.55rem;
+    }
+    .configure-field label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .configure-field input {
+      padding: 0.45rem 0.55rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+    .configure-env {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .configure-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0 0 0.55rem 0;
+    }
     .section-lead {
       color: var(--muted);
       font-size: 0.8125rem;
       line-height: 1.45;
       margin: -0.2rem 0 1rem 0;
       max-width: 52rem;
+    }
+    .section-lead code {
+      font-family: var(--mono);
+      font-size: 0.88em;
+      padding: 0.08em 0.28em;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--surface2) 92%, var(--border));
     }
     .subh {
       font-size: 0.8rem;
@@ -533,26 +851,26 @@
       max-width: 100%;
     }
     .dashboard-controls {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 0.85rem;
-      align-items: flex-end;
-      justify-content: space-between;
+      align-items: end;
       margin-top: 0.5rem;
     }
     .dashboard-controls__left {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.85rem;
       align-items: flex-end;
       min-width: 0;
     }
     .dashboard-controls__right {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
       gap: 0.4rem;
-      margin-left: auto;
+      justify-content: flex-end;
+      min-width: 0;
     }
     .dashboard-filters {
       gap: 0.85rem;
@@ -563,6 +881,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      min-width: 10rem;
     }
     .dashboard-filters .filter-field label {
       font-size: 0.6875rem;
@@ -576,7 +895,7 @@
       letter-spacing: 0;
     }
     .dashboard-filters select {
-      min-width: 9.5rem;
+      min-width: 10rem;
       padding: 0.4rem 0.5rem;
       border-radius: 8px;
       font-size: 0.8125rem;
@@ -610,6 +929,9 @@
     .dashboard-layout-bar .action-board-hint {
       white-space: nowrap;
     }
+    .dashboard-layout-bar select {
+      min-width: 8.5rem;
+    }
     html[lang="ko"] .dashboard-layout-bar .action-board-hint {
       letter-spacing: 0;
     }
@@ -617,6 +939,21 @@
       border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
       background: var(--accent-soft);
       color: var(--accent);
+    }
+    @media (max-width: 1180px) {
+      .dashboard-controls {
+        grid-template-columns: 1fr;
+      }
+      .dashboard-controls__left,
+      .dashboard-controls__right {
+        flex-wrap: wrap;
+      }
+      .dashboard-controls__right {
+        justify-content: flex-start;
+      }
+      .dashboard-filters .filter-field {
+        min-width: 9rem;
+      }
     }
     .csm-action-card {
       border: 1px solid var(--border-subtle);
@@ -966,22 +1303,29 @@
 <body>
   <div class="container">
     <div class="topbar">
-      <div>
-        <h1 data-i18n="appTitle">Sova — CSM Radar Agent 24/7</h1>
-        <p class="subtitle" data-i18n="appSubtitle">Inbox triage · KB-backed next steps · email drafts only when you ask</p>
+      <div class="topbar-title">
+        <div class="topbar-brand">
+          <div class="topbar-brand__head">
+            <div class="sova-logo-mark" aria-hidden="true"></div>
+            <h1 data-i18n="appTitle">Sova — CSM Radar Agent 24/7</h1>
+          </div>
+          <p class="subtitle topbar-brand__tagline" data-i18n="appSubtitle">Inbox triage · KB-backed next steps · email drafts only when you ask</p>
+        </div>
       </div>
-      <div class="row" style="justify-content:flex-end;">
+      <div class="topbar-controls">
         <div class="lang-switch" id="langSwitch" title="">
           <button type="button" class="lang-btn" data-lang="en" onclick="setUiLang('en')">EN</button>
           <button type="button" class="lang-btn" data-lang="ko" onclick="setUiLang('ko')">한국어</button>
         </div>
         <button class="ghost" type="button" id="themeToggle" onclick="toggleTheme()">Light</button>
         <div class="nav">
-          <button type="button" class="nav-btn active" data-tab="tab-agent" onclick="showTab('tab-agent')" data-i18n="tabWorkbench">Workbench</button>
+          <button type="button" class="nav-btn active" data-tab="tab-landing" onclick="showTab('tab-landing')" data-i18n="tabLanding">Landing</button>
+          <button type="button" class="nav-btn" data-tab="tab-agent" onclick="showTab('tab-agent')" data-i18n="tabWorkbench">Workbench</button>
           <button type="button" class="nav-btn" data-tab="tab-action-dashboard" onclick="showTab('tab-action-dashboard')" data-i18n="tabActionDashboard">Action dashboard</button>
           <button type="button" class="nav-btn" data-tab="tab-cron" onclick="showTab('tab-cron')" data-i18n="tabCron">Cron</button>
           <button type="button" class="nav-btn" data-tab="tab-knowledge" onclick="showTab('tab-knowledge')" data-i18n="tabKnowledge">Knowledge</button>
           <button type="button" class="nav-btn" data-tab="tab-interactions" onclick="showTab('tab-interactions')" data-i18n="tabHistory">Run history</button>
+          <button type="button" class="nav-btn" data-tab="tab-configure" onclick="showTab('tab-configure')" data-i18n="tabConfigure">Configure</button>
         </div>
       </div>
     </div>
@@ -989,7 +1333,138 @@
       Triage the inbox against your KB, surface next steps for CSMs, and draft email only when you ask.
     </p>
 
-  <div class="tab-pane active" id="tab-agent">
+  <div class="tab-pane active" id="tab-landing">
+    <section>
+      <h2 data-i18n="landingTitle">Welcome to Sova</h2>
+      <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.</p>
+      <div class="landing-panel" style="max-width:48rem;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.85rem 1rem;background:var(--surface-raised);">
+        <div class="landing-title" data-i18n="landingSetupShortTitle">First-time setup</div>
+        <p class="landing-copy" style="margin-bottom:0.65rem;" data-i18n-html="landingSetupShortBody">Open the <strong>Configure</strong> tab to set OpenRouter models, optional API key override, embeddings, and <strong>gog</strong> (Gmail) paths. Values are saved in the app database and override <code>.env</code> until cleared.</p>
+        <div class="landing-cta" style="margin-top:0;">
+          <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
+        </div>
+      </div>
+      <div class="landing-disclaimer" style="max-width:48rem;margin-bottom:1rem;">
+        <div class="landing-disclaimer__title" data-i18n="landingDisclaimerTitle">Email provider note</div>
+        <p data-i18n-html="landingDisclaimerBody">Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.</p>
+      </div>
+      <div class="landing-grid">
+        <div class="landing-panel">
+          <div class="landing-logo-wrap">
+            <div class="sova-orb" aria-hidden="true"></div>
+          </div>
+          <div class="landing-title" data-i18n="landingLogoTitle">Sova — CSM Radar Agent 24/7</div>
+          <p class="landing-copy" data-i18n="landingLogoCopy">Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.</p>
+          <div class="landing-cta">
+            <button type="button" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
+            <button type="button" class="ghost" onclick="showTab('tab-action-dashboard')" data-i18n="landingCtaDashboard">Open Action dashboard</button>
+          </div>
+        </div>
+        <div class="landing-panel">
+          <div class="landing-title" data-i18n="landingQuickStartTitle">Quick start</div>
+          <div class="landing-list">
+            <div class="item" data-i18n-html="landingStep1"><strong>1) Configure agent profile</strong><br/>Set vendor, role, and product scope in Workbench so triage is context-aware.</div>
+            <div class="item" data-i18n-html="landingStep2"><strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.</div>
+            <div class="item" data-i18n-html="landingStep3"><strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.</div>
+            <div class="item" data-i18n-html="landingStep4"><strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.</div>
+          </div>
+        </div>
+      </div>
+      <div class="landing-grid landing-extra">
+        <div class="landing-panel">
+          <div class="landing-title" data-i18n="landingFeedbackTitle">Feedback &amp; self-evolution</div>
+          <p class="landing-copy" data-i18n-html="landingFeedbackBody">Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.</p>
+          <div class="landing-cta">
+            <button type="button" class="ghost" onclick="showTab('tab-interactions')" data-i18n="landingCtaRunHistory">Open Run history</button>
+          </div>
+        </div>
+        <div class="landing-panel">
+          <div class="landing-title" data-i18n="landingKnowledgeTitle">Product docs &amp; RC URLs</div>
+          <p class="landing-copy" data-i18n-html="landingKnowledgeBody">Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code> / <code>.txt</code> product or internal documents, then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.</p>
+          <div class="landing-cta">
+            <button type="button" class="ghost" onclick="showTab('tab-knowledge')" data-i18n="landingCtaKnowledge">Open Knowledge</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane" id="tab-configure">
+    <section>
+      <h2 data-i18n="configureTitle">Configure</h2>
+      <p class="section-lead" data-i18n-html="configureLead">Set LLM model ids (OpenRouter), embeddings, API access, and Gmail <strong>gog</strong> paths. Saved values override <code>.env</code> for this deployment. Empty field + Save clears that override.</p>
+      <p style="font-size:0.78rem;color:var(--muted);margin:-0.35rem 0 0.85rem 0;max-width:52rem;" data-i18n-html="configureEmbedHint">After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.</p>
+      <div class="configure-layout">
+        <details class="configure-details" open>
+          <summary><span data-i18n="configureProviderSummary">Provider &amp; API</span><span style="color:var(--muted);font-weight:600;font-size:0.75rem;">OpenRouter / OpenAI / Gemini (OR)</span></summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" id="cfg_preset_hint" data-i18n="configurePresetHint">Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.</p>
+            <div class="configure-field">
+              <label for="cfg_llm_provider_preset" data-i18n="cfgProviderPreset">Provider preset</label>
+              <select id="cfg_llm_provider_preset" onchange="onConfigurePresetChange()">
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI (direct)</option>
+                <option value="gemini_openrouter">Gemini (via OpenRouter)</option>
+              </select>
+            </div>
+            <div class="row" style="gap:0.5rem;margin-bottom:0.65rem;flex-wrap:wrap;">
+              <button type="button" class="ghost" onclick="applyProviderPresetDefaults()" data-i18n="configureApplyPreset">Apply preset defaults</button>
+            </div>
+            <p class="configure-hint" data-i18n="configureOrHint">API key can stay in <code>.env</code> only; paste here to store in the app database (local deployments).</p>
+            <div class="configure-field"><label for="cfg_openrouter_base_url" data-i18n="cfgOpenrouterUrl">Base URL</label><input id="cfg_openrouter_base_url" type="text" /><span class="configure-env" id="cfg_env_openrouter_base_url"></span></div>
+            <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /><button type="button" class="ghost btn-compact" onclick="clearRuntimeField('openrouter_api_key')" data-i18n="cfgClearStored">Clear stored</button></div>
+            <p id="cfg_key_status" class="configure-hint"></p>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureLlmBlock">LLM models</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n="configureLlmHint">Defaults in gray come from your environment. Pick a suggestion or paste a model id for your preset.</p>
+            <datalist id="datalistChatModels"></datalist>
+            <div class="configure-field"><label for="cfg_llm_model" data-i18n="cfgLlmModel">Default model (LLM_MODEL)</label><input id="cfg_llm_model" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model"></span></div>
+            <div class="configure-field"><label for="cfg_llm_model_main" data-i18n="cfgLlmMain">Main agent</label><input id="cfg_llm_model_main" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_main"></span></div>
+            <div class="configure-field"><label for="cfg_llm_model_search_json" data-i18n="cfgLlmSearchJson">Search / JSON steps</label><input id="cfg_llm_model_search_json" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_search_json"></span></div>
+            <div class="configure-field"><label for="cfg_llm_model_search_rerank" data-i18n="cfgLlmRerank">Rerank</label><input id="cfg_llm_model_search_rerank" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_search_rerank"></span></div>
+            <div class="configure-field"><label for="cfg_llm_model_memory" data-i18n="cfgLlmMemory">Memory / learning</label><input id="cfg_llm_model_memory" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_memory"></span></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureEmbedBlock">Embeddings (RAG)</summary>
+          <div class="configure-details__body">
+            <datalist id="datalistEmbedModels"></datalist>
+            <div class="configure-field"><label for="cfg_rag_embedding_provider" data-i18n="cfgEmbedProv">Provider</label><input id="cfg_rag_embedding_provider" type="text" /></div>
+            <div class="configure-field"><label for="cfg_rag_embedding_model" data-i18n="cfgEmbedModel">Embedding model</label><input id="cfg_rag_embedding_model" type="text" list="datalistEmbedModels" /><span class="configure-env" id="cfg_env_rag_embedding_model"></span></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureGogBlock">Gmail (gog CLI)</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n-html="configureGogHint">Paths and account for the local <strong>gog</strong> binary. OAuth tokens live in your keyring—complete OAuth outside this UI (see <code>docs/GMAIL_SETUP.md</code>).</p>
+            <div class="configure-field"><label for="cfg_gog_home" data-i18n="cfgGogHome">GOG_HOME</label><input id="cfg_gog_home" type="text" /><span class="configure-env" id="cfg_env_gog_home"></span></div>
+            <div class="configure-field"><label for="cfg_gog_account" data-i18n="cfgGogAccount">Gmail account</label><input id="cfg_gog_account" type="text" /><span class="configure-env" id="cfg_env_gog_account"></span></div>
+            <div class="configure-field"><label for="cfg_gog_keyring_backend" data-i18n="cfgGogKeyringBackend">Keyring backend</label><input id="cfg_gog_keyring_backend" type="text" /><span class="configure-env" id="cfg_env_gog_keyring_backend"></span></div>
+            <div class="configure-field"><label for="cfg_gog_keyring_password" data-i18n="cfgGogKeyringPw">Keyring password</label><input id="cfg_gog_keyring_password" type="password" autocomplete="new-password" /><button type="button" class="ghost btn-compact" onclick="clearRuntimeField('gog_keyring_password')" data-i18n="cfgClearStored">Clear stored</button></div>
+            <div class="configure-field"><label for="cfg_xdg_config_home" data-i18n="cfgXdg">XDG_CONFIG_HOME</label><input id="cfg_xdg_config_home" type="text" /><span class="configure-env" id="cfg_env_xdg_config_home"></span></div>
+            <div class="configure-field"><label for="cfg_gog_credentials_path" data-i18n="cfgGogCredPath">OAuth client JSON path</label><input id="cfg_gog_credentials_path" type="text" /><span class="configure-env" id="cfg_env_gog_credentials_path"></span></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureEnvSyncSummary">Environment sync</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n="configureEnvSyncHint">Compare the project <code>.env</code> file on disk with what the server loaded at startup (Pydantic). Restart the server after editing <code>.env</code> manually.</p>
+            <p id="configureDotenvPath" style="font-size:0.72rem;color:var(--muted);margin:0 0 0.4rem 0;"></p>
+            <div id="configureEnvTableWrap" style="overflow-x:auto;"></div>
+          </div>
+        </details>
+      </div>
+      <div class="row" style="margin-top:0.75rem;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+        <button type="button" onclick="saveRuntimeSettings()" data-i18n="configureSave">Save configuration</button>
+        <span id="configureSaveStatus" style="color:var(--muted);font-size:0.82rem;"></span>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-pane" id="tab-agent">
     <section>
       <h2 data-i18n="workbenchTitle">Workbench</h2>
       <p class="section-lead" data-i18n="workbenchLead">Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.</p>
@@ -1233,11 +1708,104 @@
         heroBlurb: 'Triage the queue against your knowledge base, surface action items for CSMs, and request email drafts only when you need them.',
         themeModeLight: 'Light',
         themeModeDark: 'Dark',
+        tabLanding: 'Landing',
+        tabConfigure: 'Configure',
         tabWorkbench: 'Workbench',
         tabCron: 'Cron',
         tabKnowledge: 'Knowledge',
         tabHistory: 'Run history',
         tabActionDashboard: 'Action dashboard',
+        landingTitle: 'Welcome to Sova',
+        landingLead: 'CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.',
+        landingSetupShortTitle: 'First-time setup',
+        landingSetupShortBody: 'Open the <strong>Configure</strong> tab to set OpenRouter models, optional API key override, embeddings, and <strong>gog</strong> (Gmail) paths. Saved values are stored in the app database and override <code>.env</code> until cleared.',
+        landingCtaConfigure: 'Open Configure',
+        landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
+        landingLogoCopy: 'Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.',
+        landingCtaWorkbench: 'Open Workbench',
+        landingCtaDashboard: 'Open Action dashboard',
+        landingQuickStartTitle: 'Quick start',
+        landingStep1: '<strong>1) Configure models &amp; Gmail (optional)</strong><br/>Use the <strong>Configure</strong> tab for OpenRouter models, API key, embeddings, and gog paths. Then set vendor / role / product scope in Workbench.',
+        landingStep2: '<strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.',
+        landingStep3: '<strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.',
+        landingStep4: '<strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.',
+        landingFeedbackTitle: 'Feedback & self-evolution',
+        landingFeedbackBody: 'Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.',
+        landingKnowledgeTitle: 'Product docs & RC URLs',
+        landingKnowledgeBody: 'Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code> / <code>.txt</code> product or internal documents, then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.',
+        landingCtaRunHistory: 'Open Run history',
+        landingCtaKnowledge: 'Open Knowledge',
+        configureTitle: 'Configure',
+        configureLead: 'Set LLM model ids (OpenRouter), embeddings, API access, and Gmail <strong>gog</strong> paths. Saved values override <code>.env</code> for this deployment. Empty field + Save clears that override.',
+        configureEmbedHint: 'After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.',
+        configureLlmBlock: 'LLM models',
+        configureLlmHint: 'Defaults in gray come from your environment. Pick a suggestion or paste any OpenRouter model id.',
+        configureEmbedBlock: 'Embeddings (RAG)',
+        configureOrBlock: 'OpenRouter',
+        configureOrHint: 'API key can stay in <code>.env</code> only; paste here to store in the app database (typical for local use).',
+        configureGogBlock: 'Gmail (gog CLI)',
+        configureGogHint: 'Paths and account for the local <strong>gog</strong> binary. OAuth tokens live in your keyring—complete OAuth outside this UI (see <code>docs/GMAIL_SETUP.md</code>).',
+        configureSave: 'Save configuration',
+        configureSaving: 'Saving…',
+        configureSaved: 'Saved.',
+        configureLoadFail: 'Could not load settings',
+        configureSaveFail: 'Save failed',
+        configureClearConfirm: 'Clear this stored value and fall back to .env?',
+        configureEnvFrom: 'Env',
+        configureEnvOverridden: 'overridden in UI',
+        configureEffective: 'Effective',
+        configureInheritHint: 'inherit / env chain',
+        configureKeyOr: 'OPENROUTER_API_KEY in .env',
+        configureKeyOai: 'OPENAI_API_KEY in .env',
+        configureKeyDb: 'API key stored in app DB',
+        configureKeyMissing: 'No API key in .env or app DB — set one to run models.',
+        configureProviderSummary: 'Provider & API',
+        configurePresetHint: 'Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.',
+        configureApplyPreset: 'Apply preset defaults',
+        configureEnvSyncSummary: 'Environment sync',
+        configureEnvSyncHint: 'Compare the project .env file on disk with what the server loaded at startup. Restart the server after editing .env manually.',
+        configureEnvColKey: 'Variable',
+        configureEnvColFile: '.env file (on disk)',
+        configureEnvColServer: 'Server loaded (masked)',
+        configureEnvEmpty: 'No tracked variables found.',
+        cfgProviderPreset: 'Provider preset',
+        cfgLlmModel: 'Default model (LLM_MODEL)',
+        cfgLlmMain: 'Main agent',
+        cfgLlmSearchJson: 'Search / JSON steps',
+        cfgLlmRerank: 'Rerank',
+        cfgLlmMemory: 'Memory / learning',
+        cfgEmbedProv: 'Provider',
+        cfgEmbedModel: 'Embedding model',
+        cfgOpenrouterUrl: 'Base URL',
+        cfgOpenrouterKey: 'API key',
+        cfgClearStored: 'Clear stored',
+        cfgGogHome: 'GOG_HOME',
+        cfgGogAccount: 'Gmail account',
+        cfgGogKeyringBackend: 'Keyring backend',
+        cfgGogKeyringPw: 'Keyring password',
+        cfgXdg: 'XDG_CONFIG_HOME',
+        cfgGogCredPath: 'OAuth client JSON path',
+        landingSetupTitle: '1) Environment & API keys',
+        landingSetupIntro: 'Copy <code>.env.example</code> to <code>.env</code> at the project root. The app loads these variables at startup (see <code>src/config.py</code>). <strong>Restart the API server</strong> after any change. Chat calls use OpenRouter unless you change provider wiring in code.',
+        landingSetupHeadingLlm: 'LLM (chat via OpenRouter)',
+        landingEnvDdOpenrouter: 'Required. Your OpenRouter API key for all chat completions.',
+        landingEnvDdOpenrouterUrl: 'Optional. Defaults to OpenRouter’s API base URL.',
+        landingEnvDdLlmModel: 'Default model id (OpenRouter format, e.g. <code>openai/gpt-4o</code>) used for every role when the overrides below are unset.',
+        landingEnvDdMain: 'Main CSM agent: tool calls, inbox probe, Workbench replies. Falls back to <code>LLM_MODEL</code>.',
+        landingEnvDdSearchJson: 'Document retrieval helpers: subquery split, term extraction, JSON-heavy steps. Falls back to <code>LLM_MODEL</code>.',
+        landingEnvDdSearchRerank: 'Snippet reranking for KB hits. Falls back to <code>LLM_MODEL</code>.',
+        landingEnvDdMemory: 'Learning from user feedback and memory compaction. Falls back to <code>LLM_MODEL</code>.',
+        landingSetupHeadingEmbed: 'Embeddings (RAG index)',
+        landingEnvDdEmbedProv: 'e.g. <code>openrouter</code> — separate from chat; used to build vector indexes for uploaded docs.',
+        landingEnvDdEmbedModel: 'Embedding model id (see <code>.env.example</code>). Used when indexing the Knowledge base.',
+        landingSetupHeadingGmail: 'Gmail inbox (gog CLI)',
+        landingEnvDdGog: 'Paths and account for the local <strong>gog</strong> CLI used to read Gmail. OAuth/key material is outside this UI.',
+        landingEnvDdGogKeyring: 'Keyring backend/password for gog token storage (see <code>.env.example</code>).',
+        landingSetupHeadingOptional: 'Optional',
+        landingEnvDdLangsmith: 'Tracing / observability (LangSmith). Safe to omit for local-only use.',
+        landingSetupDocNote: 'Details: project file <code>docs/LLM_MODELS.md</code>.',
+        landingDisclaimerTitle: 'Email provider note',
+        landingDisclaimerBody: 'Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.',
         workbenchTitle: 'Workbench',
         workbenchLead: 'Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.',
         profileCardTitle: 'Agent profile',
@@ -1419,11 +1987,104 @@
         heroBlurb: '큐를 지식 베이스와 대조해 트리아지하고, CSM용 액션 아이템을 정리하세요. 이메일 Draft는 필요할 때만 요청하면 됩니다.',
         themeModeLight: 'Light',
         themeModeDark: 'Dark',
+        tabLanding: '랜딩',
+        tabConfigure: '설정',
         tabWorkbench: 'Workbench',
         tabCron: 'Cron',
         tabKnowledge: 'Knowledge',
         tabHistory: 'Run history',
         tabActionDashboard: 'Action dashboard',
+        landingTitle: 'Sova 시작하기',
+        landingLead: 'Inbox를 트리아지하고 액션 카드를 추적하며, 스레드별 후속 대응을 KB 근거와 함께 운영하는 CSM Radar Agent입니다. 모델·API 키·Gmail/gog 경로는 <strong>설정</strong> 탭에서 구성하면 됩니다(코드 수정 불필요).',
+        landingSetupShortTitle: '처음 설정',
+        landingSetupShortBody: '<strong>설정</strong> 탭에서 OpenRouter 모델, 선택적 API 키, 임베딩, <strong>gog</strong>(Gmail) 경로를 지정하세요. 저장 값은 앱 DB에 있으며 비우고 저장하면 <code>.env</code>로 되돌아갑니다.',
+        landingCtaConfigure: '설정 열기',
+        landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
+        landingLogoCopy: 'CSM 팀을 위한 운영 화면입니다. 고객 문의를 모니터링하고, 실제 실행이 필요한 작업만 카드로 남기며, 상태와 Run history로 진행을 투명하게 관리합니다.',
+        landingCtaWorkbench: 'Workbench 열기',
+        landingCtaDashboard: 'Action dashboard 열기',
+        landingQuickStartTitle: '빠른 시작',
+        landingStep1: '<strong>1) 모델·Gmail 설정(선택)</strong><br/><strong>설정</strong> 탭에서 OpenRouter 모델·API 키·임베딩·gog 경로를 지정한 뒤, Workbench에서 Vendor/Role/Product scope를 맞추세요.',
+        landingStep2: '<strong>2) Inbox 스캔</strong><br/>Workbench에서 Probe를 실행하면 대시보드에 구조화 액션 카드가 생성됩니다.',
+        landingStep3: '<strong>3) 상태로 운영</strong><br/>시작 전 / 진행 중 / 완료 상태로 실행 우선순위와 정렬을 관리하세요.',
+        landingStep4: '<strong>4) 액션 단위 심화 대화</strong><br/>“이 작업만 논의”로 스코프된 스레드를 열고 필요 시 정확한 이메일 thread를 다시 불러오세요.',
+        landingFeedbackTitle: '피드백과 자기 진화',
+        landingFeedbackBody: '<strong>Run history</strong>에서 Run을 펼친 뒤 <strong>OK</strong> / <strong>NG</strong> / <strong>Good</strong> / <strong>Noise</strong> 중 하나를 눌러 피드백을 남기세요. 피드백은 <strong>learning memory</strong>에 저장되고 이후 Run에 반영되는 운영 규칙으로 정리됩니다.',
+        landingKnowledgeTitle: '제품 문서·RC URL',
+        landingKnowledgeBody: '<strong>Knowledge</strong> 탭 → <strong>Upload</strong>에서 제품·내부 문서(<code>.md</code>/<code>.txt</code>)를 올리고 <strong>Reindex</strong>로 검색 색인을 갱신하세요. <strong>RC URLs</strong>에서 문서·포털 base URL을 등록하고 필요한 도메인을 <strong>enabled</strong>로 두면 Run 중 해당 도메인 web search를 사용할 수 있습니다.',
+        landingCtaRunHistory: 'Run history 열기',
+        landingCtaKnowledge: 'Knowledge 열기',
+        configureTitle: '설정',
+        configureLead: 'OpenRouter 모델 id, 임베딩, API, Gmail <strong>gog</strong> 경로를 설정합니다. 저장 값은 이 인스턴스에서 <code>.env</code>를 덮어씁니다. 필드를 비우고 저장하면 해당 항목만 초기화됩니다.',
+        configureEmbedHint: '임베딩 모델을 바꾼 뒤에는 Knowledge 탭에서 <strong>Reindex</strong>를 실행하세요.',
+        configureLlmBlock: 'LLM 모델',
+        configureLlmHint: '회색 안내는 환경 변수 기본값입니다. 제안 목록을 고르거나 OpenRouter 모델 id를 직접 입력하세요.',
+        configureEmbedBlock: '임베딩 (RAG)',
+        configureOrBlock: 'OpenRouter',
+        configureOrHint: 'API 키는 <code>.env</code>에만 둘 수 있습니다. 여기 붙여넣으면 앱 DB에 저장됩니다(로컬 배포용).',
+        configureGogBlock: 'Gmail (gog CLI)',
+        configureGogHint: '로컬 <strong>gog</strong> 바이너리 경로·계정입니다. OAuth 토큰은 키링에 있으며, 이 UI 밖에서 인증하세요(<code>docs/GMAIL_SETUP.md</code>).',
+        configureSave: '설정 저장',
+        configureSaving: '저장 중…',
+        configureSaved: '저장됨.',
+        configureLoadFail: '설정을 불러오지 못함',
+        configureSaveFail: '저장 실패',
+        configureClearConfirm: '저장된 값을 지우고 .env로 되돌릴까요?',
+        configureEnvFrom: 'Env',
+        configureEnvOverridden: 'UI에서 덮어씀',
+        configureEffective: '현재 적용',
+        configureInheritHint: '상속 / env 체인',
+        configureKeyOr: '.env OPENROUTER_API_KEY',
+        configureKeyOai: '.env OPENAI_API_KEY',
+        configureKeyDb: '앱 DB에 API 키',
+        configureKeyMissing: '.env·DB 모두에 키 없음 — 모델 실행을 위해 설정하세요.',
+        configureProviderSummary: 'Provider·API',
+        configurePresetHint: '프리셋을 고른 뒤 기본값 적용 또는 필드 수정. 채팅은 OpenAI 호환 HTTP 클라이언트를 사용합니다.',
+        configureApplyPreset: '프리셋 기본값 적용',
+        configureEnvSyncSummary: '환경 변수 동기화',
+        configureEnvSyncHint: '디스크의 프로젝트 .env와 서버 기동 시 로드된 값을 비교합니다. .env를 직접 고친 뒤에는 서버를 재시작하세요.',
+        configureEnvColKey: '변수',
+        configureEnvColFile: '.env 파일(디스크)',
+        configureEnvColServer: '서버 로드(마스킹)',
+        configureEnvEmpty: '표시할 변수가 없습니다.',
+        cfgProviderPreset: 'Provider 프리셋',
+        cfgLlmModel: '기본 모델 (LLM_MODEL)',
+        cfgLlmMain: '메인 에이전트',
+        cfgLlmSearchJson: '검색 / JSON',
+        cfgLlmRerank: '재순위',
+        cfgLlmMemory: '메모리 / 학습',
+        cfgEmbedProv: 'Provider',
+        cfgEmbedModel: '임베딩 모델',
+        cfgOpenrouterUrl: 'Base URL',
+        cfgOpenrouterKey: 'API 키',
+        cfgClearStored: '저장값 지우기',
+        cfgGogHome: 'GOG_HOME',
+        cfgGogAccount: 'Gmail 계정',
+        cfgGogKeyringBackend: 'Keyring backend',
+        cfgGogKeyringPw: 'Keyring 비밀번호',
+        cfgXdg: 'XDG_CONFIG_HOME',
+        cfgGogCredPath: 'OAuth client JSON 경로',
+        landingSetupTitle: '1) 환경 변수·API 키',
+        landingSetupIntro: '프로젝트 루트에서 <code>.env.example</code>를 복사해 <code>.env</code>로 두고 값을 채웁니다. 설정은 시작 시 로드됩니다(<code>src/config.py</code>). 변경 후에는 <strong>API 서버를 재시작</strong>하세요. 채팅 호출은 코드에서 별도로 바꾸지 않는 한 OpenRouter를 사용합니다.',
+        landingSetupHeadingLlm: 'LLM (OpenRouter 채팅)',
+        landingEnvDdOpenrouter: '필수. OpenRouter API 키(모든 채팅 completion).',
+        landingEnvDdOpenrouterUrl: '선택. OpenRouter API base URL(기본값 사용 가능).',
+        landingEnvDdLlmModel: '기본 모델 id(OpenRouter 형식, 예: <code>openai/gpt-4o</code>). 아래 역할별 변수가 비어 있을 때 사용됩니다.',
+        landingEnvDdMain: '메인 CSM 에이전트: 도구 호출·Inbox probe·Workbench 답변. 미설정 시 <code>LLM_MODEL</code>.',
+        landingEnvDdSearchJson: '문서 검색 보조: 서브쿼리 분리·용어 추출·JSON 위주 단계. 미설정 시 <code>LLM_MODEL</code>.',
+        landingEnvDdSearchRerank: 'KB 스니펫 재순위. 미설정 시 <code>LLM_MODEL</code>.',
+        landingEnvDdMemory: '사용자 피드백 학습·메모리 정리. 미설정 시 <code>LLM_MODEL</code>.',
+        landingSetupHeadingEmbed: '임베딩 (RAG 인덱스)',
+        landingEnvDdEmbedProv: '예: <code>openrouter</code> — 채팅과 별개이며 업로드 문서 벡터 색인에 사용.',
+        landingEnvDdEmbedModel: '임베딩 모델 id(<code>.env.example</code> 참고). Knowledge 색인 시 사용.',
+        landingSetupHeadingGmail: 'Gmail Inbox (gog CLI)',
+        landingEnvDdGog: '로컬 <strong>gog</strong> CLI로 Gmail을 읽기 위한 경로·계정. OAuth/키 자료는 이 UI 밖에서 관리합니다.',
+        landingEnvDdGogKeyring: 'gog 토큰 저장용 keyring 설정(<code>.env.example</code> 참고).',
+        landingSetupHeadingOptional: '선택',
+        landingEnvDdLangsmith: 'LangSmith 트레이싱. 로컬만 쓰면 생략 가능.',
+        landingSetupDocNote: '자세한 역할 매핑: 프로젝트 파일 <code>docs/LLM_MODELS.md</code>.',
+        landingDisclaimerTitle: '이메일 공급자 안내',
+        landingDisclaimerBody: 'Inbox 연동은 <strong>Gmail</strong>만 지원하며, 로컬 <strong>gog</strong> CLI와 OAuth 설정을 전제로 합니다. Outlook 등 다른 서비스는 <strong>포함되지 않습니다</strong>. 필요하면 별도 수집 파이프라인을 구현하거나 Gmail 도구 레이어를 교체해야 합니다.',
         workbenchTitle: 'Workbench',
         workbenchLead: '스레드·대화는 Workbench에서. Inbox 리뷰 Run은 Action dashboard 탭에서 확인하세요. Trace·Run history는 감사용입니다.',
         profileCardTitle: 'Agent 프로필',
@@ -1702,8 +2363,13 @@
     let _dashboardPollTimer = null;
     const DASHBOARD_TAB_ID = 'tab-action-dashboard';
     const DASHBOARD_HASH = 'action-dashboard';
+    const CONFIGURE_TAB_ID = 'tab-configure';
+    const CONFIGURE_HASH = 'configure';
     const DASHBOARD_LAYOUT_KEY = 'sova_action_dashboard_layout';
-    const TAB_TO_HASH = { [DASHBOARD_TAB_ID]: DASHBOARD_HASH };
+    const TAB_TO_HASH = {
+      [DASHBOARD_TAB_ID]: DASHBOARD_HASH,
+      [CONFIGURE_TAB_ID]: CONFIGURE_HASH,
+    };
     function _fmtTime(ts) {
       try { return new Date(ts).toLocaleString(); } catch { return ''; }
     }
@@ -2173,6 +2839,242 @@
       try { return JSON.parse(raw); } catch { return {}; }
     }
 
+    let _lastRuntimePayload = null;
+
+    function _fillDatalist(id, options) {
+      const dl = document.getElementById(id);
+      if (!dl || !Array.isArray(options)) return;
+      dl.innerHTML = options.map((o) => `<option value="${escapeHtml(o)}"></option>`).join('');
+    }
+
+    // env_loaded from API uses lowercase pydantic names; dotenv_file uses ENV_VAR names. Map to one row per var.
+    const _ENV_LOADED_TO_CANONICAL = {
+      llm_provider_preset: 'LLM_PROVIDER_PRESET',
+      llm_model: 'LLM_MODEL',
+      llm_model_main: 'LLM_MODEL_MAIN',
+      llm_model_search_json: 'LLM_MODEL_SEARCH_JSON',
+      llm_model_search_rerank: 'LLM_MODEL_SEARCH_RERANK',
+      llm_model_memory: 'LLM_MODEL_MEMORY',
+      rag_embedding_provider: 'RAG_EMBEDDING_PROVIDER',
+      rag_embedding_model: 'RAG_EMBEDDING_MODEL',
+      openrouter_base_url: 'OPENROUTER_BASE_URL',
+      openrouter_api_key: 'OPENROUTER_API_KEY',
+      openai_api_key: 'OPENAI_API_KEY',
+      gog_home: 'GOG_HOME',
+      gog_account: 'GOG_ACCOUNT',
+      gog_keyring_backend: 'GOG_KEYRING_BACKEND',
+      gog_keyring_password: 'GOG_KEYRING_PASSWORD',
+      xdg_config_home: 'XDG_CONFIG_HOME',
+      gog_credentials_path: 'GOG_CREDENTIALS_PATH',
+    };
+    function _canonicalEnvKey(k) {
+      if (!k) return k;
+      if (k === k.toUpperCase() && k.includes('_')) return k;
+      return _ENV_LOADED_TO_CANONICAL[k] || k;
+    }
+    function renderConfigureEnvTable(data) {
+      const wrap = document.getElementById('configureEnvTableWrap');
+      if (!wrap) return;
+      const dotRaw = data.dotenv_file || {};
+      const loadedRaw = data.env_loaded || {};
+      const dot = {};
+      Object.keys(dotRaw).forEach((k) => { dot[_canonicalEnvKey(k)] = dotRaw[k]; });
+      const loaded = {};
+      Object.keys(loadedRaw).forEach((k) => {
+        const c = _canonicalEnvKey(k);
+        if (loaded[c] === undefined) loaded[c] = loadedRaw[k];
+      });
+      const keys = new Set([...Object.keys(dot), ...Object.keys(loaded)]);
+      const sorted = Array.from(keys).sort();
+      if (!sorted.length) {
+        wrap.innerHTML = `<p class="configure-hint">${escapeHtml(uiText('configureEnvEmpty'))}</p>`;
+        return;
+      }
+      const th1 = escapeHtml(uiText('configureEnvColKey'));
+      const th2 = escapeHtml(uiText('configureEnvColFile'));
+      const th3 = escapeHtml(uiText('configureEnvColServer'));
+      const rows = sorted.map((k) => {
+        const a = dot[k] != null && dot[k] !== '' ? escapeHtml(String(dot[k])) : '—';
+        const b = loaded[k] != null && loaded[k] !== '' ? escapeHtml(String(loaded[k])) : '—';
+        return `<tr><td><code>${escapeHtml(k)}</code></td><td>${a}</td><td>${b}</td></tr>`;
+      }).join('');
+      wrap.innerHTML = `<table class="configure-env-table"><thead><tr><th>${th1}</th><th>${th2}</th><th>${th3}</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function refreshPresetDatalists() {
+      if (!_lastRuntimePayload) return;
+      const p = document.getElementById('cfg_llm_provider_preset')?.value || 'openrouter';
+      const meta = _lastRuntimePayload.provider_presets && _lastRuntimePayload.provider_presets[p];
+      if (meta) {
+        _fillDatalist('datalistChatModels', meta.recommended_models || _lastRuntimePayload.recommended_models || []);
+        _fillDatalist('datalistEmbedModels', meta.recommended_embedding_models || _lastRuntimePayload.recommended_embedding_models || []);
+      }
+    }
+
+    function onConfigurePresetChange() {
+      refreshPresetDatalists();
+      const p = document.getElementById('cfg_llm_provider_preset')?.value;
+      const meta = _lastRuntimePayload && _lastRuntimePayload.provider_presets && p && _lastRuntimePayload.provider_presets[p];
+      const hint = document.getElementById('cfg_preset_hint');
+      if (hint && meta && meta.hint) hint.textContent = meta.hint;
+    }
+
+    function applyProviderPresetDefaults() {
+      if (!_lastRuntimePayload) return;
+      const p = document.getElementById('cfg_llm_provider_preset')?.value || 'openrouter';
+      const meta = _lastRuntimePayload.provider_presets && _lastRuntimePayload.provider_presets[p];
+      if (!meta) return;
+      const b = document.getElementById('cfg_openrouter_base_url');
+      if (b) b.value = meta.default_base_url || '';
+      const m = meta.recommended_models || [];
+      if (m[0]) {
+        const el = document.getElementById('cfg_llm_model');
+        if (el) el.value = m[0];
+      }
+      const em = meta.recommended_embedding_models || [];
+      if (em[0]) {
+        const el = document.getElementById('cfg_rag_embedding_model');
+        if (el) el.value = em[0];
+      }
+      const rp = document.getElementById('cfg_rag_embedding_provider');
+      if (rp) rp.value = 'openrouter';
+      refreshPresetDatalists();
+    }
+
+    function _setConfigureEnvSpans(envRaw, stored, eff) {
+      const map = [
+        ['cfg_env_llm_model', 'llm_model', false],
+        ['cfg_env_llm_model_main', 'llm_model_main', true],
+        ['cfg_env_llm_model_search_json', 'llm_model_search_json', true],
+        ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank', true],
+        ['cfg_env_llm_model_memory', 'llm_model_memory', true],
+        ['cfg_env_rag_embedding_model', 'rag_embedding_model', false],
+        ['cfg_env_openrouter_base_url', 'openrouter_base_url', false],
+        ['cfg_env_gog_home', 'gog_home', false],
+        ['cfg_env_gog_account', 'gog_account', false],
+        ['cfg_env_gog_keyring_backend', 'gog_keyring_backend', false],
+        ['cfg_env_xdg_config_home', 'xdg_config_home', false],
+        ['cfg_env_gog_credentials_path', 'gog_credentials_path', false],
+      ];
+      map.forEach(([spanId, key, optionalRole]) => {
+        const el = document.getElementById(spanId);
+        if (!el) return;
+        const st = stored && stored[key];
+        const vEnv = (envRaw && envRaw[key]) ? String(envRaw[key]) : '';
+        const effVal = eff && eff[key] != null ? String(eff[key]) : '';
+        if (optionalRole && !st && effVal) {
+          el.textContent = `${uiText('configureEffective')}: ${effVal} (${uiText('configureInheritHint')})`;
+          return;
+        }
+        el.textContent = vEnv
+          ? `${uiText('configureEnvFrom')}: ${vEnv}${st ? ` · ${uiText('configureEnvOverridden')}` : ''}`
+          : (effVal && !st ? `${uiText('configureEffective')}: ${effVal}` : '');
+      });
+    }
+
+    async function loadRuntimeSettings() {
+      const st = document.getElementById('configureSaveStatus');
+      try {
+        const data = await fetchJson('/settings/runtime');
+        _lastRuntimePayload = data;
+        const eff = data.effective || {};
+        const env = data.env_loaded || {};
+        const stored = data.stored_in_database || {};
+        const setv = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val != null ? String(val) : '';
+        };
+        const pp = document.getElementById('cfg_llm_provider_preset');
+        if (pp) pp.value = eff.llm_provider_preset || 'openrouter';
+        setv('cfg_llm_model', eff.llm_model || '');
+        setv('cfg_llm_model_main', stored.llm_model_main ? eff.llm_model_main : '');
+        setv('cfg_llm_model_search_json', stored.llm_model_search_json ? eff.llm_model_search_json : '');
+        setv('cfg_llm_model_search_rerank', stored.llm_model_search_rerank ? eff.llm_model_search_rerank : '');
+        setv('cfg_llm_model_memory', stored.llm_model_memory ? eff.llm_model_memory : '');
+        setv('cfg_rag_embedding_provider', eff.rag_embedding_provider || '');
+        setv('cfg_rag_embedding_model', eff.rag_embedding_model || '');
+        setv('cfg_openrouter_base_url', stored.openrouter_base_url ? eff.openrouter_base_url : '');
+        setv('cfg_openrouter_api_key', '');
+        setv('cfg_gog_home', stored.gog_home ? eff.gog_home : '');
+        setv('cfg_gog_account', stored.gog_account ? eff.gog_account : '');
+        setv('cfg_gog_keyring_backend', stored.gog_keyring_backend ? eff.gog_keyring_backend : '');
+        setv('cfg_gog_keyring_password', '');
+        setv('cfg_xdg_config_home', stored.xdg_config_home ? eff.xdg_config_home : '');
+        setv('cfg_gog_credentials_path', stored.gog_credentials_path ? eff.gog_credentials_path : '');
+        _setConfigureEnvSpans(env, stored, eff);
+        refreshPresetDatalists();
+        onConfigurePresetChange();
+        const pathEl = document.getElementById('configureDotenvPath');
+        if (pathEl) {
+          const p = data.dotenv_path || '';
+          pathEl.textContent = (data.dotenv_exists ? '' : '[missing] ') + p;
+        }
+        renderConfigureEnvTable(data);
+        const ks = document.getElementById('cfg_key_status');
+        if (ks) {
+          const parts = [];
+          if (data.openrouter_api_key_set_in_env) parts.push(uiText('configureKeyOr'));
+          if (data.openai_api_key_set_in_env) parts.push(uiText('configureKeyOai'));
+          if (data.openrouter_api_key_set_in_database) parts.push(uiText('configureKeyDb'));
+          ks.textContent = parts.length ? parts.join(' · ') : uiText('configureKeyMissing');
+        }
+        if (st) st.textContent = '';
+      } catch (e) {
+        if (st) st.textContent = uiText('configureLoadFail') + ': ' + e.message;
+      }
+    }
+
+    async function clearRuntimeField(key) {
+      if (!confirm(uiText('configureClearConfirm'))) return;
+      try {
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: '' }),
+        });
+        await loadRuntimeSettings();
+      } catch (e) {
+        alert(uiText('configureSaveFail') + ': ' + e.message);
+      }
+    }
+
+    async function saveRuntimeSettings() {
+      const st = document.getElementById('configureSaveStatus');
+      const gv = (id) => (document.getElementById(id)?.value || '').trim();
+      const payload = {
+        llm_provider_preset: gv('cfg_llm_provider_preset'),
+        llm_model: gv('cfg_llm_model'),
+        llm_model_main: gv('cfg_llm_model_main'),
+        llm_model_search_json: gv('cfg_llm_model_search_json'),
+        llm_model_search_rerank: gv('cfg_llm_model_search_rerank'),
+        llm_model_memory: gv('cfg_llm_model_memory'),
+        rag_embedding_provider: gv('cfg_rag_embedding_provider'),
+        rag_embedding_model: gv('cfg_rag_embedding_model'),
+        openrouter_base_url: gv('cfg_openrouter_base_url'),
+        gog_home: gv('cfg_gog_home'),
+        gog_account: gv('cfg_gog_account'),
+        gog_keyring_backend: gv('cfg_gog_keyring_backend'),
+        xdg_config_home: gv('cfg_xdg_config_home'),
+        gog_credentials_path: gv('cfg_gog_credentials_path'),
+      };
+      const npw = gv('cfg_gog_keyring_password');
+      if (npw) payload.gog_keyring_password = npw;
+      const nkey = gv('cfg_openrouter_api_key');
+      if (nkey) payload.openrouter_api_key = nkey;
+      try {
+        if (st) st.textContent = uiText('configureSaving');
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (st) st.textContent = uiText('configureSaved');
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = uiText('configureSaveFail') + ': ' + e.message;
+      }
+    }
+
     function _stopDashboardPolling() {
       if (_dashboardPollTimer) {
         clearInterval(_dashboardPollTimer);
@@ -2207,11 +3109,15 @@
         void loadActionBoard(true);
         _startDashboardPolling();
       }
+      if (tabId === CONFIGURE_TAB_ID) {
+        void loadRuntimeSettings();
+      }
     }
 
     function tabIdFromHash() {
       const raw = (location.hash || '').replace(/^#\/?/, '');
       if (raw === DASHBOARD_HASH) return DASHBOARD_TAB_ID;
+      if (raw === CONFIGURE_HASH) return CONFIGURE_TAB_ID;
       return null;
     }
 
@@ -2812,7 +3718,7 @@
 
     window.addEventListener('popstate', () => {
       const t = tabIdFromHash();
-      showTab(t || 'tab-agent', { syncHash: false });
+      showTab(t || 'tab-landing', { syncHash: false });
     });
     const _initialTab = tabIdFromHash();
     if (_initialTab) showTab(_initialTab, { syncHash: false });
