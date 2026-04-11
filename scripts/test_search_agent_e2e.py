@@ -14,9 +14,6 @@ import argparse
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--query", type=str, default="")
@@ -30,8 +27,7 @@ def main() -> None:
     project_root = Path(__file__).resolve().parents[1]
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-    load_dotenv(project_root / ".env")
-    # Import after dotenv so pydantic settings read populated env.
+    # Import after sys.path; export OPENROUTER_API_KEY etc. in your shell first.
     from src.agent.tools.search_agent import search_with_agent
 
     if args.query_file:

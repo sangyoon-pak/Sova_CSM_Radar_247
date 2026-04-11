@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the main email agent end-to-end on a saved query (no Gmail).
 
-Loads .env before importing app modules so OPENROUTER_API_KEY is visible to Settings.
+Export ``OPENROUTER_API_KEY`` (and related vars) in your shell before running, or save keys in Configure and use the app DB.
 
 Example:
   .venv/bin/python scripts/test_full_agent_reply.py \\
@@ -25,8 +25,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-
-from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -92,8 +90,6 @@ def main() -> None:
         help="Write structured log (matches + context_passed_to_llm) as JSON.",
     )
     args = ap.parse_args()
-
-    load_dotenv(PROJECT_ROOT / ".env")
 
     if args.query_file:
         body = Path(args.query_file).read_text(encoding="utf-8").strip()

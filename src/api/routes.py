@@ -3,7 +3,7 @@ from pathlib import Path
 from threading import Thread
 
 from fastapi import HTTPException, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field, ConfigDict
 from langchain_core.callbacks import BaseCallbackHandler
 
@@ -21,12 +21,19 @@ from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
 from src.agent.tools.openrouter_web import run_web_search
 from src.config import settings
-from src.runtime_config import effective_llm_model_main, runtime_settings_snapshot
+from src.runtime_config import (
+    clear_gog_local_oauth_files,
+    clear_runtime_configure_overrides,
+    effective_llm_model_main,
+    runtime_settings_snapshot,
+)
 from src.db import database
 from src.api import run_state
 
 from fastapi import APIRouter
 router = APIRouter()
+
+_RUNTIME_SETTINGS_NO_CACHE = {"Cache-Control": "no-store, max-age=0"}
 
 
 class RunAgentRequest(BaseModel):
@@ -225,12 +232,15 @@ class RuntimeSettingsPatch(BaseModel):
 @router.get("/settings/runtime")
 def get_runtime_settings():
     """Effective LLM / embedding / OpenRouter / gog settings for the Configure UI."""
-    return runtime_settings_snapshot()
+    return JSONResponse(
+        content=runtime_settings_snapshot(),
+        headers=_RUNTIME_SETTINGS_NO_CACHE,
+    )
 
 
 @router.patch("/settings/runtime")
 def patch_runtime_settings(req: RuntimeSettingsPatch):
-    """Persist overrides in app_settings. Empty string clears a key (fall back to .env)."""
+    """Persist overrides in app_settings. Empty string clears that key (fall back to env + defaults)."""
     raw = req.model_dump(exclude_unset=True)
     for key, val in raw.items():
         if val is None:
@@ -240,7 +250,23 @@ def patch_runtime_settings(req: RuntimeSettingsPatch):
             database.delete_app_setting(key)
         else:
             database.set_app_setting(key, s)
-    return runtime_settings_snapshot()
+    return JSONResponse(
+        content=runtime_settings_snapshot(),
+        headers=_RUNTIME_SETTINGS_NO_CACHE,
+    )
+
+
+@router.post("/settings/runtime/clear-overrides")
+def clear_runtime_settings_overrides():
+    """Remove every Configure-saved key from app_settings; these values then come from env + defaults."""
+    gog_cleanup = clear_gog_local_oauth_files()
+    clear_runtime_configure_overrides()
+    payload = runtime_settings_snapshot()
+    payload["gog_cleanup"] = gog_cleanup
+    return JSONResponse(
+        content=payload,
+        headers=_RUNTIME_SETTINGS_NO_CACHE,
+    )
 
 
 @router.post("/docs/upload")

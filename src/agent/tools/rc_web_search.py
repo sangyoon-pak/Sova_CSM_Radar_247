@@ -1,7 +1,9 @@
 """Web search across enabled RC URLs (solution-agnostic).
 
 This tool is only used when the user has enabled RC URLs in the UI.
-It delegates web retrieval to OpenRouter's Responses API web plugin.
+Hosted web retrieval follows **Configure → provider preset**:
+OpenRouter presets use OpenRouter's Responses + web plugin; **openai** uses
+OpenAI's Responses API + ``web_search`` tool (same entrypoint: ``run_web_search``).
 """
 
 from __future__ import annotations

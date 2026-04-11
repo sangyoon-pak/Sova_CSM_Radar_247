@@ -1,103 +1,79 @@
-# Gmail setup (SOVA Agent)
+# Gmail setup
 
-The SOVA Agent uses **`gog`** (gogcli) locally under `email_draft_agent/` to read Gmail. OAuth must be completed **on the machine** where the app runs so tokens live next to `GOG_HOME`.
+Gmail uses the **`gog`** CLI and Google OAuth. LLM/API keys are separate — see **[INSTALLATION.md](INSTALLATION.md)**.
 
-For **LLM / embeddings / provider presets**, use the web UI **Configure** tab or copy from `.env.example`. Saved Configure values are stored in the app database and **override** `.env` until cleared.
+**Flow:** (1) Google OAuth client + install `gog` → (2) one-time **`gog` sign-in in a terminal** → (3) **finish in the browser**: **Configure → Gmail** + **Save configuration** so **`GOG_*`** persist in the app database (no shell exports on every **`python run.py`**). Saved Configure values **take precedence** over the same variables in the process environment (see `effective_*` in `src/runtime_config.py`). Tokens on disk live under **`GOG_HOME`**.
 
 ---
 
-## 1. One-time OAuth (local)
+## 1. OAuth client
 
-From the `email_draft_agent/` repo root:
+In [Google Cloud Console](https://console.cloud.google.com/): enable **Gmail API**, configure the OAuth consent screen, create an **OAuth client ID** (Desktop app), download the JSON, and save it as **`credentials.json`** in the **repo root** (gitignored). Add test users if the app is in Testing.
+
+---
+
+## 2. Install `gog`
 
 ```bash
-cd scripts
-
-# 1) Install gog to ./scripts/.local (one-time)
+cd email_draft_agent/scripts
 ./install-gog-local.sh
-
-# 2) Use the .local dir (has gog binary)
-export GOG_HOME="$(pwd)/.local" HOME="$(pwd)/.local"
-export PATH="$(pwd)/.local/bin:$PATH"
-# Use the same passphrase here and in .env (below); pick a strong random string.
-export GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=YOUR_KEYRING_PASSPHRASE
-
-# 3) Register OAuth client (if not done)
-# Download OAuth client JSON from Google Cloud Console and place it at:
-#   email_draft_agent/credentials.json
-# Or set GOG_CREDENTIALS_PATH (absolute path) / Configure → OAuth client JSON path.
-./.local/bin/gog auth credentials ../credentials.json
-
-# 4) Complete OAuth in browser (replace with your Gmail)
-./.local/bin/gog auth add YOUR_EMAIL --services gmail --readonly --manual
 ```
 
-1. Open the URL in your browser  
-2. Sign in and authorize  
-3. Copy the **full redirect URL** from the address bar (after redirect)  
-4. Paste it into the terminal when prompted  
+Binary: **`scripts/.local/bin/gog`**. Default **`GOG_HOME=./scripts/.local`**.
 
 ---
 
-## 2. Environment variables
+## 3. Sign in once (terminal)
 
-### 2a. Gmail / `gog` (minimal `.env`)
-
-Put these in `email_draft_agent/.env` (or set the same fields in **Configure → Gmail**):
+Use a normal shell (not an IDE Run task). From **repo root**, replace `CHANGE_ME` and `YOUR_EMAIL`:
 
 ```bash
-GOG_HOME=./scripts/.local
-GOG_ACCOUNT=YOUR_EMAIL
-GOG_KEYRING_BACKEND=file
-GOG_KEYRING_PASSWORD=YOUR_KEYRING_PASSPHRASE
-# Optional: absolute path to Google OAuth client JSON if not using ./credentials.json
-# GOG_CREDENTIALS_PATH=/absolute/path/to/credentials.json
-# Optional: isolate gog config under GOG_HOME (matches one-time OAuth exports)
-# XDG_CONFIG_HOME=./scripts/.local/.config
+cd scripts && \
+export GOG_HOME="$(pwd)/.local" HOME="$(pwd)/.local" PATH="$(pwd)/.local/bin:$PATH" GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD='CHANGE_ME' && \
+./.local/bin/gog auth credentials ../credentials.json && \
+./.local/bin/gog auth add 'YOUR_EMAIL' --services gmail --readonly --manual
 ```
 
-Use a **strong, private** `GOG_KEYRING_PASSWORD` if others can access the `scripts/.local` tree. Do **not** commit `credentials.json` (see `.gitignore`).
-
-### 2b. Configure tab ↔ `.env` (full reference)
-
-These environment variables correspond to **Configure** in the UI. The **Environment sync** section on Configure compares your on-disk `.env` with values the server loaded at startup (restart after editing `.env` manually).
-
-| Environment variable | Configure section | Notes |
-|---------------------|-------------------|--------|
-| `LLM_PROVIDER_PRESET` | Provider & API | `openrouter` (default) · `openai` · `gemini_openrouter` |
-| `OPENROUTER_BASE_URL` | Provider & API | Default `https://openrouter.ai/api/v1`; for `openai` preset, effective base is `https://api.openai.com/v1` unless overridden in Configure |
-| `OPENROUTER_API_KEY` | Provider & API | Chat + embeddings; can also be pasted in Configure (stored in DB) |
-| `OPENAI_API_KEY` | — (env only) | Used when preset is `openai` if `OPENROUTER_API_KEY` is not used; not a separate Configure field |
-| `LLM_MODEL` | LLM models | Default model |
-| `LLM_MODEL_MAIN` | LLM models | Main agent |
-| `LLM_MODEL_SEARCH_JSON` | LLM models | Search / JSON steps |
-| `LLM_MODEL_SEARCH_RERANK` | LLM models | Rerank |
-| `LLM_MODEL_MEMORY` | LLM models | Memory / learning |
-| `RAG_EMBEDDING_PROVIDER` | Embeddings | e.g. `openrouter` |
-| `RAG_EMBEDDING_MODEL` | Embeddings | e.g. `openai/text-embedding-3-large` |
-| `GOG_HOME` | Gmail | |
-| `GOG_ACCOUNT` | Gmail | |
-| `GOG_KEYRING_BACKEND` | Gmail | |
-| `GOG_KEYRING_PASSWORD` | Gmail | Can be set in Configure (DB) instead of `.env` |
-| `XDG_CONFIG_HOME` | Gmail | |
-| `GOG_CREDENTIALS_PATH` | Gmail | OAuth client JSON path |
-
-A filled-out template (including LangSmith, server, KB path) is in **`.env.example`**. Model roles and tuning are summarized in **`docs/LLM_MODELS.md`**.
+`gog` prints a URL (it may not open a browser). Open it → sign in → paste the **full redirect URL** from the address bar when prompted.
 
 ---
 
-## 3. Test
+## 4. Finish in the UI (Configure)
+
+The app **does not** run Google OAuth in the browser here — it only stores **`GOG_*`** so the running server can call **`gog`** on later restarts.
+
+1. Start the API server if it is not running: **`python run.py`** from the repo root (see [INSTALLATION.md](INSTALLATION.md)).
+2. Open the web UI (default **http://127.0.0.1:8000**).
+3. Open the **Configure** tab.
+4. Expand **Gmail (gog)**.
+5. Enter the **same** values you used in §3 (and the same paths you expect for `GOG_HOME`):
+   - **GOG_HOME** — e.g. `./scripts/.local` (relative to repo root) or an absolute path to that directory.
+   - **GOG_ACCOUNT** — the Gmail address you authorized (required).
+   - **GOG_KEYRING_BACKEND** — usually **`file`**.
+   - **GOG_KEYRING_PASSWORD** — the **same** passphrase you used with `gog auth` in §3 (paste once; then **Save**).
+   - **XDG_CONFIG_HOME** / **GOG_CREDENTIALS_PATH** — only if your layout needs them (otherwise leave empty).
+6. Scroll to the bottom of **Configure** and click **Save configuration** (this saves the Gmail fields together with the rest of Configure).
+7. Reload the page or collapse/reopen **Gmail (gog)**. The checklist should turn **green** when **gog**, OAuth client JSON, account, and keyring passphrase are all satisfied. If something stays red, read the line hints (common: empty **GOG_ACCOUNT** or passphrase mismatch).
+
+---
+
+## 5. Test
+
+With the server running and §4 saved (or the same variables set only in the environment):
 
 ```bash
 cd email_draft_agent
-.venv/bin/python -c "
-from src.agent.tools.gmail_tool import fetch_inbox_emails
-print(fetch_inbox_emails(max_results=2)[:500])
-"
+.venv/bin/python -c "from src.agent.tools.gmail_tool import fetch_inbox_emails; print(fetch_inbox_emails(max_results=2)[:500])"
 ```
 
 ---
 
-## Note
+## Reset local auth
 
-If you previously completed OAuth only on a **VPS** (Docker), tokens live there—not on your laptop. Run the OAuth flow **locally** once so tokens are stored under `email_draft_agent/scripts/.local` (or your chosen `GOG_HOME`).
+Use **Configure → Clear all database overrides** (or **`scripts/reset_configure_overrides.py`**) to clear saved settings **and** delete gog token files under **`GOG_HOME`**. Or stop the server and manually delete **`…/gogcli/keyring/*`** and **`…/gogcli/credentials.json`**, then repeat **§3–5**. Optional: revoke the app under Google Account → Third-party access.
+
+---
+
+## New machine
+
+Repeat **§2–5** on each machine; OAuth tokens are local.

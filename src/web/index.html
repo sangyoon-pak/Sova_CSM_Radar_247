@@ -592,6 +592,17 @@
       border-radius: 10px;
       padding: 0.52rem 0.62rem;
     }
+    ul.landing-next-ul {
+      margin: 0.35rem 0 0.25rem 0;
+      padding-left: 1.25rem;
+      max-width: 48rem;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--text);
+    }
+    ul.landing-next-ul li { margin-bottom: 0.45rem; }
+    ul.landing-next-ul code { font-size: 0.84em; }
+    .landing-docs-line a { font-weight: 600; }
     .landing-cta {
       display: flex;
       flex-wrap: wrap;
@@ -672,8 +683,12 @@
       font-size: 0.8rem;
     }
     .configure-env {
+      display: block;
+      margin-top: 0.2rem;
       font-size: 0.72rem;
+      line-height: 1.35;
       color: var(--muted);
+      min-height: 1em;
     }
     .configure-hint {
       font-size: 0.78rem;
@@ -681,6 +696,44 @@
       line-height: 1.45;
       margin: 0 0 0.55rem 0;
     }
+    .gog-setup-status {
+      margin-top: 0.75rem;
+      max-width: 40rem;
+    }
+    .gog-setup-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.55rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .gog-setup-status--ready {
+      background: rgba(34, 197, 94, 0.14);
+      color: #16a34a;
+    }
+    [data-theme="dark"] .gog-setup-status--ready {
+      color: #4ade80;
+      background: rgba(34, 197, 94, 0.12);
+    }
+    .gog-setup-status--incomplete {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+    }
+    [data-theme="dark"] .gog-setup-status--incomplete {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.12);
+    }
+    .gog-setup-checks {
+      margin: 0.5rem 0 0 0;
+      padding-left: 1.15rem;
+      font-size: 0.76rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .gog-setup-checks li.ok { color: var(--muted); }
+    .gog-setup-checks li.fail { color: var(--text); }
     .section-lead {
       color: var(--muted);
       font-size: 0.8125rem;
@@ -1337,11 +1390,23 @@
     <section>
       <h2 data-i18n="landingTitle">Welcome to Sova</h2>
       <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.</p>
-      <div class="landing-panel" style="max-width:48rem;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.85rem 1rem;background:var(--surface-raised);">
-        <div class="landing-title" data-i18n="landingSetupShortTitle">First-time setup</div>
-        <p class="landing-copy" style="margin-bottom:0.65rem;" data-i18n-html="landingSetupShortBody">Open the <strong>Configure</strong> tab to set OpenRouter models, optional API key override, embeddings, and <strong>gog</strong> (Gmail) paths. Values are saved in the app database and override <code>.env</code> until cleared.</p>
+      <div class="landing-panel" style="max-width:52rem;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.85rem 1rem;background:var(--surface-raised);">
+        <div class="landing-title" data-i18n="landingNextStepsTitle">Next steps</div>
+        <p class="landing-copy" style="margin-bottom:0.55rem;" data-i18n-html="landingNextStepsLead">You already cloned the repo and started the server—continue here in the UI:</p>
+        <ul class="landing-next-ul">
+          <li data-i18n-html="landingNextStepsLi1"></li>
+          <li data-i18n-html="landingNextStepsLi2"></li>
+          <li data-i18n-html="landingNextStepsLi3"></li>
+          <li data-i18n-html="landingNextStepsLi4"></li>
+        </ul>
+        <p class="landing-copy landing-docs-line" style="font-size:0.84rem;color:var(--muted);margin:0.65rem 0 0.5rem 0;">
+          <span data-i18n-html="landingDocsGithubBefore"></span>
+          <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
+          <span data-i18n-html="landingDocsGithubAfter"></span>
+        </p>
         <div class="landing-cta" style="margin-top:0;">
           <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
+          <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
         </div>
       </div>
       <div class="landing-disclaimer" style="max-width:48rem;margin-bottom:1rem;">
@@ -1392,7 +1457,7 @@
   <div class="tab-pane" id="tab-configure">
     <section>
       <h2 data-i18n="configureTitle">Configure</h2>
-      <p class="section-lead" data-i18n-html="configureLead">Set LLM model ids (OpenRouter), embeddings, API access, and Gmail <strong>gog</strong> paths. Saved values override <code>.env</code> for this deployment. Empty field + Save clears that override.</p>
+      <p class="section-lead" data-i18n-html="configureLead">Choose provider preset, models, API keys, and Gmail <strong>gog</strong> fields. <strong>Save configuration</strong> stores values in this app’s database. <strong>Clear all database overrides</strong> removes everything saved from this screen, deletes local <strong>gog</strong> OAuth tokens under <code>GOG_HOME</code> (see Gmail section), and restores built-in defaults.</p>
       <p style="font-size:0.78rem;color:var(--muted);margin:-0.35rem 0 0.85rem 0;max-width:52rem;" data-i18n-html="configureEmbedHint">After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.</p>
       <div class="configure-layout">
         <details class="configure-details" open>
@@ -1410,16 +1475,16 @@
             <div class="row" style="gap:0.5rem;margin-bottom:0.65rem;flex-wrap:wrap;">
               <button type="button" class="ghost" onclick="applyProviderPresetDefaults()" data-i18n="configureApplyPreset">Apply preset defaults</button>
             </div>
-            <p class="configure-hint" data-i18n="configureOrHint">API key can stay in <code>.env</code> only; paste here to store in the app database (local deployments).</p>
+            <p class="configure-hint" data-i18n-html="configureOrHint">Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.</p>
             <div class="configure-field"><label for="cfg_openrouter_base_url" data-i18n="cfgOpenrouterUrl">Base URL</label><input id="cfg_openrouter_base_url" type="text" /><span class="configure-env" id="cfg_env_openrouter_base_url"></span></div>
-            <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /><button type="button" class="ghost btn-compact" onclick="clearRuntimeField('openrouter_api_key')" data-i18n="cfgClearStored">Clear stored</button></div>
+            <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
             <p id="cfg_key_status" class="configure-hint"></p>
           </div>
         </details>
         <details class="configure-details">
           <summary data-i18n="configureLlmBlock">LLM models</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n="configureLlmHint">Defaults in gray come from your environment. Pick a suggestion or paste a model id for your preset.</p>
+            <p class="configure-hint" data-i18n="configureLlmHint">Gray lines show recommended defaults (starting point only). Pick a suggestion or paste any OpenRouter model id.</p>
             <datalist id="datalistChatModels"></datalist>
             <div class="configure-field"><label for="cfg_llm_model" data-i18n="cfgLlmModel">Default model (LLM_MODEL)</label><input id="cfg_llm_model" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_main" data-i18n="cfgLlmMain">Main agent</label><input id="cfg_llm_model_main" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_main"></span></div>
@@ -1437,25 +1502,30 @@
           </div>
         </details>
         <details class="configure-details">
-          <summary data-i18n="configureGogBlock">Gmail (gog CLI)</summary>
+          <summary data-i18n="configureGogBlock">Gmail (gog)</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n-html="configureGogHint">Paths and account for the local <strong>gog</strong> binary. OAuth tokens live in your keyring—complete OAuth outside this UI (see <code>docs/GMAIL_SETUP.md</code>).</p>
-            <div class="configure-field"><label for="cfg_gog_home" data-i18n="cfgGogHome">GOG_HOME</label><input id="cfg_gog_home" type="text" /><span class="configure-env" id="cfg_env_gog_home"></span></div>
-            <div class="configure-field"><label for="cfg_gog_account" data-i18n="cfgGogAccount">Gmail account</label><input id="cfg_gog_account" type="text" /><span class="configure-env" id="cfg_env_gog_account"></span></div>
-            <div class="configure-field"><label for="cfg_gog_keyring_backend" data-i18n="cfgGogKeyringBackend">Keyring backend</label><input id="cfg_gog_keyring_backend" type="text" /><span class="configure-env" id="cfg_env_gog_keyring_backend"></span></div>
-            <div class="configure-field"><label for="cfg_gog_keyring_password" data-i18n="cfgGogKeyringPw">Keyring password</label><input id="cfg_gog_keyring_password" type="password" autocomplete="new-password" /><button type="button" class="ghost btn-compact" onclick="clearRuntimeField('gog_keyring_password')" data-i18n="cfgClearStored">Clear stored</button></div>
-            <div class="configure-field"><label for="cfg_xdg_config_home" data-i18n="cfgXdg">XDG_CONFIG_HOME</label><input id="cfg_xdg_config_home" type="text" /><span class="configure-env" id="cfg_env_xdg_config_home"></span></div>
-            <div class="configure-field"><label for="cfg_gog_credentials_path" data-i18n="cfgGogCredPath">OAuth client JSON path</label><input id="cfg_gog_credentials_path" type="text" /><span class="configure-env" id="cfg_env_gog_credentials_path"></span></div>
+            <p class="configure-hint" data-i18n-html="configureGogLead">Run one-time OAuth in a terminal (<a href="/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a>). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.</p>
+            <div class="configure-field"><label for="cfg_gog_home" data-i18n="cfgGogHome">GOG_HOME</label><input id="cfg_gog_home" type="text" autocomplete="off" placeholder="./scripts/.local" /></div>
+            <div class="configure-field"><label for="cfg_gog_account" data-i18n="cfgGogAccount">GOG_ACCOUNT</label><input id="cfg_gog_account" type="email" autocomplete="off" placeholder="you@example.com" /></div>
+            <div class="configure-field"><label for="cfg_gog_keyring_backend" data-i18n="cfgGogKeyringBackend">GOG_KEYRING_BACKEND</label><input id="cfg_gog_keyring_backend" type="text" autocomplete="off" placeholder="file" /></div>
+            <div class="configure-field"><label for="cfg_gog_keyring_password" data-i18n="cfgGogKeyringPassword">GOG_KEYRING_PASSWORD</label><input id="cfg_gog_keyring_password" type="password" autocomplete="new-password" placeholder="" /><span class="configure-env" id="cfg_env_gog_keyring"></span></div>
+            <div class="configure-field"><label for="cfg_xdg_config_home" data-i18n="cfgXdgConfigHome">XDG_CONFIG_HOME</label><input id="cfg_xdg_config_home" type="text" autocomplete="off" placeholder="" /></div>
+            <div class="configure-field"><label for="cfg_gog_credentials_path" data-i18n="cfgGogCredentialsPath">GOG_CREDENTIALS_PATH</label><input id="cfg_gog_credentials_path" type="text" autocomplete="off" placeholder="optional absolute path to credentials.json" /></div>
+            <p id="cfg_gog_keyring_status" class="configure-hint"></p>
+            <div id="gogSetupStatus" class="gog-setup-status" aria-live="polite"></div>
           </div>
         </details>
         <details class="configure-details">
-          <summary data-i18n="configureEnvSyncSummary">Environment sync</summary>
+          <summary data-i18n="configureSavedTitle">Saved in Configure</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n="configureEnvSyncHint">Compare the project <code>.env</code> file on disk with what the server loaded at startup (Pydantic). Restart the server after editing <code>.env</code> manually.</p>
-            <p id="configureDotenvPath" style="font-size:0.72rem;color:var(--muted);margin:0 0 0.4rem 0;"></p>
+            <p class="configure-hint" data-i18n="configureSavedHint">Values you saved with <strong>Save configuration</strong> (masked). Empty until you save.</p>
             <div id="configureEnvTableWrap" style="overflow-x:auto;"></div>
           </div>
         </details>
+      </div>
+      <p class="configure-hint" style="margin-top:1rem;max-width:52rem;" data-i18n-html="configureClearAllHint">This removes <strong>every</strong> value saved from Configure (all sections above), and deletes local <strong>gog</strong> OAuth token files under your effective <code>GOG_HOME</code> (bundled <code>scripts/.local</code> when unset). The <code>gog</code> binary is kept. Fields will show recommended defaults until you save again.</p>
+      <div class="row" style="margin-top:0.35rem;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+        <button type="button" class="ghost" onclick="clearAllRuntimeOverrides()" data-i18n="configureClearAllBtn">Clear all database overrides</button>
       </div>
       <div class="row" style="margin-top:0.75rem;align-items:center;gap:0.65rem;flex-wrap:wrap;">
         <button type="button" onclick="saveRuntimeSettings()" data-i18n="configureSave">Save configuration</button>
@@ -1717,8 +1787,15 @@
         tabActionDashboard: 'Action dashboard',
         landingTitle: 'Welcome to Sova',
         landingLead: 'CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.',
-        landingSetupShortTitle: 'First-time setup',
-        landingSetupShortBody: 'Open the <strong>Configure</strong> tab to set OpenRouter models, optional API key override, embeddings, and <strong>gog</strong> (Gmail) paths. Saved values are stored in the app database and override <code>.env</code> until cleared.',
+        landingNextStepsTitle: 'Next steps',
+        landingNextStepsLead: 'You already cloned the repo and started the server—continue in the UI:',
+        landingNextStepsLi1: '<strong>Configure</strong> — Provider preset, models, API keys, embeddings, Gmail / <code>gog</code> paths. Saving stores values in the app database; grey hints show recommended defaults.',
+        landingNextStepsLi2: '<strong>Workbench</strong> — Set vendor, role, and product scope (agent profile) before probes and chat.',
+        landingNextStepsLi3: '<strong>Knowledge</strong> — Upload <code>.md</code> / <code>.txt</code> and <strong>Reindex</strong> for RAG; add RC URLs if you use web search.',
+        landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Review probes, action cards, and traces after runs.',
+        landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, optional Gmail): see ',
+        landingDocsGithubLinkLabel: 'docs on GitHub',
+        landingDocsGithubAfter: ' — or open <code>docs/INSTALLATION.md</code> in your local clone.',
         landingCtaConfigure: 'Open Configure',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.',
@@ -1736,38 +1813,46 @@
         landingCtaRunHistory: 'Open Run history',
         landingCtaKnowledge: 'Open Knowledge',
         configureTitle: 'Configure',
-        configureLead: 'Set LLM model ids (OpenRouter), embeddings, API access, and Gmail <strong>gog</strong> paths. Saved values override <code>.env</code> for this deployment. Empty field + Save clears that override.',
+        configureLead: 'Choose provider preset, models, API keys, and Gmail <strong>gog</strong> fields. <strong>Save configuration</strong> stores values in this app’s database. <strong>Clear all database overrides</strong> removes everything saved from this screen, deletes local <strong>gog</strong> OAuth tokens under <code>GOG_HOME</code> (see Gmail section), and restores built-in defaults.',
         configureEmbedHint: 'After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.',
         configureLlmBlock: 'LLM models',
-        configureLlmHint: 'Defaults in gray come from your environment. Pick a suggestion or paste any OpenRouter model id.',
+        configureLlmHint: 'Gray lines show recommended defaults (starting point only). Pick a suggestion or paste any OpenRouter model id.',
+        configureRecommendedLabel: 'Recommended',
+        configureSavedInDbShort: 'saved in database',
+        configureSavedTitle: 'Saved in Configure',
+        configureSavedHint: 'Values you saved with Save configuration (masked). Empty until you save.',
+        configureSavedEmpty: 'Nothing saved in the database yet — edit fields above and click Save configuration.',
+        configureSavedValueCol: 'Value (masked)',
+        configureKeyMissingDb: 'No API key saved — paste above and Save configuration.',
         configureEmbedBlock: 'Embeddings (RAG)',
-        configureOrBlock: 'OpenRouter',
-        configureOrHint: 'API key can stay in <code>.env</code> only; paste here to store in the app database (typical for local use).',
-        configureGogBlock: 'Gmail (gog CLI)',
-        configureGogHint: 'Paths and account for the local <strong>gog</strong> binary. OAuth tokens live in your keyring—complete OAuth outside this UI (see <code>docs/GMAIL_SETUP.md</code>).',
+        configureOrHint: 'Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.',
+        configureGogBlock: 'Gmail (gog)',
+        configureGogLead: 'Run one-time OAuth in a terminal (<a href="/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a>). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.',
+        configureGogKeyringDb: 'Keyring passphrase is stored in the app database (leave password blank and Save to keep it; enter a new value to replace).',
+        configureGogKeyringMissingDb: 'No keyring passphrase saved — paste GOG_KEYRING_PASSWORD and Save, or set it in the process environment.',
+        cfgGogHome: 'GOG_HOME',
+        cfgGogAccount: 'GOG_ACCOUNT',
+        cfgGogKeyringBackend: 'GOG_KEYRING_BACKEND',
+        cfgGogKeyringPassword: 'GOG_KEYRING_PASSWORD',
+        cfgXdgConfigHome: 'XDG_CONFIG_HOME',
+        cfgGogCredentialsPath: 'GOG_CREDENTIALS_PATH',
+        configureGogStatusReady: 'Prerequisites look complete',
+        configureGogStatusIncomplete: 'Setup incomplete — fix the items below, then refresh (reopen Configure or reload the page).',
         configureSave: 'Save configuration',
         configureSaving: 'Saving…',
         configureSaved: 'Saved.',
         configureLoadFail: 'Could not load settings',
         configureSaveFail: 'Save failed',
-        configureClearConfirm: 'Clear this stored value and fall back to .env?',
-        configureEnvFrom: 'Env',
-        configureEnvOverridden: 'overridden in UI',
-        configureEffective: 'Effective',
-        configureInheritHint: 'inherit / env chain',
-        configureKeyOr: 'OPENROUTER_API_KEY in .env',
-        configureKeyOai: 'OPENAI_API_KEY in .env',
-        configureKeyDb: 'API key stored in app DB',
-        configureKeyMissing: 'No API key in .env or app DB — set one to run models.',
+        configureClearAllHint: 'This removes <strong>every</strong> value saved from Configure (all sections above), and deletes local <strong>gog</strong> OAuth token files under your effective <code>GOG_HOME</code> (bundled <code>scripts/.local</code> when unset). The <code>gog</code> binary is kept. Fields will show recommended defaults until you save again.',
+        configureClearAllBtn: 'Clear all database overrides',
+        configureClearAllConfirm: 'Remove every Configure value from the app database and delete local gog OAuth tokens under GOG_HOME? You will need to run terminal OAuth again (docs/GMAIL_SETUP.md).',
+        configureClearAllDone: 'Database overrides cleared.',
+        configureClearAllGogSuffix: 'Removed {n} local gog OAuth file(s).',
+        configureKeyDb: 'OpenRouter API key stored in app database',
         configureProviderSummary: 'Provider & API',
         configurePresetHint: 'Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.',
         configureApplyPreset: 'Apply preset defaults',
-        configureEnvSyncSummary: 'Environment sync',
-        configureEnvSyncHint: 'Compare the project .env file on disk with what the server loaded at startup. Restart the server after editing .env manually.',
         configureEnvColKey: 'Variable',
-        configureEnvColFile: '.env file (on disk)',
-        configureEnvColServer: 'Server loaded (masked)',
-        configureEnvEmpty: 'No tracked variables found.',
         cfgProviderPreset: 'Provider preset',
         cfgLlmModel: 'Default model (LLM_MODEL)',
         cfgLlmMain: 'Main agent',
@@ -1778,15 +1863,8 @@
         cfgEmbedModel: 'Embedding model',
         cfgOpenrouterUrl: 'Base URL',
         cfgOpenrouterKey: 'API key',
-        cfgClearStored: 'Clear stored',
-        cfgGogHome: 'GOG_HOME',
-        cfgGogAccount: 'Gmail account',
-        cfgGogKeyringBackend: 'Keyring backend',
-        cfgGogKeyringPw: 'Keyring password',
-        cfgXdg: 'XDG_CONFIG_HOME',
-        cfgGogCredPath: 'OAuth client JSON path',
         landingSetupTitle: '1) Environment & API keys',
-        landingSetupIntro: 'Copy <code>.env.example</code> to <code>.env</code> at the project root. The app loads these variables at startup (see <code>src/config.py</code>). <strong>Restart the API server</strong> after any change. Chat calls use OpenRouter unless you change provider wiring in code.',
+        landingSetupIntro: 'Use <strong>Configure</strong> to save models and keys in the database, or export variables from your host environment before starting the server. <strong>Restart the API server</strong> after changing exported environment variables.',
         landingSetupHeadingLlm: 'LLM (chat via OpenRouter)',
         landingEnvDdOpenrouter: 'Required. Your OpenRouter API key for all chat completions.',
         landingEnvDdOpenrouterUrl: 'Optional. Defaults to OpenRouter’s API base URL.',
@@ -1797,10 +1875,10 @@
         landingEnvDdMemory: 'Learning from user feedback and memory compaction. Falls back to <code>LLM_MODEL</code>.',
         landingSetupHeadingEmbed: 'Embeddings (RAG index)',
         landingEnvDdEmbedProv: 'e.g. <code>openrouter</code> — separate from chat; used to build vector indexes for uploaded docs.',
-        landingEnvDdEmbedModel: 'Embedding model id (see <code>.env.example</code>). Used when indexing the Knowledge base.',
+        landingEnvDdEmbedModel: 'Embedding model id (defaults in code or Configure). Used when indexing the Knowledge base.',
         landingSetupHeadingGmail: 'Gmail inbox (gog CLI)',
         landingEnvDdGog: 'Paths and account for the local <strong>gog</strong> CLI used to read Gmail. OAuth/key material is outside this UI.',
-        landingEnvDdGogKeyring: 'Keyring backend/password for gog token storage (see <code>.env.example</code>).',
+        landingEnvDdGogKeyring: 'Keyring backend/password for gog token storage (Configure or environment).',
         landingSetupHeadingOptional: 'Optional',
         landingEnvDdLangsmith: 'Tracing / observability (LangSmith). Safe to omit for local-only use.',
         landingSetupDocNote: 'Details: project file <code>docs/LLM_MODELS.md</code>.',
@@ -1988,7 +2066,6 @@
         themeModeLight: 'Light',
         themeModeDark: 'Dark',
         tabLanding: '랜딩',
-        tabConfigure: '설정',
         tabWorkbench: 'Workbench',
         tabCron: 'Cron',
         tabKnowledge: 'Knowledge',
@@ -1996,9 +2073,15 @@
         tabActionDashboard: 'Action dashboard',
         landingTitle: 'Sova 시작하기',
         landingLead: 'Inbox를 트리아지하고 액션 카드를 추적하며, 스레드별 후속 대응을 KB 근거와 함께 운영하는 CSM Radar Agent입니다. 모델·API 키·Gmail/gog 경로는 <strong>설정</strong> 탭에서 구성하면 됩니다(코드 수정 불필요).',
-        landingSetupShortTitle: '처음 설정',
-        landingSetupShortBody: '<strong>설정</strong> 탭에서 OpenRouter 모델, 선택적 API 키, 임베딩, <strong>gog</strong>(Gmail) 경로를 지정하세요. 저장 값은 앱 DB에 있으며 비우고 저장하면 <code>.env</code>로 되돌아갑니다.',
-        landingCtaConfigure: '설정 열기',
+        landingNextStepsTitle: '다음 단계',
+        landingNextStepsLead: '저장소를 클론하고 서버를 띄운 상태입니다. UI에서 이어서 진행하세요:',
+        landingNextStepsLi1: '<strong>설정</strong> — 프리셋·모델·API 키·임베딩·Gmail/<code>gog</code> 경로. 저장 시 앱 DB에 반영되며, 필드 아래 회색 안내는 권장 기본값입니다.',
+        landingNextStepsLi2: '<strong>Workbench</strong> — Probe·채팅 전 Vendor·Role·Product scope(에이전트 프로필) 설정.',
+        landingNextStepsLi3: '<strong>Knowledge</strong> — RAG용 <code>.md</code>/<code>.txt</code> 업로드 후 <strong>Reindex</strong>; 웹 검색 시 RC URL.',
+        landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Probe·액션 카드·트레이스 확인.',
+        landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, 선택 Gmail): ',
+        landingDocsGithubLinkLabel: 'GitHub 문서',
+        landingDocsGithubAfter: ' — 또는 로컬 클론의 <code>docs/INSTALLATION.md</code>를 여세요.',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'CSM 팀을 위한 운영 화면입니다. 고객 문의를 모니터링하고, 실제 실행이 필요한 작업만 카드로 남기며, 상태와 Run history로 진행을 투명하게 관리합니다.',
         landingCtaWorkbench: 'Workbench 열기',
@@ -2014,58 +2097,8 @@
         landingKnowledgeBody: '<strong>Knowledge</strong> 탭 → <strong>Upload</strong>에서 제품·내부 문서(<code>.md</code>/<code>.txt</code>)를 올리고 <strong>Reindex</strong>로 검색 색인을 갱신하세요. <strong>RC URLs</strong>에서 문서·포털 base URL을 등록하고 필요한 도메인을 <strong>enabled</strong>로 두면 Run 중 해당 도메인 web search를 사용할 수 있습니다.',
         landingCtaRunHistory: 'Run history 열기',
         landingCtaKnowledge: 'Knowledge 열기',
-        configureTitle: '설정',
-        configureLead: 'OpenRouter 모델 id, 임베딩, API, Gmail <strong>gog</strong> 경로를 설정합니다. 저장 값은 이 인스턴스에서 <code>.env</code>를 덮어씁니다. 필드를 비우고 저장하면 해당 항목만 초기화됩니다.',
-        configureEmbedHint: '임베딩 모델을 바꾼 뒤에는 Knowledge 탭에서 <strong>Reindex</strong>를 실행하세요.',
-        configureLlmBlock: 'LLM 모델',
-        configureLlmHint: '회색 안내는 환경 변수 기본값입니다. 제안 목록을 고르거나 OpenRouter 모델 id를 직접 입력하세요.',
-        configureEmbedBlock: '임베딩 (RAG)',
-        configureOrBlock: 'OpenRouter',
-        configureOrHint: 'API 키는 <code>.env</code>에만 둘 수 있습니다. 여기 붙여넣으면 앱 DB에 저장됩니다(로컬 배포용).',
-        configureGogBlock: 'Gmail (gog CLI)',
-        configureGogHint: '로컬 <strong>gog</strong> 바이너리 경로·계정입니다. OAuth 토큰은 키링에 있으며, 이 UI 밖에서 인증하세요(<code>docs/GMAIL_SETUP.md</code>).',
-        configureSave: '설정 저장',
-        configureSaving: '저장 중…',
-        configureSaved: '저장됨.',
-        configureLoadFail: '설정을 불러오지 못함',
-        configureSaveFail: '저장 실패',
-        configureClearConfirm: '저장된 값을 지우고 .env로 되돌릴까요?',
-        configureEnvFrom: 'Env',
-        configureEnvOverridden: 'UI에서 덮어씀',
-        configureEffective: '현재 적용',
-        configureInheritHint: '상속 / env 체인',
-        configureKeyOr: '.env OPENROUTER_API_KEY',
-        configureKeyOai: '.env OPENAI_API_KEY',
-        configureKeyDb: '앱 DB에 API 키',
-        configureKeyMissing: '.env·DB 모두에 키 없음 — 모델 실행을 위해 설정하세요.',
-        configureProviderSummary: 'Provider·API',
-        configurePresetHint: '프리셋을 고른 뒤 기본값 적용 또는 필드 수정. 채팅은 OpenAI 호환 HTTP 클라이언트를 사용합니다.',
-        configureApplyPreset: '프리셋 기본값 적용',
-        configureEnvSyncSummary: '환경 변수 동기화',
-        configureEnvSyncHint: '디스크의 프로젝트 .env와 서버 기동 시 로드된 값을 비교합니다. .env를 직접 고친 뒤에는 서버를 재시작하세요.',
-        configureEnvColKey: '변수',
-        configureEnvColFile: '.env 파일(디스크)',
-        configureEnvColServer: '서버 로드(마스킹)',
-        configureEnvEmpty: '표시할 변수가 없습니다.',
-        cfgProviderPreset: 'Provider 프리셋',
-        cfgLlmModel: '기본 모델 (LLM_MODEL)',
-        cfgLlmMain: '메인 에이전트',
-        cfgLlmSearchJson: '검색 / JSON',
-        cfgLlmRerank: '재순위',
-        cfgLlmMemory: '메모리 / 학습',
-        cfgEmbedProv: 'Provider',
-        cfgEmbedModel: '임베딩 모델',
-        cfgOpenrouterUrl: 'Base URL',
-        cfgOpenrouterKey: 'API 키',
-        cfgClearStored: '저장값 지우기',
-        cfgGogHome: 'GOG_HOME',
-        cfgGogAccount: 'Gmail 계정',
-        cfgGogKeyringBackend: 'Keyring backend',
-        cfgGogKeyringPw: 'Keyring 비밀번호',
-        cfgXdg: 'XDG_CONFIG_HOME',
-        cfgGogCredPath: 'OAuth client JSON 경로',
         landingSetupTitle: '1) 환경 변수·API 키',
-        landingSetupIntro: '프로젝트 루트에서 <code>.env.example</code>를 복사해 <code>.env</code>로 두고 값을 채웁니다. 설정은 시작 시 로드됩니다(<code>src/config.py</code>). 변경 후에는 <strong>API 서버를 재시작</strong>하세요. 채팅 호출은 코드에서 별도로 바꾸지 않는 한 OpenRouter를 사용합니다.',
+        landingSetupIntro: '<strong>설정</strong>에서 모델·키를 DB에 저장하거나, 서버 시작 전에 호스트 환경 변수로 내보냅니다. 내보낸 변수를 바꾼 뒤에는 <strong>API 서버를 재시작</strong>하세요.',
         landingSetupHeadingLlm: 'LLM (OpenRouter 채팅)',
         landingEnvDdOpenrouter: '필수. OpenRouter API 키(모든 채팅 completion).',
         landingEnvDdOpenrouterUrl: '선택. OpenRouter API base URL(기본값 사용 가능).',
@@ -2076,10 +2109,10 @@
         landingEnvDdMemory: '사용자 피드백 학습·메모리 정리. 미설정 시 <code>LLM_MODEL</code>.',
         landingSetupHeadingEmbed: '임베딩 (RAG 인덱스)',
         landingEnvDdEmbedProv: '예: <code>openrouter</code> — 채팅과 별개이며 업로드 문서 벡터 색인에 사용.',
-        landingEnvDdEmbedModel: '임베딩 모델 id(<code>.env.example</code> 참고). Knowledge 색인 시 사용.',
+        landingEnvDdEmbedModel: '임베딩 모델 id(코드 기본값 또는 설정). Knowledge 색인 시 사용.',
         landingSetupHeadingGmail: 'Gmail Inbox (gog CLI)',
         landingEnvDdGog: '로컬 <strong>gog</strong> CLI로 Gmail을 읽기 위한 경로·계정. OAuth/키 자료는 이 UI 밖에서 관리합니다.',
-        landingEnvDdGogKeyring: 'gog 토큰 저장용 keyring 설정(<code>.env.example</code> 참고).',
+        landingEnvDdGogKeyring: 'gog 토큰 저장용 keyring 설정(설정 또는 환경 변수).',
         landingSetupHeadingOptional: '선택',
         landingEnvDdLangsmith: 'LangSmith 트레이싱. 로컬만 쓰면 생략 가능.',
         landingSetupDocNote: '자세한 역할 매핑: 프로젝트 파일 <code>docs/LLM_MODELS.md</code>.',
@@ -2276,6 +2309,11 @@
       return pack[key] ?? I18N.en[key] ?? key;
     }
 
+    /** Configure tab is English-only; use this for strings set from JS on that tab. */
+    function configureUiText(key) {
+      return I18N.en[key] ?? key;
+    }
+
     function applyUiLang() {
       document.documentElement.lang = _uiLang === 'ko' ? 'ko' : 'en';
       document.querySelectorAll('[data-i18n]').forEach((node) => {
@@ -2334,6 +2372,26 @@
         das.options[0].text = uiText('dashboardSortUpdatedDesc');
         das.options[1].text = uiText('dashboardSortUpdatedAsc');
         das.options[2].text = uiText('dashboardSortStatus');
+      }
+      const cfgRoot = document.getElementById('tab-configure');
+      if (cfgRoot) {
+        const en = I18N.en;
+        cfgRoot.querySelectorAll('[data-i18n]').forEach((node) => {
+          const k = node.getAttribute('data-i18n');
+          if (k && en[k] !== undefined) node.textContent = en[k];
+        });
+        cfgRoot.querySelectorAll('[data-i18n-html]').forEach((node) => {
+          const k = node.getAttribute('data-i18n-html');
+          if (k && en[k] !== undefined) node.innerHTML = en[k];
+        });
+        cfgRoot.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+          const k = node.getAttribute('data-i18n-placeholder');
+          if (k && en[k] !== undefined) node.placeholder = en[k];
+        });
+        cfgRoot.querySelectorAll('[data-i18n-title]').forEach((node) => {
+          const k = node.getAttribute('data-i18n-title');
+          if (k && en[k] !== undefined) node.setAttribute('title', en[k]);
+        });
       }
     }
 
@@ -2847,7 +2905,7 @@
       dl.innerHTML = options.map((o) => `<option value="${escapeHtml(o)}"></option>`).join('');
     }
 
-    // env_loaded from API uses lowercase pydantic names; dotenv_file uses ENV_VAR names. Map to one row per var.
+    // Map runtime_setting keys (snake_case) to canonical UPPER_SNAKE labels in the saved-values table.
     const _ENV_LOADED_TO_CANONICAL = {
       llm_provider_preset: 'LLM_PROVIDER_PRESET',
       llm_model: 'LLM_MODEL',
@@ -2875,30 +2933,45 @@
     function renderConfigureEnvTable(data) {
       const wrap = document.getElementById('configureEnvTableWrap');
       if (!wrap) return;
-      const dotRaw = data.dotenv_file || {};
-      const loadedRaw = data.env_loaded || {};
-      const dot = {};
-      Object.keys(dotRaw).forEach((k) => { dot[_canonicalEnvKey(k)] = dotRaw[k]; });
-      const loaded = {};
-      Object.keys(loadedRaw).forEach((k) => {
-        const c = _canonicalEnvKey(k);
-        if (loaded[c] === undefined) loaded[c] = loadedRaw[k];
-      });
-      const keys = new Set([...Object.keys(dot), ...Object.keys(loaded)]);
-      const sorted = Array.from(keys).sort();
+      const masked = data.configure_saved_masked || data.configureSavedMasked || {};
+      const sorted = Object.keys(masked).sort();
       if (!sorted.length) {
-        wrap.innerHTML = `<p class="configure-hint">${escapeHtml(uiText('configureEnvEmpty'))}</p>`;
+        wrap.innerHTML = `<p class="configure-hint">${escapeHtml(configureUiText('configureSavedEmpty'))}</p>`;
         return;
       }
-      const th1 = escapeHtml(uiText('configureEnvColKey'));
-      const th2 = escapeHtml(uiText('configureEnvColFile'));
-      const th3 = escapeHtml(uiText('configureEnvColServer'));
+      const th1 = escapeHtml(configureUiText('configureEnvColKey'));
+      const th2 = escapeHtml(configureUiText('configureSavedValueCol'));
       const rows = sorted.map((k) => {
-        const a = dot[k] != null && dot[k] !== '' ? escapeHtml(String(dot[k])) : '—';
-        const b = loaded[k] != null && loaded[k] !== '' ? escapeHtml(String(loaded[k])) : '—';
-        return `<tr><td><code>${escapeHtml(k)}</code></td><td>${a}</td><td>${b}</td></tr>`;
+        const canon = _canonicalEnvKey(k);
+        const b = masked[k] != null && masked[k] !== '' ? escapeHtml(String(masked[k])) : '—';
+        return `<tr><td><code>${escapeHtml(canon)}</code></td><td>${b}</td></tr>`;
       }).join('');
-      wrap.innerHTML = `<table class="configure-env-table"><thead><tr><th>${th1}</th><th>${th2}</th><th>${th3}</th></tr></thead><tbody>${rows}</tbody></table>`;
+      wrap.innerHTML = `<table class="configure-env-table"><thead><tr><th>${th1}</th><th>${th2}</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function renderGogSetupStatus(data) {
+      const wrap = document.getElementById('gogSetupStatus');
+      if (!wrap) return;
+      const g = data.gog_setup || data.gogSetup;
+      if (!g || !Array.isArray(g.checks)) {
+        wrap.innerHTML = '';
+        return;
+      }
+      const complete = !!g.complete;
+      const badgeClass = complete ? 'gog-setup-status--ready' : 'gog-setup-status--incomplete';
+      const badgeText = complete
+        ? configureUiText('configureGogStatusReady')
+        : configureUiText('configureGogStatusIncomplete');
+      const list = g.checks
+        .map((c) => {
+          const ok = !!c.ok;
+          const liClass = ok ? 'ok' : 'fail';
+          const mark = ok ? '✓' : '✗';
+          const hint = c.hint ? ` — ${escapeHtml(String(c.hint))}` : '';
+          return `<li class="${liClass}">${mark} <strong>${escapeHtml(String(c.label || c.id))}</strong>${hint}</li>`;
+        })
+        .join('');
+      wrap.innerHTML = `<div class="gog-setup-status-badge ${badgeClass}">${escapeHtml(badgeText)}</div><ul class="gog-setup-checks">${list}</ul>`;
     }
 
     function refreshPresetDatalists() {
@@ -2941,44 +3014,50 @@
       refreshPresetDatalists();
     }
 
-    function _setConfigureEnvSpans(envRaw, stored, eff) {
+    /** Fallback if GET /settings/runtime omits recommended_hints (must stay in sync with runtime_config.recommended_ui_hints). */
+    const CONFIGURE_DEFAULT_RECOMMENDED_HINTS = {
+      llm_model: 'openai/gpt-4o',
+      llm_model_main: 'openai/gpt-4o',
+      llm_model_search_json: 'openai/gpt-4o-mini',
+      llm_model_search_rerank: 'openai/gpt-4o-mini',
+      llm_model_memory: 'openai/gpt-4o-mini',
+      rag_embedding_model: 'openai/text-embedding-3-large',
+      openrouter_base_url: 'https://openrouter.ai/api/v1',
+    };
+
+    function _mergeRecommendedHints(data) {
+      const fromApi = data.recommended_hints || data.recommendedHints || {};
+      return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS, ...fromApi };
+    }
+
+    function _setConfigureEnvSpans(recommended, stored) {
       const map = [
-        ['cfg_env_llm_model', 'llm_model', false],
-        ['cfg_env_llm_model_main', 'llm_model_main', true],
-        ['cfg_env_llm_model_search_json', 'llm_model_search_json', true],
-        ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank', true],
-        ['cfg_env_llm_model_memory', 'llm_model_memory', true],
-        ['cfg_env_rag_embedding_model', 'rag_embedding_model', false],
-        ['cfg_env_openrouter_base_url', 'openrouter_base_url', false],
-        ['cfg_env_gog_home', 'gog_home', false],
-        ['cfg_env_gog_account', 'gog_account', false],
-        ['cfg_env_gog_keyring_backend', 'gog_keyring_backend', false],
-        ['cfg_env_xdg_config_home', 'xdg_config_home', false],
-        ['cfg_env_gog_credentials_path', 'gog_credentials_path', false],
+        ['cfg_env_llm_model', 'llm_model'],
+        ['cfg_env_llm_model_main', 'llm_model_main'],
+        ['cfg_env_llm_model_search_json', 'llm_model_search_json'],
+        ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank'],
+        ['cfg_env_llm_model_memory', 'llm_model_memory'],
+        ['cfg_env_rag_embedding_model', 'rag_embedding_model'],
+        ['cfg_env_openrouter_base_url', 'openrouter_base_url'],
       ];
-      map.forEach(([spanId, key, optionalRole]) => {
+      map.forEach(([spanId, key]) => {
         const el = document.getElementById(spanId);
         if (!el) return;
-        const st = stored && stored[key];
-        const vEnv = (envRaw && envRaw[key]) ? String(envRaw[key]) : '';
-        const effVal = eff && eff[key] != null ? String(eff[key]) : '';
-        if (optionalRole && !st && effVal) {
-          el.textContent = `${uiText('configureEffective')}: ${effVal} (${uiText('configureInheritHint')})`;
-          return;
-        }
-        el.textContent = vEnv
-          ? `${uiText('configureEnvFrom')}: ${vEnv}${st ? ` · ${uiText('configureEnvOverridden')}` : ''}`
-          : (effVal && !st ? `${uiText('configureEffective')}: ${effVal}` : '');
+        const recVal = recommended && recommended[key] != null ? String(recommended[key]) : '';
+        const isStored = stored && stored[key];
+        const parts = [];
+        if (recVal) parts.push(`${configureUiText('configureRecommendedLabel')}: ${recVal}`);
+        if (isStored) parts.push(configureUiText('configureSavedInDbShort'));
+        el.textContent = parts.join(parts.length > 1 ? ' · ' : '');
       });
     }
 
     async function loadRuntimeSettings() {
       const st = document.getElementById('configureSaveStatus');
       try {
-        const data = await fetchJson('/settings/runtime');
+        const data = await fetchJson('/settings/runtime', { cache: 'no-store' });
         _lastRuntimePayload = data;
         const eff = data.effective || {};
-        const env = data.env_loaded || {};
         const stored = data.stored_in_database || {};
         const setv = (id, val) => {
           const el = document.getElementById(id);
@@ -2986,55 +3065,79 @@
         };
         const pp = document.getElementById('cfg_llm_provider_preset');
         if (pp) pp.value = eff.llm_provider_preset || 'openrouter';
-        setv('cfg_llm_model', eff.llm_model || '');
+        setv('cfg_llm_model', stored.llm_model ? eff.llm_model : (eff.llm_model || ''));
         setv('cfg_llm_model_main', stored.llm_model_main ? eff.llm_model_main : '');
         setv('cfg_llm_model_search_json', stored.llm_model_search_json ? eff.llm_model_search_json : '');
         setv('cfg_llm_model_search_rerank', stored.llm_model_search_rerank ? eff.llm_model_search_rerank : '');
         setv('cfg_llm_model_memory', stored.llm_model_memory ? eff.llm_model_memory : '');
-        setv('cfg_rag_embedding_provider', eff.rag_embedding_provider || '');
-        setv('cfg_rag_embedding_model', eff.rag_embedding_model || '');
-        setv('cfg_openrouter_base_url', stored.openrouter_base_url ? eff.openrouter_base_url : '');
+        setv(
+          'cfg_rag_embedding_provider',
+          stored.rag_embedding_provider ? eff.rag_embedding_provider : (eff.rag_embedding_provider || ''),
+        );
+        setv(
+          'cfg_rag_embedding_model',
+          stored.rag_embedding_model ? eff.rag_embedding_model : (eff.rag_embedding_model || ''),
+        );
+        setv(
+          'cfg_openrouter_base_url',
+          stored.openrouter_base_url ? eff.openrouter_base_url : (eff.openrouter_base_url || ''),
+        );
         setv('cfg_openrouter_api_key', '');
-        setv('cfg_gog_home', stored.gog_home ? eff.gog_home : '');
-        setv('cfg_gog_account', stored.gog_account ? eff.gog_account : '');
-        setv('cfg_gog_keyring_backend', stored.gog_keyring_backend ? eff.gog_keyring_backend : '');
+        setv('cfg_gog_home', eff.gog_home != null ? String(eff.gog_home) : '');
+        setv('cfg_gog_account', eff.gog_account != null ? String(eff.gog_account) : '');
+        setv('cfg_gog_keyring_backend', eff.gog_keyring_backend != null ? String(eff.gog_keyring_backend) : 'file');
         setv('cfg_gog_keyring_password', '');
-        setv('cfg_xdg_config_home', stored.xdg_config_home ? eff.xdg_config_home : '');
-        setv('cfg_gog_credentials_path', stored.gog_credentials_path ? eff.gog_credentials_path : '');
-        _setConfigureEnvSpans(env, stored, eff);
+        setv('cfg_xdg_config_home', eff.xdg_config_home != null ? String(eff.xdg_config_home) : '');
+        setv('cfg_gog_credentials_path', eff.gog_credentials_path != null ? String(eff.gog_credentials_path) : '');
+        const gogKr = document.getElementById('cfg_env_gog_keyring');
+        if (gogKr) {
+          gogKr.textContent = data.gog_keyring_password_set_in_database
+            ? configureUiText('configureSavedInDbShort')
+            : '';
+        }
+        const gogKs = document.getElementById('cfg_gog_keyring_status');
+        if (gogKs) {
+          gogKs.textContent = data.gog_keyring_password_set_in_database
+            ? configureUiText('configureGogKeyringDb')
+            : configureUiText('configureGogKeyringMissingDb');
+        }
+        _setConfigureEnvSpans(_mergeRecommendedHints(data), stored);
         refreshPresetDatalists();
         onConfigurePresetChange();
-        const pathEl = document.getElementById('configureDotenvPath');
-        if (pathEl) {
-          const p = data.dotenv_path || '';
-          pathEl.textContent = (data.dotenv_exists ? '' : '[missing] ') + p;
-        }
         renderConfigureEnvTable(data);
+        renderGogSetupStatus(data);
         const ks = document.getElementById('cfg_key_status');
         if (ks) {
-          const parts = [];
-          if (data.openrouter_api_key_set_in_env) parts.push(uiText('configureKeyOr'));
-          if (data.openai_api_key_set_in_env) parts.push(uiText('configureKeyOai'));
-          if (data.openrouter_api_key_set_in_database) parts.push(uiText('configureKeyDb'));
-          ks.textContent = parts.length ? parts.join(' · ') : uiText('configureKeyMissing');
+          ks.textContent = data.openrouter_api_key_set_in_database
+            ? configureUiText('configureKeyDb')
+            : configureUiText('configureKeyMissingDb');
         }
         if (st) st.textContent = '';
       } catch (e) {
-        if (st) st.textContent = uiText('configureLoadFail') + ': ' + e.message;
+        if (st) st.textContent = configureUiText('configureLoadFail') + ': ' + e.message;
       }
     }
 
-    async function clearRuntimeField(key) {
-      if (!confirm(uiText('configureClearConfirm'))) return;
+    async function clearAllRuntimeOverrides() {
+      if (!confirm(configureUiText('configureClearAllConfirm'))) return;
       try {
-        await fetchJson('/settings/runtime', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [key]: '' }),
-        });
+        const data = await fetchJson('/settings/runtime/clear-overrides', { method: 'POST' });
         await loadRuntimeSettings();
+        const st = document.getElementById('configureSaveStatus');
+        if (st) {
+          let msg = configureUiText('configureClearAllDone');
+          const gc = data && data.gog_cleanup;
+          const n = gc && Array.isArray(gc.removed) ? gc.removed.length : 0;
+          if (n > 0) {
+            msg += ' ' + configureUiText('configureClearAllGogSuffix').replace('{n}', String(n));
+          }
+          if (gc && Array.isArray(gc.errors) && gc.errors.length) {
+            msg += ' ' + gc.errors.length + ' file warning(s).';
+          }
+          st.textContent = msg;
+        }
       } catch (e) {
-        alert(uiText('configureSaveFail') + ': ' + e.message);
+        alert(configureUiText('configureSaveFail') + ': ' + e.message);
       }
     }
 
@@ -3051,27 +3154,27 @@
         rag_embedding_provider: gv('cfg_rag_embedding_provider'),
         rag_embedding_model: gv('cfg_rag_embedding_model'),
         openrouter_base_url: gv('cfg_openrouter_base_url'),
-        gog_home: gv('cfg_gog_home'),
-        gog_account: gv('cfg_gog_account'),
-        gog_keyring_backend: gv('cfg_gog_keyring_backend'),
-        xdg_config_home: gv('cfg_xdg_config_home'),
-        gog_credentials_path: gv('cfg_gog_credentials_path'),
       };
-      const npw = gv('cfg_gog_keyring_password');
-      if (npw) payload.gog_keyring_password = npw;
       const nkey = gv('cfg_openrouter_api_key');
       if (nkey) payload.openrouter_api_key = nkey;
+      payload.gog_home = gv('cfg_gog_home');
+      payload.gog_account = gv('cfg_gog_account');
+      payload.gog_keyring_backend = gv('cfg_gog_keyring_backend');
+      const gkp = gv('cfg_gog_keyring_password');
+      if (gkp) payload.gog_keyring_password = gkp;
+      payload.xdg_config_home = gv('cfg_xdg_config_home');
+      payload.gog_credentials_path = gv('cfg_gog_credentials_path');
       try {
-        if (st) st.textContent = uiText('configureSaving');
+        if (st) st.textContent = configureUiText('configureSaving');
         await fetchJson('/settings/runtime', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        if (st) st.textContent = uiText('configureSaved');
+        if (st) st.textContent = configureUiText('configureSaved');
         await loadRuntimeSettings();
       } catch (e) {
-        if (st) st.textContent = uiText('configureSaveFail') + ': ' + e.message;
+        if (st) st.textContent = configureUiText('configureSaveFail') + ': ' + e.message;
       }
     }
 

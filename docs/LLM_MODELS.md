@@ -2,19 +2,19 @@
 
 Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not** hard-coded in call sites; they come from settings (`src/config.py`) and optional **Configure** DB overrides (see `src/runtime_config.py`).
 
-**Provider preset:** `LLM_PROVIDER_PRESET` — `openrouter` (default), `openai` (direct OpenAI + `OPENAI_API_KEY`), or `gemini_openrouter` (Gemini model ids via OpenRouter). Same HTTP client; base URL and keys follow the preset (see `.env.example` and **Configure** in the UI).
+**Provider preset:** `LLM_PROVIDER_PRESET` — `openrouter` (default), `openai` (direct OpenAI + `OPENAI_API_KEY`), or `gemini_openrouter` (Gemini model ids via OpenRouter). Same HTTP client; base URL and keys follow the preset (see `.env.example` as a reference list and **Configure** in the UI).
 
 ## Environment variables
 
 | Variable | Role | Fallback |
 |----------|------|----------|
-| `LLM_MODEL` | Default chat model for every role | Required baseline (see `.env.example`) |
+| `LLM_MODEL` | Default chat model for every role | Required baseline (set in Configure or env; see `.env.example`) |
 | `LLM_MODEL_MAIN` | Main email agent (`create_agent` + tools) | `LLM_MODEL` |
 | `LLM_MODEL_SEARCH_JSON` | Search: subquery split, term extraction, sufficiency, refine | `LLM_MODEL` |
 | `LLM_MODEL_SEARCH_RERANK` | Search: snippet rerank (1–5 scores) | `LLM_MODEL` |
 | `LLM_MODEL_MEMORY` | Memory compaction (summarize old interactions) | `LLM_MODEL` |
 
-Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDING_MODEL` in `.env` (see `src/agent/tools/doc_search.py`).
+Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDING_MODEL` (Configure, env, or defaults — see `src/agent/tools/doc_search.py`).
 
 ## Web search (RC URLs)
 
@@ -41,4 +41,4 @@ Web search is enabled **only** when the user has saved and enabled RC URLs in th
 
 ## LangSmith
 
-When tracing is enabled, runs still group by **run name** / **tags** (for example `search_agent.split_focus_subqueries`). The **model id** in each trace reflects the resolved env vars above.
+When tracing is enabled, runs still group by **run name** / **tags** (for example `search_agent.split_focus_subqueries`). The **model id** in each trace reflects the resolved configuration above.

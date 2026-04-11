@@ -1,4 +1,4 @@
-"""Configuration from environment."""
+"""Configuration from environment (and defaults)."""
 from pathlib import Path
 
 from pydantic import Field
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
     # openrouter | openai | gemini_openrouter (Gemini models via OpenRouter, same HTTP client)
     llm_provider_preset: str = Field("openrouter", validation_alias="LLM_PROVIDER_PRESET")
-    llm_model: str = Field("gpt-4o", validation_alias="LLM_MODEL")
+    llm_model: str = Field("openai/gpt-4o", validation_alias="LLM_MODEL")
     # Optional per-role overrides (OpenRouter model ids). All fall back to LLM_MODEL when unset.
     llm_model_main: str | None = Field(None, validation_alias="LLM_MODEL_MAIN")
     llm_model_search_json: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_JSON")
@@ -76,15 +76,11 @@ class Settings(BaseSettings):
     # Database
     database_path: str = Field("./data/agent.db", validation_alias="DATABASE_PATH")
 
-    # LangSmith (read from .env via pydantic; worker may not inherit os.environ)
+    # LangSmith (process environment only if you export these vars before starting the server)
     langsmith_api_key: str | None = Field(None, validation_alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field("email_draft_agent", validation_alias="LANGSMITH_PROJECT")
 
-    _project_root: Path = Path(__file__).resolve().parent.parent
-
     model_config = {
-        "env_file": str(_project_root / ".env"),
-        "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
 

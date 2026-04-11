@@ -1,53 +1,39 @@
-# Proactive CSM Assistant
+# Sova (email_draft_agent)
 
-> *Repository folder may still be named `email_draft_agent`; the product direction is a **proactive CSM assistant**—inbox-aware, doc-grounded replies for customer success.*
+> *Repository folder name may remain `email_draft_agent`; the product is **Sova** — a CSM Radar Agent: inbox-aware, doc-grounded assistance.*
 
-Local console with **grep / RAG document search**, Gmail probe, and a dashboard for runs and knowledge. No OpenClaw, no VPS, no 24/7 heartbeat.
+Local web console with **grep / RAG document search**, Gmail (via **`gog`**), cron jobs, and dashboards for runs and knowledge.
+
+## Install (A–Z)
+
+**Start here:** **[docs/INSTALLATION.md](docs/INSTALLATION.md)** — clone, venv, Configure + env, ripgrep, optional Gmail, run server, first UI steps.
+
+Quick copy-paste after clone:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+# Optional: see .env.example for variable names; use Configure → Save or export env vars before python run.py
+# Install ripgrep for doc search — e.g. brew install ripgrep
+python run.py               # http://127.0.0.1:8000
+```
+
+- **Gmail / `gog`:** [docs/GMAIL_SETUP.md](docs/GMAIL_SETUP.md)
+- **Models & presets:** [docs/LLM_MODELS.md](docs/LLM_MODELS.md)
+- **LangSmith:** [docs/LANGSMITH.md](docs/LANGSMITH.md)
+- **Retrieval / search agent:** [docs/SEARCH_AGENT.md](docs/SEARCH_AGENT.md)
 
 ## Features
 
-- **Grep-based search**: LLM analyzes query → extracts search terms → ripgrep through knowledge base
-- **Gmail probe**: Fetches inbox via gog CLI using local gog keyring (GOG_HOME)
-- **Cron control**: UI to add/edit/disable cron jobs
-- **Dashboard**: Workbench (probe + task prompt + follow-up chat), run history, knowledge uploads
+- **Grep-based search**: LLM → search terms → ripgrep over the knowledge base
+- **Gmail**: inbox via local **`gog`** CLI and OAuth (`GOG_HOME`, keyring)
+- **Cron**: UI for scheduled jobs
+- **Dashboards**: Workbench, Action dashboard, Run history, Knowledge uploads
 
-## Neutral Scope Config Examples
+## RC scope (optional)
 
-Use `RC_SCOPE_*` to make retrieval scope-aware without hard-coding product names:
-
-```bash
-# Disable scope routing entirely
-RC_SCOPE_ENABLE=false
-
-# Enable scope routing with your own labels
-RC_SCOPE_ENABLE=true
-RC_SCOPE_FIELD=product
-RC_SCOPE_LABELS=product_a,product_b,platform,enterprise
-RC_SCOPE_PENALTY=100
-RC_SCOPE_EXCLUSIVE_THRESHOLD=0.75
-```
-
-## Roadmap
-
-- **Search Agent** — Smarter retrieval: re-rank results, optional refined search when insufficient. See [docs/SEARCH_AGENT.md](docs/SEARCH_AGENT.md).
-- **LangSmith tracing** — Observability for agent runs and tool calls. See [docs/LANGSMITH.md](docs/LANGSMITH.md).
-- **Memory & history** — DB-backed interaction log with UI controls to clear or summarize older runs.
-
-## Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # Edit with your keys
-brew install ripgrep   # For doc search
-```
-
-See `docs/GMAIL_SETUP.md` for Gmail OAuth.
-
-**LLM routing:** optional per-role OpenRouter models (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, etc.). See [docs/LLM_MODELS.md](docs/LLM_MODELS.md).
-
-**Web search:** you can persist “RC URLs” in the dashboard and enable them; the agent can then pull citations from those domains via OpenRouter web search.
+Use `RC_SCOPE_*` for scope-aware retrieval without hard-coding product names — see `.env.example` (reference) and [docs/SEARCH_AGENT.md](docs/SEARCH_AGENT.md).
 
 ## Run
 
@@ -55,4 +41,4 @@ See `docs/GMAIL_SETUP.md` for Gmail OAuth.
 python run.py
 ```
 
-Open http://127.0.0.1:8000
+Open **http://127.0.0.1:8000** — use the **Landing** tab for setup guidance and **Configure** for runtime settings.

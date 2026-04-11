@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
 """Run the Proactive CSM Assistant server."""
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-# Load project-root .env into os.environ so workers always see OPENROUTER_*, LANGSMITH_*, etc.
-_ROOT = Path(__file__).resolve().parent
-load_dotenv(_ROOT / ".env")
-
 import uvicorn
 
 from src.config import settings

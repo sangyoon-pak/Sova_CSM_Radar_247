@@ -1,14 +1,127 @@
 """
 Effective runtime configuration: values saved via Configure UI (app_settings)
-override environment-backed `Settings` from `src/config.py`.
+override process-environment-backed `Settings` from `src/config.py` (built-in defaults
+when unset). Configure UI overrides (below) apply on top of ``Settings`` (from process
+environment and built-in defaults) for keys saved in the database.
 """
 from __future__ import annotations
 
+import re
+import shutil
 from pathlib import Path
+from typing import Any
 
 from src.config import settings
 from src.db import database
-from src.env_file import dotenv_path, dotenv_snapshot_for_ui, mask_env_display
+
+_SENSITIVE_KEY = re.compile(r"(?i)(key|secret|password|token|credential)")
+
+
+def mask_env_display(key: str, value: str) -> str:
+    if not value:
+        return ""
+    if _SENSITIVE_KEY.search(key):
+        return "••••••••" if len(value) > 6 else "••••"
+    if len(value) > 120:
+        return value[:117] + "…"
+    return value
+
+# Keys persisted by Configure (PATCH /settings/runtime). Bulk-cleared together.
+RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
+    "llm_provider_preset",
+    "llm_model",
+    "llm_model_main",
+    "llm_model_search_json",
+    "llm_model_search_rerank",
+    "llm_model_memory",
+    "rag_embedding_provider",
+    "rag_embedding_model",
+    "openrouter_api_key",
+    "openrouter_base_url",
+    "gog_home",
+    "gog_account",
+    "gog_keyring_backend",
+    "gog_keyring_password",
+    "xdg_config_home",
+    "gog_credentials_path",
+)
+
+
+def _gog_home_for_oauth_cleanup() -> Path | None:
+    """Directory where gog stores keyring + cached OAuth client copy (see docs/GMAIL_SETUP.md)."""
+    h = gog_home_resolved()
+    if h is not None and h.is_dir():
+        return h
+    bundled = _repo_root() / "scripts" / ".local"
+    if bundled.is_dir():
+        return bundled
+    return None
+
+
+def _path_must_be_under(base: Path, p: Path) -> bool:
+    try:
+        p.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def clear_gog_local_oauth_files() -> dict[str, Any]:
+    """
+    Delete gog OAuth tokens and the gogcli copy of the client JSON under GOG_HOME.
+    Does not remove scripts/.local/bin/gog. Safe to call before clearing DB overrides
+    so effective GOG_HOME from saved Configure is still applied.
+    """
+    removed: list[str] = []
+    errors: list[str] = []
+    home = _gog_home_for_oauth_cleanup()
+    if home is None:
+        return {
+            "home": None,
+            "removed": removed,
+            "errors": errors,
+            "skipped": "GOG_HOME not set and scripts/.local not found",
+        }
+
+    base = home.resolve()
+    gogcli = base / "Library" / "Application Support" / "gogcli"
+    keyring_dir = gogcli / "keyring"
+    cred_file = gogcli / "credentials.json"
+
+    def _unlink(path: Path) -> None:
+        if not path.is_file():
+            return
+        if not _path_must_be_under(base, path):
+            errors.append(f"refused (path outside GOG_HOME): {path}")
+            return
+        try:
+            path.unlink()
+            removed.append(str(path))
+        except OSError as e:
+            errors.append(f"{path}: {e}")
+
+    _unlink(cred_file)
+
+    if keyring_dir.is_dir():
+        for entry in keyring_dir.iterdir():
+            if entry.is_file():
+                _unlink(entry)
+            elif entry.is_dir():
+                # unlikely; skip nested dirs for safety
+                pass
+
+    return {
+        "home": str(base),
+        "removed": removed,
+        "errors": errors,
+        "skipped": None,
+    }
+
+
+def clear_runtime_configure_overrides() -> None:
+    """Remove all Configure-saved values from app_settings (effective config falls back to env + defaults)."""
+    for key in RUNTIME_CONFIGURE_KEYS:
+        database.delete_app_setting(key)
 
 
 def _db_str(key: str) -> str | None:
@@ -152,8 +265,10 @@ def effective_gog_keyring_backend() -> str:
 
 
 def effective_gog_keyring_password() -> str:
+    # Only treat DB as an override when non-empty. A saved empty string would otherwise
+    # override process env and break gog token decryption (aes.KeyUnwrap integrity check).
     v = _db_str("gog_keyring_password")
-    if v is not None:
+    if v is not None and v.strip():
         return v.strip()
     return (settings.gog_keyring_password or "").strip()
 
@@ -189,26 +304,114 @@ def _mask_env_row(key: str, val: str) -> str:
     return mask_env_display(key, val)
 
 
+def recommended_ui_hints() -> dict[str, str]:
+    """
+    Static recommended defaults for Configure grey hints (same role as a former .env.example).
+    Does not reflect runtime effective values or OS environment.
+    """
+    s = settings
+    base = (s.llm_model or "openai/gpt-4o").strip()
+    role_small = "openai/gpt-4o-mini"
+    return {
+        "llm_model": base,
+        "llm_model_main": base,
+        "llm_model_search_json": role_small,
+        "llm_model_search_rerank": role_small,
+        "llm_model_memory": role_small,
+        "rag_embedding_provider": (s.rag_embedding_provider or "openrouter").strip(),
+        "rag_embedding_model": (s.rag_embedding_model or "openai/text-embedding-3-large").strip(),
+        "openrouter_base_url": (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip(),
+    }
+
+
+def configure_saved_masked() -> dict[str, str]:
+    """Only keys the user saved via Configure, values masked for display."""
+    out: dict[str, str] = {}
+    for k in RUNTIME_CONFIGURE_KEYS:
+        if not database.app_setting_is_set(k):
+            continue
+        v = database.get_app_setting(k, "") or ""
+        out[k] = _mask_env_row(k, str(v))
+    return out
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def gog_setup_diagnostics() -> dict[str, Any]:
+    """
+    Lightweight checks for the Configure UI (Gmail is configured via CLI + env; see docs/GMAIL_SETUP.md).
+    All checks must pass for `complete` — this does not prove OAuth tokens work, only that prerequisites exist.
+    """
+    root = _repo_root()
+    checks: list[dict[str, str | bool]] = []
+
+    gog_bin_ok = False
+    gh = gog_home_resolved()
+    if gh is not None:
+        cand = gh / "bin" / "gog"
+        if cand.is_file():
+            gog_bin_ok = True
+    if not gog_bin_ok:
+        bundled = root / "scripts" / ".local" / "bin" / "gog"
+        if bundled.is_file():
+            gog_bin_ok = True
+    if not gog_bin_ok:
+        w = shutil.which("gog")
+        if w:
+            gog_bin_ok = True
+    checks.append(
+        {
+            "id": "gog_binary",
+            "ok": gog_bin_ok,
+            "label": "gog CLI available",
+            "hint": "Run scripts/install-gog-local.sh or ensure bin/gog exists under GOG_HOME, or gog is on PATH.",
+        }
+    )
+
+    cred_ok = False
+    ex = gog_credentials_path_resolved()
+    if ex is not None and ex.is_file():
+        cred_ok = True
+    elif (root / "credentials.json").is_file():
+        cred_ok = True
+    checks.append(
+        {
+            "id": "oauth_client",
+            "ok": cred_ok,
+            "label": "OAuth client JSON present",
+            "hint": "Put credentials.json at the project root or set GOG_CREDENTIALS_PATH to your Google OAuth client file.",
+        }
+    )
+
+    acct_ok = bool(effective_gog_account().strip())
+    checks.append(
+        {
+            "id": "gmail_account",
+            "ok": acct_ok,
+            "label": "Gmail account (GOG_ACCOUNT)",
+            "hint": "Export GOG_ACCOUNT (or use a saved app_settings override) before starting the server.",
+        }
+    )
+
+    kr_ok = bool(effective_gog_keyring_password().strip())
+    checks.append(
+        {
+            "id": "keyring_password",
+            "ok": kr_ok,
+            "label": "Keyring password (GOG_KEYRING_PASSWORD)",
+            "hint": "Must match the passphrase you used with gog auth in the terminal (export or saved override).",
+        }
+    )
+
+    complete = all(bool(c.get("ok")) for c in checks)
+    return {"complete": complete, "checks": checks}
+
+
 def runtime_settings_snapshot() -> dict:
     """Payload for GET /settings/runtime (values + metadata for the Configure UI)."""
-    keys_db = [
-        "llm_provider_preset",
-        "llm_model",
-        "llm_model_main",
-        "llm_model_search_json",
-        "llm_model_search_rerank",
-        "llm_model_memory",
-        "rag_embedding_provider",
-        "rag_embedding_model",
-        "openrouter_api_key",
-        "openrouter_base_url",
-        "gog_home",
-        "gog_account",
-        "gog_keyring_backend",
-        "gog_keyring_password",
-        "xdg_config_home",
-        "gog_credentials_path",
-    ]
+    keys_db = RUNTIME_CONFIGURE_KEYS
     stored = {k: database.app_setting_is_set(k) for k in keys_db}
     or_key_db = database.app_setting_is_set("openrouter_api_key") and bool(
         (database.get_app_setting("openrouter_api_key") or "").strip()
@@ -217,27 +420,6 @@ def runtime_settings_snapshot() -> dict:
         (database.get_app_setting("gog_keyring_password") or "").strip()
     )
     oai_k = getattr(settings, "openai_api_key", None) or ""
-    dotenv_p = dotenv_path()
-    env_from_pydantic = {
-        "llm_provider_preset": getattr(settings, "llm_provider_preset", "openrouter") or "openrouter",
-        "llm_model": settings.llm_model,
-        "llm_model_main": settings.llm_model_main or "",
-        "llm_model_search_json": settings.llm_model_search_json or "",
-        "llm_model_search_rerank": settings.llm_model_search_rerank or "",
-        "llm_model_memory": settings.llm_model_memory or "",
-        "rag_embedding_provider": settings.rag_embedding_provider,
-        "rag_embedding_model": settings.rag_embedding_model,
-        "openrouter_base_url": settings.openrouter_base_url,
-        "openrouter_api_key": settings.openrouter_api_key or "",
-        "openai_api_key": oai_k,
-        "gog_home": settings.gog_home or "",
-        "gog_account": settings.gog_account or "",
-        "gog_keyring_backend": settings.gog_keyring_backend or "",
-        "gog_keyring_password": settings.gog_keyring_password or "",
-        "xdg_config_home": settings.xdg_config_home or "",
-        "gog_credentials_path": settings.gog_credentials_path or "",
-    }
-    env_masked = {k: _mask_env_row(k, str(v)) for k, v in env_from_pydantic.items()}
     return {
         "effective": {
             "llm_provider_preset": effective_llm_provider_preset(),
@@ -260,11 +442,9 @@ def runtime_settings_snapshot() -> dict:
         "openrouter_api_key_set_in_env": bool((settings.openrouter_api_key or "").strip()),
         "openai_api_key_set_in_env": bool(oai_k.strip()),
         "gog_keyring_password_set_in_database": gog_pw_db,
-        "env_loaded": env_masked,
-        "dotenv_path": str(dotenv_p.resolve()),
-        "dotenv_exists": dotenv_p.exists(),
-        "dotenv_file": dotenv_snapshot_for_ui(),
-        "env_raw": env_masked,
+        "gog_setup": gog_setup_diagnostics(),
+        "recommended_hints": recommended_ui_hints(),
+        "configure_saved_masked": configure_saved_masked(),
         "recommended_models": [
             "openai/gpt-4o",
             "openai/gpt-4o-mini",
@@ -290,7 +470,7 @@ def runtime_settings_snapshot() -> dict:
             },
             "openai": {
                 "label": "OpenAI",
-                "hint": "Direct OpenAI API; set OPENAI_API_KEY in .env or paste key in UI.",
+                "hint": "Direct OpenAI API; set OPENAI_API_KEY or paste a key in Configure. RC web search uses OpenAI Responses + web_search (not OpenRouter).",
                 "default_base_url": _DEFAULT_OPENAI_BASE,
                 "recommended_models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1-mini"],
                 "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
