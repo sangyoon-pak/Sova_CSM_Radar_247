@@ -227,6 +227,11 @@ class RuntimeSettingsPatch(BaseModel):
     gog_keyring_password: str | None = None
     xdg_config_home: str | None = None
     gog_credentials_path: str | None = None
+    scheduler_timezone: str | None = None
+    guardrail_include_sender_domains: str | None = None
+    guardrail_exclude_sender_domains: str | None = None
+    guardrail_exclude_subject_keywords: str | None = None
+    guardrail_strictness: str | None = None
 
 
 @router.get("/settings/runtime")

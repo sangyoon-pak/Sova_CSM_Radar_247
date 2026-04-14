@@ -13,6 +13,11 @@
 - Retrieval + candidate ranking: `src/agent/tools/doc_search.py` (`search_documents`)
 - Retrieval logging (debug): `scripts/test_full_agent_reply.py --with-retrieval --retrieval-json ...`
 
+Related behavior docs:
+- Guardrails: [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md)
+- Action cards: [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md)
+- Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
+
 ### LLM models (OpenRouter)
 Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. All fall back to **`LLM_MODEL`** when unset. See [docs/LLM_MODELS.md](LLM_MODELS.md).
 
@@ -60,6 +65,11 @@ Candidates are sorted with a heuristic key that considers:
 
 Final return: top candidates (currently capped at `[:50]`) with `snippet/line_num/path`.
 
+### Uploaded documents behavior
+
+Uploaded `.md/.txt` and other indexed knowledge artifacts are expected to participate in the same retrieval path after indexing/reindexing.  
+If a product-related thread does not produce uploaded-document evidence, treat it as an operational issue and follow [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md).
+
 ---
 
 ## 2) Search Orchestration (`search_agent.search_with_agent`)
@@ -99,6 +109,14 @@ For each term variant and each focus sub-query:
 - `format_matches_for_context()` truncates to `max_context_chars` and returns a string like:
   `[From <file> line <line_num>] ...`
 
+### Step 7. Contract with action-card creation
+
+Retrieval output is a prerequisite for reliable action-card drafting when a thread is CSM-relevant:
+
+- If evidence is strong, the downstream draft/card builder should include citations and grounded next steps.
+- If evidence is weak or insufficient, the agent should explicitly mark a knowledge gap and avoid confident speculation.
+- Card metadata should retain retrieval evidence references for downstream follow-up.
+
 ---
 
 ## 3) Scope Rules (Scope citations)
@@ -121,6 +139,8 @@ This is enforced at 2 layers:
 If there are no relevant passages (or retrieved snippets do not substantively answer the numbered questions),
 the agent should state KB gaps and recommend the customer contact your team/support (no guessing).
 
+This keeps retrieval behavior aligned with guardrail policy in [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md).
+
 ---
 
 ## 4) Debugging: why you see `rag` vs `fts` vs “plain grep”
@@ -137,3 +157,4 @@ In `scripts/test_full_agent_reply.py --with-retrieval`, each candidate line show
 - Orchestration: `src/agent/tools/search_agent.py`
 - Tool wiring: `src/agent/email_agent.py` (`search_product_docs`)
 - Debug output: `scripts/test_full_agent_reply.py`
+- Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)

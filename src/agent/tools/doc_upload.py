@@ -10,8 +10,12 @@ import re
 from datetime import datetime
 from pathlib import Path
 from threading import Thread
+from io import BytesIO
+from uuid import uuid4
 
 from fastapi import UploadFile
+from pypdf import PdfReader
+from docx import Document
 
 from src.agent.tools.kb_metadata import KBDocMeta, build_uploaded_markdown, detect_language_simple, extract_kb_metadata_from_text, sha256_text
 from src.db import database
@@ -27,21 +31,55 @@ def _safe_filename(name: str) -> str:
     return name or "uploaded_doc"
 
 
+def _extract_pdf_text(content: bytes) -> str:
+    reader = PdfReader(BytesIO(content))
+    pages: list[str] = []
+    for page in reader.pages:
+        pages.append(page.extract_text() or "")
+    return "\n\n".join(pages).strip()
+
+
+def _extract_docx_text(content: bytes) -> str:
+    doc = Document(BytesIO(content))
+    lines = [p.text for p in doc.paragraphs if (p.text or "").strip()]
+    return "\n".join(lines).strip()
+
+
 def normalize_uploaded_text(filename: str, content: bytes) -> tuple[str, str]:
     """Return (normalized_filename, normalized_markdown_text)."""
-    # Try UTF-8 first; fall back to latin1 to avoid hard failures on odd encodings.
-    try:
-        text = content.decode("utf-8")
-    except UnicodeDecodeError:
-        text = content.decode("latin1", errors="replace")
-
     # Normalize extension to .md
     norm_name = _safe_filename(filename)
     ext = Path(norm_name).suffix.lower()
+    text = ""
+
+    # Structured formats: extract text before wrapping into markdown.
+    if ext == ".pdf":
+        try:
+            text = _extract_pdf_text(content)
+        except Exception as e:
+            raise ValueError(f"Could not parse PDF: {e}") from e
+    elif ext == ".docx":
+        try:
+            text = _extract_docx_text(content)
+        except Exception as e:
+            raise ValueError(f"Could not parse DOCX: {e}") from e
+    else:
+        # Try UTF-8 first; fall back to latin1 to avoid hard failures on odd encodings.
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            text = content.decode("latin1", errors="replace")
+
+    if not text.strip():
+        raise ValueError("Uploaded document has no extractable text.")
+
     if ext in (".md", ".markdown"):
         norm_name = str(Path(norm_name).with_suffix(".md"))
         return norm_name, text
     if ext in (".txt", ".text"):
+        norm_name = str(Path(norm_name).with_suffix(".md"))
+        return norm_name, text
+    if ext in (".pdf", ".docx"):
         norm_name = str(Path(norm_name).with_suffix(".md"))
         return norm_name, text
 
@@ -66,8 +104,9 @@ async def ingest_upload(file: UploadFile, kb_path: Path, max_bytes: int = 5_000_
     kb_path.mkdir(parents=True, exist_ok=True)
     normalized_name, normalized_md = normalize_uploaded_text(file.filename, raw)
 
-    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    out_name = f"uploaded_{ts}_{normalized_name}"
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+    nonce = uuid4().hex[:8]
+    out_name = f"uploaded_{ts}_{nonce}_{normalized_name}"
     out_path = kb_path / out_name
     lang = detect_language_simple(normalized_md)
     meta = extract_kb_metadata_from_text(normalized_md)

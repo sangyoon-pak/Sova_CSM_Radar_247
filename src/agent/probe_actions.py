@@ -5,7 +5,15 @@ import json
 import re
 from typing import Any
 
+from src.runtime_config import (
+    effective_guardrail_exclude_sender_domains,
+    effective_guardrail_exclude_subject_keywords,
+    effective_guardrail_include_sender_domains,
+    effective_guardrail_strictness,
+)
+
 _GMAIL_TID_RE = re.compile(r"^[a-zA-Z0-9_-]{6,128}$")
+_EMAIL_IN_ANGLE_RE = re.compile(r"<([^>]+@[^>]+)>")
 
 
 def _GMAIL_THREAD_ID_OK(s: str) -> bool:
@@ -27,7 +35,6 @@ _TECH_OR_ACTION_PAT = re.compile(
     r")\b"
 )
 
-
 def _looks_non_actionable_meeting_invite(a: dict[str, Any]) -> bool:
     """
     Guardrail: skip cards that are only scheduling/intro invites with no product issue.
@@ -48,16 +55,72 @@ def _looks_non_actionable_meeting_invite(a: dict[str, Any]) -> bool:
     return has_meeting and not has_tech
 
 
+def _csv_tokens(v: str) -> list[str]:
+    return [x.strip().lower() for x in str(v or "").split(",") if x.strip()]
+
+
+def _email_domain(v: str) -> str:
+    t = str(v or "").strip().lower()
+    if not t:
+        return ""
+    m = _EMAIL_IN_ANGLE_RE.search(t)
+    if m:
+        t = m.group(1).strip().lower()
+    if "@" not in t:
+        return ""
+    return t.split("@", 1)[1].strip()
+
+
+def _category_is_product_technical(cat: str) -> bool:
+    c = str(cat or "").strip().lower()
+    return c in {"product_technical", "product", "technical"}
+
+
+def _is_excluded_by_user_guardrails(a: dict[str, Any], *, strictness: str) -> bool:
+    include_domains = set(_csv_tokens(effective_guardrail_include_sender_domains()))
+    exclude_domains = set(_csv_tokens(effective_guardrail_exclude_sender_domains()))
+    exclude_subject_kw = _csv_tokens(effective_guardrail_exclude_subject_keywords())
+
+    sender = str(a.get("email_from") or a.get("from") or "").strip()
+    subject = str(a.get("email_subject") or a.get("subject") or "").strip().lower()
+    brief = str(a.get("brief") or "").strip().lower()
+    digest = str(a.get("client_query_digest") or a.get("client_ask_summary") or "").strip().lower()
+    domain = _email_domain(sender)
+
+    if include_domains and (not domain or domain not in include_domains):
+        return True
+    if domain and domain in exclude_domains:
+        return True
+    if exclude_subject_kw and any(kw in subject or kw in brief or kw in digest for kw in exclude_subject_kw):
+        return True
+
+    if strictness == "strict":
+        # Strict mode suppresses low-signal cards with no concrete next step/evidence.
+        refs = a.get("references") or []
+        steps = a.get("next_steps") or []
+        has_refs = isinstance(refs, list) and len(refs) > 0
+        has_steps = isinstance(steps, list) and len(steps) > 0
+        text = " ".join([subject, brief, digest])
+        has_action_signal = bool(_TECH_OR_ACTION_PAT.search(text))
+        if not (has_refs or has_steps or has_action_signal):
+            return True
+
+    return False
+
+
 def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
         return []
     out: list[dict[str, Any]] = []
+    strictness = effective_guardrail_strictness()
     for i, a in enumerate(raw):
         if not isinstance(a, dict):
             continue
         if a.get("include_on_dashboard") is False:
             continue
-        if _looks_non_actionable_meeting_invite(a):
+        if strictness != "permissive" and _looks_non_actionable_meeting_invite(a):
+            continue
+        if _is_excluded_by_user_guardrails(a, strictness=strictness):
             continue
         steps = a.get("next_steps") or []
         if not isinstance(steps, list):
@@ -119,6 +182,10 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
         st = str(a.get("status") or "").strip().lower()
         if st not in {"not_started", "in_progress", "completed"}:
             st = "not_started"
+        category = str(a.get("category") or "general")[:120]
+        # Reliability gate: product/technical cards must have retrieval evidence.
+        if strictness != "permissive" and _category_is_product_technical(category) and not refs:
+            continue
         out.append(
             {
                 "title": str(a.get("title") or f"Action {i + 1}")[:240],
@@ -133,7 +200,7 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
                 "email_from": e_from,
                 "email_subject": e_subj,
                 "status": st,
-                "category": str(a.get("category") or "general")[:120],
+                "category": category,
                 "next_steps": [str(x)[:800] for x in steps[:15]],
                 "references": [str(x)[:800] for x in refs[:12]],
             }

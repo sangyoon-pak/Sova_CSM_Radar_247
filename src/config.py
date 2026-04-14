@@ -73,6 +73,24 @@ class Settings(BaseSettings):
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")
 
+    # Guardrails (optional; can be overridden in Configure)
+    guardrail_include_sender_domains: str = Field(
+        "",
+        validation_alias="GUARDRAIL_INCLUDE_SENDER_DOMAINS",
+    )
+    guardrail_exclude_sender_domains: str = Field(
+        "",
+        validation_alias="GUARDRAIL_EXCLUDE_SENDER_DOMAINS",
+    )
+    guardrail_exclude_subject_keywords: str = Field(
+        "",
+        validation_alias="GUARDRAIL_EXCLUDE_SUBJECT_KEYWORDS",
+    )
+    guardrail_strictness: str = Field(
+        "balanced",
+        validation_alias="GUARDRAIL_STRICTNESS",
+    )
+
     # Database
     database_path: str = Field("./data/agent.db", validation_alias="DATABASE_PATH")
 

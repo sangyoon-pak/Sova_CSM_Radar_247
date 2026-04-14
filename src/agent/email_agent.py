@@ -74,6 +74,43 @@ def _route_user_request(text: str) -> str:
         pass
     return "agent_run"
 
+
+_ACTION_REVIEW_DOC_HINT_PAT = re.compile(
+    r"(?i)\b(rc|docs?|document|reference|kb|retrieve|retrieval|search|api|integration|campaign|sdk|webhook)\b|"
+    r"(문서|검색|찾아|근거|레퍼런스|참고|api|연동|기술|문의|캠페인)"
+)
+
+
+def _latest_action_review_snapshot_text(conversation_messages: list[dict] | None) -> str:
+    if not conversation_messages:
+        return ""
+    for row in reversed(conversation_messages):
+        if (row.get("role") or "").strip().lower() != "system":
+            continue
+        c = str(row.get("content") or "")
+        if c.lstrip().startswith("[Action review"):
+            return c
+    return ""
+
+
+def _looks_like_action_review_product_turn(*, user_text: str, snapshot_text: str) -> bool:
+    # Product/technical follow-up often omits "search" wording.
+    # Use both current user turn and action snapshot to detect likely product context.
+    combo = f"{user_text}\n{snapshot_text}"
+    return bool(_ACTION_REVIEW_DOC_HINT_PAT.search(combo))
+
+
+def _kb_context_insufficient(kb_text: str) -> bool:
+    t = (kb_text or "").strip()
+    if not t:
+        return True
+    if "No relevant documents found." in t:
+        return True
+    # search_with_agent appends a "## Retrieved documents" section when there are usable sources.
+    if "## Retrieved documents" not in t:
+        return True
+    return False
+
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
 
 
@@ -297,6 +334,43 @@ def run_agent(
             except Exception:
                 pass
         return out
+
+    # Strong safety net for action-review UX:
+    # for product-related action threads, prefetch retrieval context every turn with priority:
+    #   1) uploaded KB docs (search_product_docs path)
+    #   2) RC URL web search only when KB evidence is insufficient
+    snapshot_text = _latest_action_review_snapshot_text(conversation_messages)
+    if (
+        _action_review
+        and not probe
+        and _looks_like_action_review_product_turn(user_text=route_text, snapshot_text=snapshot_text)
+    ):
+        try:
+            from src.agent.tools.search_agent import search_with_agent as _kb_lookup
+            from src.agent.tools.rc_web_search import search_rc_web as _rc_lookup
+            q = route_text.strip()
+            if snapshot_text:
+                q = f"{q}\n\nAction snapshot:\n{snapshot_text[:5000]}"
+            kb_prefetched = _kb_lookup(query=q, max_context_chars=14000)
+            prefetched = kb_prefetched
+            if _kb_context_insufficient(kb_prefetched):
+                rc_prefetched = _rc_lookup(query=q)
+                prefetched = (
+                    "[KB retrieval result]\n"
+                    f"{kb_prefetched}\n\n"
+                    "---\n\n"
+                    "[RC URL web retrieval fallback]\n"
+                    f"{rc_prefetched}"
+                )
+            extra = (
+                "\n\n[Auto-prefetched retrieval context for this action-review turn]\n"
+                "Use this as evidence; if insufficient, you may call tools again.\n\n"
+                f"{prefetched}"
+            )
+            system_append = ((system_append or "").rstrip() + extra).strip()
+        except Exception:
+            # If prefetch fails, continue normal agent flow.
+            pass
 
     agent = create_agent_executor(probe=probe, system_append=system_append)
     config = {"callbacks": list(callbacks)} if callbacks else None

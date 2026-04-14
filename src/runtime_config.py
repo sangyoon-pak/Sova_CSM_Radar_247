@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import re
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from src.config import settings
 from src.db import database
@@ -44,6 +46,11 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "gog_keyring_password",
     "xdg_config_home",
     "gog_credentials_path",
+    "scheduler_timezone",
+    "guardrail_include_sender_domains",
+    "guardrail_exclude_sender_domains",
+    "guardrail_exclude_subject_keywords",
+    "guardrail_strictness",
 )
 
 
@@ -287,6 +294,58 @@ def effective_gog_credentials_path() -> str:
     return (settings.gog_credentials_path or "").strip()
 
 
+def effective_scheduler_timezone() -> str:
+    """IANA timezone for cron scheduler (Configure DB overrides env)."""
+    v = _db_str("scheduler_timezone")
+    if v is not None and v.strip():
+        return v.strip()
+    return (getattr(settings, "scheduler_timezone", None) or "Asia/Seoul").strip()
+
+
+def effective_guardrail_include_sender_domains() -> str:
+    v = _db_str("guardrail_include_sender_domains")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_include_sender_domains", None) or "").strip()
+
+
+def effective_guardrail_exclude_sender_domains() -> str:
+    v = _db_str("guardrail_exclude_sender_domains")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_exclude_sender_domains", None) or "").strip()
+
+
+def effective_guardrail_exclude_subject_keywords() -> str:
+    v = _db_str("guardrail_exclude_subject_keywords")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_exclude_subject_keywords", None) or "").strip()
+
+
+def effective_guardrail_strictness() -> str:
+    v = _db_str("guardrail_strictness")
+    raw = (v if v is not None else getattr(settings, "guardrail_strictness", None) or "balanced").strip().lower()
+    if raw in {"strict", "balanced", "permissive"}:
+        return raw
+    return "balanced"
+
+
+def scheduler_timezone_offset_hours() -> int | None:
+    """Whole-hour UTC offset of the effective scheduler zone (for Configure GMT dropdown)."""
+    tz_name = effective_scheduler_timezone()
+    if not tz_name:
+        return 0
+    try:
+        z = ZoneInfo(tz_name)
+    except Exception:
+        return None
+    off = datetime.now(z).utcoffset()
+    if off is None:
+        return 0
+    return int(off.total_seconds() // 3600)
+
+
 def gog_credentials_path_resolved() -> Path | None:
     p_raw = effective_gog_credentials_path().strip()
     if not p_raw:
@@ -321,6 +380,7 @@ def recommended_ui_hints() -> dict[str, str]:
         "rag_embedding_provider": (s.rag_embedding_provider or "openrouter").strip(),
         "rag_embedding_model": (s.rag_embedding_model or "openai/text-embedding-3-large").strip(),
         "openrouter_base_url": (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip(),
+        "guardrail_strictness": "balanced",
     }
 
 
@@ -421,6 +481,7 @@ def runtime_settings_snapshot() -> dict:
     )
     oai_k = getattr(settings, "openai_api_key", None) or ""
     return {
+        "scheduler_timezone_offset_hours": scheduler_timezone_offset_hours(),
         "effective": {
             "llm_provider_preset": effective_llm_provider_preset(),
             "llm_model": effective_llm_model(),
@@ -436,6 +497,11 @@ def runtime_settings_snapshot() -> dict:
             "gog_keyring_backend": effective_gog_keyring_backend(),
             "xdg_config_home": effective_xdg_config_home(),
             "gog_credentials_path": effective_gog_credentials_path(),
+            "scheduler_timezone": effective_scheduler_timezone(),
+            "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
+            "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
+            "guardrail_exclude_subject_keywords": effective_guardrail_exclude_subject_keywords(),
+            "guardrail_strictness": effective_guardrail_strictness(),
         },
         "stored_in_database": {k: stored[k] for k in keys_db},
         "openrouter_api_key_set_in_database": or_key_db,

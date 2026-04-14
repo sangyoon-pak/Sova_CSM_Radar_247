@@ -4,6 +4,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from src.config import settings
 from src.db import database
+from src.runtime_config import effective_scheduler_timezone
 
 
 _scheduler: BackgroundScheduler | None = None
@@ -27,7 +28,7 @@ def _run_probe_job(name: str = "default"):
 def get_scheduler() -> BackgroundScheduler:
     global _scheduler
     if _scheduler is None:
-        tz = getattr(settings, "scheduler_timezone", "Asia/Seoul")
+        tz = effective_scheduler_timezone()
         _scheduler = BackgroundScheduler(timezone=tz)
         _scheduler.start()
         for j in database.get_cron_jobs():
@@ -37,7 +38,7 @@ def get_scheduler() -> BackgroundScheduler:
 
 
 def get_scheduler_timezone() -> str:
-    return getattr(settings, "scheduler_timezone", "Asia/Seoul")
+    return effective_scheduler_timezone()
 
 
 def _add_job_to_scheduler(name: str, cron_expr: str, tz: str):
