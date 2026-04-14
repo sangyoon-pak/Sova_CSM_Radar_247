@@ -1,4 +1,4 @@
-"""FastAPI application - Email Draft Agent dashboard and API."""
+"""FastAPI application - Sova (CSM Radar Agent) console and API."""
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Email Draft Agent",
-    description="Local Appier email assistant with grep-based doc search",
+    title="Sova — CSM Radar Agent 24/7",
+    description="Sova console: inbox radar, KB-grounded answers, cron, and traceable runs.",
     lifespan=lifespan,
 )
 
@@ -37,6 +37,10 @@ app.include_router(cron_router, tags=["cron"])
 web_dir = Path(__file__).parent / "web"
 if web_dir.exists():
     app.mount("/static", StaticFiles(directory=str(web_dir)), name="static")
+
+docs_dir = Path(__file__).parent.parent / "docs"
+if docs_dir.is_dir():
+    app.mount("/docs", StaticFiles(directory=str(docs_dir)), name="docs")
 
 
 @app.get("/health")

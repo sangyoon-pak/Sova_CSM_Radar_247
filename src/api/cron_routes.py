@@ -44,5 +44,10 @@ def update_cron_job(name: str, body: CronJobToggle):
 @router.post("/cron/{name}/run")
 def run_cron_job_now(name: str):
     from src.scheduler.cron_manager import _run_probe_job
-    _run_probe_job()
+    _run_probe_job(name)
     return {"ok": True, "message": "Probe job executed"}
+
+
+@router.get("/cron/summary")
+def cron_summary(limit: int = 20):
+    return database.get_cron_run_summary(limit=limit)

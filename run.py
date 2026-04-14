@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the Email Draft Agent server."""
+"""Run the Proactive CSM Assistant server."""
 import uvicorn
 
 from src.config import settings
@@ -9,5 +9,5 @@ if __name__ == "__main__":
         "src.main:app",
         host=settings.host,
         port=settings.port,
-        reload=True,
+        reload=False,
     )

@@ -17,6 +17,7 @@ import email
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,6 +30,12 @@ FALLBACK_ENCODINGS = ("utf-8", "cp949", "euc-kr", "iso-2022-kr", "latin1")
 
 # Max body chars to avoid raw JSON/HTML dumps (calendar invites, etc.)
 MAX_BODY_CHARS = 4000
+
+
+def _repo_local_gog_bin() -> str:
+    """Best-effort repo-local gog path (scripts/.local/bin/gog)."""
+    p = (os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(p, ".local", "bin", "gog")
 
 
 def decode_body(part):
@@ -85,22 +92,31 @@ def gog_env():
     if _is_local():
         home = os.environ.get("GOG_HOME", os.environ.get("HOME", os.path.expanduser("~")))
         gog_bin = os.environ.get("GOG_BIN", "gog")
-        path = os.path.join(home, ".local", "bin") if home else ""
-        path = f"{path}:{os.environ.get('PATH', '')}" if path else os.environ.get("PATH", "")
+        home_local_bin = os.path.join(home, ".local", "bin") if home else ""
+        repo_local_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".local", "bin")
+        path_parts = [x for x in [home_local_bin, repo_local_bin, os.environ.get("PATH", "")] if x]
+        path = ":".join(path_parts)
+        resolved = shutil.which(gog_bin, path=path) if gog_bin else None
+        if not resolved:
+            repo_bin = _repo_local_gog_bin()
+            if os.path.exists(repo_bin):
+                resolved = repo_bin
         return {
             "HOME": home,
             "PATH": path,
+            "GOG_BIN": resolved or gog_bin,
             "GOG_KEYRING_BACKEND": os.environ.get("GOG_KEYRING_BACKEND", "file"),
-            "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", "openclaw-gmail"),
-            "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", "sangyoon.park@appier.com"),
+            "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", ""),
+            "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", ""),
             "XDG_CONFIG_HOME": os.environ.get("XDG_CONFIG_HOME", os.path.join(home, ".config")),
         }
     return {
         "HOME": "/data",
         "PATH": "/data/.local/bin:" + os.environ.get("PATH", ""),
+        "GOG_BIN": os.environ.get("GOG_BIN", "/data/.local/bin/gog"),
         "GOG_KEYRING_BACKEND": "file",
-        "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", "openclaw-gmail"),
-        "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", "sangyoon.park@appier.com"),
+        "GOG_KEYRING_PASSWORD": os.environ.get("GOG_KEYRING_PASSWORD", ""),
+        "GOG_ACCOUNT": os.environ.get("GOG_ACCOUNT", ""),
         "XDG_CONFIG_HOME": "/data/.config",
     }
 
@@ -108,7 +124,19 @@ def gog_env():
 def gog_bin():
     """Path to gog binary."""
     if _is_local():
-        return os.environ.get("GOG_BIN", "gog")
+        explicit = os.environ.get("GOG_BIN", "").strip()
+        if explicit:
+            return explicit
+        resolved = shutil.which("gog", path=gog_env().get("PATH", ""))
+        if resolved:
+            return resolved
+        repo_bin = _repo_local_gog_bin()
+        if os.path.exists(repo_bin):
+            return repo_bin
+        return "gog"
+    explicit = os.environ.get("GOG_BIN", "").strip()
+    if explicit:
+        return explicit
     return "/data/.local/bin/gog"
 
 

@@ -1,4 +1,6 @@
 .env
+# Google OAuth client (download from Cloud Console; never commit)
+credentials.json
 __pycache__/
 *.pyc
 *.pyo
@@ -8,3 +10,7 @@ venv/
 *.sqlite
 chroma_data/
 .DS_Store
+
+# Local runtime artifacts (keep deployment-safe)
+data/
+scripts/.local/

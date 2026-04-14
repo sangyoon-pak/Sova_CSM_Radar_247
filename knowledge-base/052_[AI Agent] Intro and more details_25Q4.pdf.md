@@ -381,7 +381,7 @@ Coding Agent Available Creative Package OR AdCreative.ai + Managed Service N/A
 Director Agent Available Creative Package OR AdCreative.ai + Managed Service [LINK] AdCreative.ai + Managed Service [LINK] 
 Campaign Agent Available N/A Add-on credit on AIQUA 
 Audience Agent Available N/A Add-on credit on AIRIS 
-Insight Agent 2026Q1 N/A Add-on credit on AIRIS 
+Insight Agent TBD N/A Add-on credit on AIRIS 
 Service Agent Available N/A Add-on module on BotBonnie 
 Sales Agent Available N/A Add-on module on BotBonnie 
 Ad Cloud BD ESS Sales
@@ -622,9 +622,9 @@ Appier’s latest AI Research
 Your Marketing Goal 
 Select Select Select 
 Audience  Agent 
-New moisturizing skincare product launch in Q1 2026, with the goal to maximize revenue growth 
+New moisturizing skincare product launch in Q1, with the goal to maximize revenue growth 
 Start Conversation 
-I'm going to launch new moisturizing skincare products in Q1 2026, please help predict the target audience that can maximize revenue growth.
+I'm going to launch new moisturizing skincare products in Q1, please help predict the target audience that can maximize revenue growth.
  
  
 Industry Expertise guide your direction 
@@ -700,7 +700,7 @@ AI Predictive Segment Agent perform 2 hours for in-depth analysis targeted segme
  
  
 Audience Agent Roadmap 
-2025 Q4 2026 Q1 2026 Q2 
+Future quarters 
 Insight-driven learning for continuous optimization 
  Learn and optimize from past campaigns 
  Brand setting & Agent memories 
@@ -732,12 +732,11 @@ Summary:
 analysis — and will continue to evolve through deeper data integration and advanced predictive modeling for smarter and more precise segmentation.
  
  
-Insight Agent 
-MVP Overview & Pilot Program 
-Danny Lin
- 
- 
-Insight Agent bridges Appierʼs One Data foundation with 
+Insight Agent
+MVP Overview & Pilot Program
+
+
+Insight Agent bridges Appierʼs One Data foundation with
 AI-driven decision-making. 
 Why Insight Agent 
 "Marketers today spend more time finding insights than acting on them." 
@@ -831,8 +830,7 @@ Ideal Pilot Clients
  Multi-region or multi-brand structures. 
  Seeking faster insights and decision speed. 
 Contact 
-Danny Lin 
-Data Cloud PM 
+Please contact your Appier representative for early access.
 Early Access 
 Co-design sessions 
 Joint PR 
@@ -1183,7 +1181,7 @@ Try our after-sun lotion — it goes perfectly with sunscreen.
 This week’s skincare bundle is 15% off — want to check it out? 
 Our new Hydra Series just arrived — want to take a look?
 Sales/Service Agent Product Roadmap & Goal 
-Where We Are Now 2025 Q4 2026 ~ 
+Where We Are Now 
  Service Agent early onboardings revealed gaps in key e-commerce scenarios. 
  Service Agent internal quality testing 
  Onboard 3 ICP clients 

@@ -1,0 +1,57 @@
+# Action Card Spec
+
+This file defines the expected action card contract for the Action dashboard.
+
+## Card Purpose
+
+An action card represents a customer-facing CSM task that needs follow-up and can be traced back to email/thread evidence.
+
+## Required Fields
+
+- `card_id`: unique identifier
+- `thread_id`: source email thread ID
+- `thread_title`: original thread subject/title
+- `customer_identifier`: customer name when known
+- `customer_domain`: sender domain fallback when name is unknown
+- `summary`: concise action summary
+- `recommended_next_step`: concrete suggested action
+- `status`: `not_started | in_progress | completed`
+- `created_at`: UTC timestamp
+- `updated_at`: UTC timestamp
+
+## Recommended Metadata
+
+- `source_messages`: list of email IDs included in analysis
+- `retrieval_evidence`: citations/snippets used for draft reasoning
+- `confidence_label`: `high | medium | low`
+- `priority`: `low | medium | high | urgent`
+- `owner`: assigned user/team
+- `feedback_notes`: free-text user feedback for self-evolution loops
+
+## Status Behavior
+
+- `not_started`: newly created or triaged but untouched
+- `in_progress`: active execution
+- `completed`: follow-up done and closed
+
+Cards should support filtering and sorting by status, recency, priority, and customer domain.
+
+## Retrieval Metadata Contract
+
+Even when the card UI is concise, metadata should retain evidence needed for follow-up Q&A:
+
+- doc/file reference
+- snippet or normalized evidence text
+- retrieval source type (`rag`, `grep`, `fts`, `web` when enabled)
+
+Without this metadata, downstream assistant responses lose traceability.
+
+## Feedback Model
+
+Move beyond binary like/dislike where possible:
+
+- Keep binary feedback optional for quick triage.
+- Prefer free-text feedback attached to the card.
+- Feed normalized feedback signals into agent evolution pipelines.
+
+Guardrail and architecture context: [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md), [ARCHITECTURE.md](ARCHITECTURE.md).

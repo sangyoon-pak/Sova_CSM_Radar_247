@@ -1,1 +1,1 @@
-"""Email draft agent - local Appier email assistant."""
+"""Proactive CSM Assistant - local inbox and knowledge console."""
