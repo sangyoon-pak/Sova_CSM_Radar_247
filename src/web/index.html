@@ -1413,8 +1413,11 @@
     <section>
       <h2 data-i18n="landingTitle">Welcome to Sova</h2>
       <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.</p>
-      <div class="landing-panel" style="max-width:52rem;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.85rem 1rem;background:var(--surface-raised);">
-        <div class="landing-title" data-i18n="landingNextStepsTitle">Next steps</div>
+      <details class="landing-panel" style="max-width:52rem;margin-bottom:0.75rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.1rem 1rem 0.75rem 1rem;background:var(--surface-raised);">
+        <summary style="cursor:pointer;list-style:none;color:var(--text);font-weight:700;padding:0.7rem 0;">
+          <span class="section-caret">▸</span>
+          <span data-i18n="landingNextStepsTitle">Next steps</span>
+        </summary>
         <p class="landing-copy" style="margin-bottom:0.55rem;" data-i18n-html="landingNextStepsLead">You already cloned the repo and started the server—continue here in the UI:</p>
         <ul class="landing-next-ul">
           <li data-i18n-html="landingNextStepsLi1"></li>
@@ -1422,6 +1425,10 @@
           <li data-i18n-html="landingNextStepsLi3"></li>
           <li data-i18n-html="landingNextStepsLi4"></li>
         </ul>
+        <div class="landing-disclaimer" style="max-width:48rem;margin:0.65rem 0 0.3rem 0;">
+          <div class="landing-disclaimer__title" data-i18n="landingDisclaimerTitle">Email provider note</div>
+          <p data-i18n-html="landingDisclaimerBody">Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.</p>
+        </div>
         <p class="landing-copy landing-docs-line" style="font-size:0.84rem;color:var(--muted);margin:0.65rem 0 0.5rem 0;">
           <span data-i18n-html="landingDocsGithubBefore"></span>
           <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
@@ -1431,11 +1438,7 @@
           <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
           <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
         </div>
-      </div>
-      <div class="landing-disclaimer" style="max-width:48rem;margin-bottom:1rem;">
-        <div class="landing-disclaimer__title" data-i18n="landingDisclaimerTitle">Email provider note</div>
-        <p data-i18n-html="landingDisclaimerBody">Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.</p>
-      </div>
+      </details>
       <div class="landing-grid">
         <div class="landing-panel">
           <div class="landing-logo-wrap">
@@ -1501,6 +1504,17 @@
             <p class="configure-hint" data-i18n-html="configureOrHint">Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.</p>
             <div class="configure-field"><label for="cfg_openrouter_base_url" data-i18n="cfgOpenrouterUrl">Base URL</label><input id="cfg_openrouter_base_url" type="text" /><span class="configure-env" id="cfg_env_openrouter_base_url"></span></div>
             <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
+            <p class="configure-hint" style="margin-top:0.55rem;">Optional observability and display timezone. LangSmith emits traces for new runs only when tracing is on and a key is set.</p>
+            <div class="configure-field"><label for="cfg_scheduler_timezone">Scheduler / UI timezone</label><input id="cfg_scheduler_timezone" type="text" placeholder="Asia/Seoul" /><span class="configure-env" id="cfg_env_scheduler_timezone"></span></div>
+            <div class="configure-field"><label for="cfg_langsmith_tracing">LangSmith tracing</label>
+              <select id="cfg_langsmith_tracing">
+                <option value="false">off</option>
+                <option value="true">on</option>
+              </select>
+            </div>
+            <div class="configure-field"><label for="cfg_langsmith_project">LangSmith project</label><input id="cfg_langsmith_project" type="text" placeholder="email_draft_agent" /><span class="configure-env" id="cfg_env_langsmith_project"></span></div>
+            <div class="configure-field"><label for="cfg_langsmith_api_key">LangSmith API key</label><input id="cfg_langsmith_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
+            <p id="cfg_langsmith_key_status" class="configure-hint"></p>
             <p id="cfg_key_status" class="configure-hint"></p>
           </div>
         </details>
@@ -1546,7 +1560,8 @@
         <details class="configure-details">
           <summary>Agent prompts (database)</summary>
           <div class="configure-details__body">
-            <p class="configure-hint">These strings are stored in the app database and are what the agent uses at runtime. On first start, defaults are copied from <code>src/agent/prompts.py</code>. The main system template must keep placeholders <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, <code>{learning_section}</code>. Clear a field and <strong>Save configuration</strong> to reset that row to the built-in default (still saved in the database).</p>
+            <p class="configure-hint">These strings are stored in the app database and are what the agent uses at runtime. On first start, defaults are copied from <code>src/agent/prompts.py</code>. Clear a field and <strong>Save configuration</strong> to reset that row to the built-in default (still saved in the database).</p>
+            <p class="configure-hint" style="margin-top:0.35rem;"><strong>Curly braces <code>{…}</code></strong> are <strong>runtime placeholders</strong>—do not paste your vendor name or product list in place of them. Keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code> exactly as written. At run time, the first three are filled from <strong>Workbench → Agent profile</strong> (vendor, product scope, role title). <code>{learning_section}</code> is filled from <strong>learning memory</strong> (distilled from Run history feedback), not from the profile form. <strong>Everything else</strong> in the template is yours to edit—rules, tone, and instructions—without changing those four placeholder names.</p>
             <div class="configure-field"><label for="cfg_prompt_email_agent_system_template">Main system prompt template <span class="configure-hint" id="cfg_prompt_email_agent_system_template_sync"></span></label><textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea></div>
             <div class="configure-field"><label for="cfg_prompt_probe_user_message">Probe user message (Scan inbox / cron) <span class="configure-hint" id="cfg_prompt_probe_user_message_sync"></span></label><textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea></div>
             <div class="configure-field"><label for="cfg_prompt_probe_mode_append">Probe mode system append <span class="configure-hint" id="cfg_prompt_probe_mode_append_sync"></span></label><textarea id="cfg_prompt_probe_mode_append" rows="8" style="width:100%;max-width:52rem;" placeholder="Appended to system prompt when probe=True."></textarea></div>
@@ -1768,9 +1783,9 @@
           <strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.
         </p>
         <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-        <details style="margin-top:0.75rem;">
+        <details style="margin-top:0.45rem;">
           <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span><span data-i18n="persistedDocs">Saved documents</span></summary>
-          <div id="docRegistry" class="result-box" style="display:block;max-height:260px;"></div>
+          <div id="docRegistry" class="result-box" style="display:block;padding:0.45rem 0.55rem;white-space:normal;font-family:inherit;font-size:0.82rem;"></div>
         </details>
       </section>
     </div>
@@ -2532,12 +2547,28 @@
     const CONFIGURE_TAB_ID = 'tab-configure';
     const CONFIGURE_HASH = 'configure';
     const DASHBOARD_LAYOUT_KEY = 'sova_action_dashboard_layout';
+    let _configuredTimeZone = '';
     const TAB_TO_HASH = {
       [DASHBOARD_TAB_ID]: DASHBOARD_HASH,
       [CONFIGURE_TAB_ID]: CONFIGURE_HASH,
     };
+    function _safeTimeZone() {
+      const tz = String(_configuredTimeZone || '').trim();
+      if (!tz) return undefined;
+      try {
+        new Intl.DateTimeFormat(undefined, { timeZone: tz });
+        return tz;
+      } catch {
+        return undefined;
+      }
+    }
     function _fmtTime(ts) {
-      try { return new Date(ts).toLocaleString(); } catch { return ''; }
+      try {
+        const tz = _safeTimeZone();
+        return tz ? new Date(ts).toLocaleString(undefined, { timeZone: tz }) : new Date(ts).toLocaleString();
+      } catch {
+        return '';
+      }
     }
     function _threadTitle(t) {
       return (t && t.title) ? String(t.title) : `Thread #${t.id}`;
@@ -2748,17 +2779,84 @@
       }
     }
     // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
+    let _selectedKbDocIds = new Set();
+
+    function toggleKbDocSelected(docId, checked) {
+      const id = Number(docId);
+      if (!Number.isFinite(id)) return;
+      if (checked) _selectedKbDocIds.add(id);
+      else _selectedKbDocIds.delete(id);
+      const bulkBtn = document.getElementById('kbBulkDeleteBtn');
+      if (bulkBtn) {
+        const n = _selectedKbDocIds.size;
+        bulkBtn.disabled = n === 0;
+        bulkBtn.textContent = n > 0 ? `Delete selected (${n})` : 'Delete selected';
+      }
+    }
+
+    function toggleKbDocSelectAll(checked) {
+      const boxes = document.querySelectorAll('.kb-doc-select');
+      _selectedKbDocIds = new Set();
+      boxes.forEach((el) => {
+        el.checked = !!checked;
+        const id = Number(el.getAttribute('data-doc-id'));
+        if (checked && Number.isFinite(id)) _selectedKbDocIds.add(id);
+      });
+      toggleKbDocSelected(-1, false);
+    }
+
+    async function deleteSelectedKbDocs() {
+      const ids = Array.from(_selectedKbDocIds);
+      if (!ids.length) return;
+      if (!confirm(`Delete ${ids.length} selected document(s)?`)) return;
+      for (const id of ids) {
+        await fetchJson(`/kb/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      }
+      _selectedKbDocIds = new Set();
+      await loadDocRegistry();
+    }
+
     async function loadDocRegistry() {
       const data = await fetchJson('/kb/documents?limit=200');
       const el = document.getElementById('docRegistry');
       if (!data.length) { el.textContent = uiText('noDocsYet'); return; }
+      const validIds = new Set(data.map((d) => Number(d.id)).filter((x) => Number.isFinite(x)));
+      _selectedKbDocIds = new Set(Array.from(_selectedKbDocIds).filter((x) => validIds.has(x)));
+      const controls = `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.35rem;margin:0 0 0.22rem 0;">
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--muted);">
+          <input type="checkbox" onchange="toggleKbDocSelectAll(this.checked)" />
+          Select all
+        </label>
+        <button id="kbBulkDeleteBtn" type="button" class="danger btn-compact" style="padding:0.25rem 0.5rem;border-radius:7px;" onclick="deleteSelectedKbDocs()" ${_selectedKbDocIds.size ? '' : 'disabled'}>
+          ${_selectedKbDocIds.size ? `Delete selected (${_selectedKbDocIds.size})` : 'Delete selected'}
+        </button>
+      </div>`;
       el.innerHTML = data.map(d => {
         const loc = d.url ? d.url : (d.path || '');
         const title = d.title || '';
-        const lang = d.language || '';
         const scope = d.scope || '';
-        return `<div style="margin-bottom:0.65rem;padding-bottom:0.65rem;border-bottom:1px dashed var(--border)"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;"><div style="min-width:0;"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span><br><code style="font-size:0.78rem;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:560px;">${escapeHtml(loc)}</code><br><span style="color:var(--muted);font-size:0.78rem;">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span></div><button type="button" class="danger" style="padding:0.4rem 0.6rem;border-radius:8px;" onclick="deleteKbDoc(${d.id})">${escapeHtml(uiText('delete'))}</button></div></div>`;
-      }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0.35rem 0;">');
+        const scopeLine = scope
+          ? `<span style="color:var(--muted);font-size:0.78rem;">scope=${escapeHtml(scope)}</span>`
+          : '';
+        const checked = _selectedKbDocIds.has(Number(d.id)) ? 'checked' : '';
+        return `<details style="margin:0 0 0.22rem 0;border:1px solid var(--border);border-radius:9px;padding:0.12rem 0.45rem;background:var(--surface);">
+          <summary style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:0.45rem;cursor:pointer;list-style:none;padding:0.02rem 0;">
+            <div style="display:flex;align-items:center;">
+              <input class="kb-doc-select" data-doc-id="${Number(d.id)}" type="checkbox" ${checked}
+                onclick="event.stopPropagation()"
+                onchange="toggleKbDocSelected(${Number(d.id)}, this.checked)" />
+            </div>
+            <div style="min-width:0;display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;">
+              <strong style="min-width:0;">${escapeHtml(title)}</strong>
+              <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span>
+              ${scopeLine}
+            </div>
+            <button type="button" class="danger btn-compact" style="padding:0.2rem 0.42rem;border-radius:7px;line-height:1;" onclick="event.preventDefault();event.stopPropagation();deleteKbDoc(${d.id})">${escapeHtml(uiText('delete'))}</button>
+          </summary>
+          <div style="margin:0.12rem 0 0 0;word-break:break-all;font-size:0.78rem;font-family:var(--mono);line-height:1.3;color:var(--text);">${escapeHtml(loc)}</div>
+        </details>`;
+      }).join('');
+      el.innerHTML = controls + el.innerHTML;
     }
 
     async function deleteKbDoc(id) {
@@ -2863,7 +2961,7 @@
       if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noCronRuns'))}</div>`; return; }
       el.innerHTML = data.map(i => {
         const msg = (i.output_text || i.error_message || '').slice(0, 500);
-        return `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
+        return `<div class="interaction"><div class="interaction-meta">${_fmtTime(i.created_at)} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
       }).join('');
     }
     let _traceLen = 0;
@@ -3230,6 +3328,8 @@
         ['cfg_env_llm_model_memory', 'llm_model_memory'],
         ['cfg_env_rag_embedding_model', 'rag_embedding_model'],
         ['cfg_env_openrouter_base_url', 'openrouter_base_url'],
+        ['cfg_env_scheduler_timezone', 'scheduler_timezone'],
+        ['cfg_env_langsmith_project', 'langsmith_project'],
       ];
       map.forEach(([spanId, key]) => {
         const el = document.getElementById(spanId);
@@ -3280,6 +3380,10 @@
         setv('cfg_gog_keyring_password', '');
         setv('cfg_xdg_config_home', eff.xdg_config_home != null ? String(eff.xdg_config_home) : '');
         setv('cfg_gog_credentials_path', eff.gog_credentials_path != null ? String(eff.gog_credentials_path) : '');
+        setv('cfg_scheduler_timezone', eff.scheduler_timezone != null ? String(eff.scheduler_timezone) : 'Asia/Seoul');
+        setv('cfg_langsmith_tracing', eff.langsmith_tracing != null ? String(eff.langsmith_tracing) : 'false');
+        setv('cfg_langsmith_project', eff.langsmith_project != null ? String(eff.langsmith_project) : 'email_draft_agent');
+        setv('cfg_langsmith_api_key', '');
         setv('cfg_guardrail_include_sender_domains', eff.guardrail_include_sender_domains != null ? String(eff.guardrail_include_sender_domains) : '');
         setv('cfg_guardrail_exclude_sender_domains', eff.guardrail_exclude_sender_domains != null ? String(eff.guardrail_exclude_sender_domains) : '');
         setv('cfg_guardrail_include_intent_keywords', eff.guardrail_include_intent_keywords != null ? String(eff.guardrail_include_intent_keywords) : '');
@@ -3309,6 +3413,13 @@
             ? configureUiText('configureGogKeyringDb')
             : configureUiText('configureGogKeyringMissingDb');
         }
+        const lsKs = document.getElementById('cfg_langsmith_key_status');
+        if (lsKs) {
+          lsKs.textContent = data.langsmith_api_key_set_in_database
+            ? 'LangSmith API key stored in app database'
+            : (data.langsmith_api_key_set_in_env ? 'LangSmith API key set in server environment' : 'No LangSmith API key saved');
+        }
+        _configuredTimeZone = String(eff.scheduler_timezone || '');
         _setConfigureEnvSpans(_mergeRecommendedHints(data), stored);
         refreshPresetDatalists();
         onConfigurePresetChange();
@@ -3373,6 +3484,11 @@
       if (gkp) payload.gog_keyring_password = gkp;
       payload.xdg_config_home = gv('cfg_xdg_config_home');
       payload.gog_credentials_path = gv('cfg_gog_credentials_path');
+      payload.scheduler_timezone = gv('cfg_scheduler_timezone') || 'Asia/Seoul';
+      payload.langsmith_tracing = gv('cfg_langsmith_tracing') || 'false';
+      payload.langsmith_project = gv('cfg_langsmith_project') || 'email_draft_agent';
+      const lsk = gv('cfg_langsmith_api_key');
+      if (lsk) payload.langsmith_api_key = lsk;
       payload.guardrail_include_sender_domains = gv('cfg_guardrail_include_sender_domains');
       payload.guardrail_exclude_sender_domains = gv('cfg_guardrail_exclude_sender_domains');
       payload.guardrail_include_intent_keywords = gv('cfg_guardrail_include_intent_keywords');
@@ -3481,7 +3597,7 @@
     }
 
     function dashboardProbeMetaLine(row) {
-      const when = new Date(row.created_at).toLocaleString();
+      const when = _fmtTime(row.created_at);
       const tt = String(row.trigger_type || '');
       const st = String(row.status || '');
       return `${when} · ${tt} · ${st}`;
@@ -4061,7 +4177,7 @@
               <div style="display:flex;align-items:center;gap:0.35rem;color:var(--muted);font-size:0.78rem;font-weight:900;margin-bottom:0.25rem;">
                 <span class="section-caret">▸</span><span>${escapeHtml(uiText('expandDetails'))}</span>
               </div>
-              <div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
+              <div class="interaction-meta">${_fmtTime(i.created_at)} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
               <div style="font-size:0.84rem;font-family:var(--mono);white-space:pre-wrap;line-height:1.35;">${promptPreview || ep}</div>
               <div style="margin-top:0.35rem;">${toolChips}</div>
             </summary>

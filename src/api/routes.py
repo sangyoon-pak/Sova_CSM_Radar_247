@@ -253,6 +253,10 @@ class RuntimeSettingsPatch(BaseModel):
     gog_keyring_password: str | None = None
     xdg_config_home: str | None = None
     gog_credentials_path: str | None = None
+    scheduler_timezone: str | None = None
+    langsmith_tracing: str | None = None
+    langsmith_api_key: str | None = None
+    langsmith_project: str | None = None
     guardrail_include_sender_domains: str | None = None
     guardrail_exclude_sender_domains: str | None = None
     guardrail_include_intent_keywords: str | None = None

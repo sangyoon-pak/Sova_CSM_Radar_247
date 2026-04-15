@@ -89,7 +89,8 @@ class Settings(BaseSettings):
     # Database
     database_path: str = Field("./data/agent.db", validation_alias="DATABASE_PATH")
 
-    # LangSmith (process environment only if you export these vars before starting the server)
+    # LangSmith
+    langsmith_tracing: bool = Field(False, validation_alias="LANGSMITH_TRACING")
     langsmith_api_key: str | None = Field(None, validation_alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field("email_draft_agent", validation_alias="LANGSMITH_PROJECT")
 

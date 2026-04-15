@@ -17,7 +17,7 @@ from fastapi import UploadFile
 from pypdf import PdfReader
 from docx import Document
 
-from src.agent.tools.kb_metadata import KBDocMeta, build_uploaded_markdown, detect_language_simple, extract_kb_metadata_from_text, sha256_text
+from src.agent.tools.kb_metadata import KBDocMeta, build_uploaded_markdown, extract_kb_metadata_from_text, sha256_text
 from src.db import database
 
 
@@ -108,13 +108,12 @@ async def ingest_upload(file: UploadFile, kb_path: Path, max_bytes: int = 5_000_
     nonce = uuid4().hex[:8]
     out_name = f"uploaded_{ts}_{nonce}_{normalized_name}"
     out_path = kb_path / out_name
-    lang = detect_language_simple(normalized_md)
     meta = extract_kb_metadata_from_text(normalized_md)
-    # Ensure we always tag language for later routing/LLM planning.
+    # Keep uploaded-doc metadata minimal: language is not used by core retrieval/runtime logic.
     meta = KBDocMeta(
         title=meta.title or f"Uploaded: {normalized_name}",
         tags=meta.tags,
-        language=meta.language or lang,
+        language=None,
         scope=meta.scope,
         last_updated=meta.last_updated,
         url=meta.url,
@@ -155,7 +154,6 @@ async def ingest_upload(file: UploadFile, kb_path: Path, max_bytes: int = 5_000_
         "saved": True,
         "filename": out_name,
         "chars": len(md),
-        "language": meta.language,
         "doc_id": doc_id,
     }
 

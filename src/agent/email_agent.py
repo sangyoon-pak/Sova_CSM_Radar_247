@@ -10,9 +10,11 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
-from src.config import settings
 from src.runtime_config import (
     effective_guardrail_team_guidance,
+    effective_langsmith_api_key,
+    effective_langsmith_project,
+    effective_langsmith_tracing,
     effective_llm_model_main,
     effective_llm_model_search_json,
 )
@@ -56,11 +58,15 @@ class _CancelPatrolCallback(BaseCallbackHandler):
 
 
 def _ensure_langsmith_env():
-    """Set LangSmith env vars from settings so tracing works in uvicorn workers."""
-    if settings.langsmith_api_key:
+    """Set LangSmith env vars from runtime config so tracing works in uvicorn workers."""
+    if effective_langsmith_tracing() and effective_langsmith_api_key():
         os.environ["LANGSMITH_TRACING"] = "true"
-        os.environ["LANGSMITH_API_KEY"] = settings.langsmith_api_key
-        os.environ["LANGSMITH_PROJECT"] = settings.langsmith_project
+        os.environ["LANGSMITH_API_KEY"] = effective_langsmith_api_key()
+        os.environ["LANGSMITH_PROJECT"] = effective_langsmith_project()
+    else:
+        os.environ.pop("LANGSMITH_TRACING", None)
+        os.environ.pop("LANGSMITH_API_KEY", None)
+        os.environ.pop("LANGSMITH_PROJECT", None)
 
 
 def _get_llm():

@@ -53,6 +53,10 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "gog_keyring_password",
     "xdg_config_home",
     "gog_credentials_path",
+    "scheduler_timezone",
+    "langsmith_tracing",
+    "langsmith_api_key",
+    "langsmith_project",
     "guardrail_include_sender_domains",
     "guardrail_exclude_sender_domains",
     "guardrail_include_intent_keywords",
@@ -332,6 +336,38 @@ def effective_gog_credentials_path() -> str:
     return (settings.gog_credentials_path or "").strip()
 
 
+def effective_scheduler_timezone() -> str:
+    v = _db_str("scheduler_timezone")
+    if v is not None and v.strip():
+        return v.strip()
+    return (getattr(settings, "scheduler_timezone", None) or "Asia/Seoul").strip()
+
+
+def _truthy_str(v: str) -> bool:
+    return v.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def effective_langsmith_tracing() -> bool:
+    v = _db_str("langsmith_tracing")
+    if v is not None and v.strip():
+        return _truthy_str(v)
+    return bool(getattr(settings, "langsmith_tracing", False))
+
+
+def effective_langsmith_api_key() -> str:
+    v = _db_str("langsmith_api_key")
+    if v is not None and v.strip():
+        return v.strip()
+    return str(getattr(settings, "langsmith_api_key", None) or "").strip()
+
+
+def effective_langsmith_project() -> str:
+    v = _db_str("langsmith_project")
+    if v is not None and v.strip():
+        return v.strip()
+    return str(getattr(settings, "langsmith_project", None) or "email_draft_agent").strip()
+
+
 def gog_credentials_path_resolved() -> Path | None:
     p_raw = effective_gog_credentials_path().strip()
     if not p_raw:
@@ -450,6 +486,8 @@ def recommended_ui_hints() -> dict[str, str]:
         "rag_embedding_provider": (s.rag_embedding_provider or "openrouter").strip(),
         "rag_embedding_model": (s.rag_embedding_model or "openai/text-embedding-3-large").strip(),
         "openrouter_base_url": (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip(),
+        "scheduler_timezone": (getattr(s, "scheduler_timezone", None) or "Asia/Seoul").strip(),
+        "langsmith_project": (getattr(s, "langsmith_project", None) or "email_draft_agent").strip(),
         "guardrail_strictness": "balanced",
     }
 
@@ -555,6 +593,9 @@ def runtime_settings_snapshot() -> dict:
     gog_pw_db = database.app_setting_is_set("gog_keyring_password") and bool(
         (database.get_app_setting("gog_keyring_password") or "").strip()
     )
+    ls_key_db = database.app_setting_is_set("langsmith_api_key") and bool(
+        (database.get_app_setting("langsmith_api_key") or "").strip()
+    )
     oai_k = getattr(settings, "openai_api_key", None) or ""
     from src.agent.prompts import build_prompt_effective_by_mode
     from src.configure_crypto import encryption_enabled
@@ -591,6 +632,9 @@ def runtime_settings_snapshot() -> dict:
             "gog_keyring_backend": effective_gog_keyring_backend(),
             "xdg_config_home": effective_xdg_config_home(),
             "gog_credentials_path": effective_gog_credentials_path(),
+            "scheduler_timezone": effective_scheduler_timezone(),
+            "langsmith_tracing": "true" if effective_langsmith_tracing() else "false",
+            "langsmith_project": effective_langsmith_project(),
             "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
             "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
             "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
@@ -606,6 +650,8 @@ def runtime_settings_snapshot() -> dict:
         "openrouter_api_key_set_in_database": or_key_db,
         "openrouter_api_key_set_in_env": bool((settings.openrouter_api_key or "").strip()),
         "openai_api_key_set_in_env": bool(oai_k.strip()),
+        "langsmith_api_key_set_in_database": ls_key_db,
+        "langsmith_api_key_set_in_env": bool((getattr(settings, "langsmith_api_key", None) or "").strip()),
         "gog_keyring_password_set_in_database": gog_pw_db,
         "gog_setup": gog_setup_diagnostics(),
         "recommended_hints": recommended_ui_hints(),

@@ -6,7 +6,7 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 ## What Sova Does
 
-- Probes inbox threads (optional Gmail via local `gog` + OAuth)
+- Probes inbox threads (Gmail via local `gog` + OAuth)
 - Classifies whether a thread requires CSM action
 - Runs retrieval (RAG + lexical search) for evidence-backed responses
 - Builds action-card candidates and tracks status progression
