@@ -30,6 +30,9 @@ def init_db():
     conn.executescript(schema)
     conn.commit()
     conn.close()
+    from src.agent.prompt_seed import seed_prompt_library_if_needed
+
+    seed_prompt_library_if_needed()
 
 
 def _conn():

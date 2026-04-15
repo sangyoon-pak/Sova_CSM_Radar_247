@@ -1,3 +1,1 @@
-"""Agent module."""
-from .email_agent import create_agent_executor, run_agent
-__all__ = ["create_agent_executor", "run_agent"]
+"""Agent package. Import from submodules (e.g. ``src.agent.email_agent``) to avoid heavy imports at package load."""

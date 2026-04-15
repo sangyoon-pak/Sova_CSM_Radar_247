@@ -10,7 +10,9 @@ import json
 import sqlite3
 import subprocess
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from src.config import settings
@@ -47,9 +49,11 @@ _RAG_DIR = (Path(__file__).resolve().parents[3] / "data" / "rag").resolve()
 _RAG_INDEX_DIR = (_RAG_DIR / "faiss_index").resolve()
 _RAG_STATE_PATH = (_RAG_DIR / "state.txt").resolve()
 _RAG_TOMBSTONES_PATH = (_RAG_DIR / "tombstones.json").resolve()
+_RAG_REBUILD_LOG_PATH = (_RAG_DIR / "rebuild_log.jsonl").resolve()
 _RAG_EMBED_MODEL_LOCAL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 _RAG_CHUNK_SIZE = 900
 _RAG_OVERLAP = 150
+_RAG_REINDEX_LOCK = Lock()
 _EMBEDDINGS = None
 _EMBED_CFG: tuple[str, str] | None = None
 _VECTORSTORE = None
@@ -111,6 +115,41 @@ def _kb_fingerprint(base_path: Path) -> str:
     provider = (effective_rag_embedding_provider() or "openrouter").strip().lower()
     model = (effective_rag_embedding_model() or "").strip()
     return f"{count}:{latest}:{provider}:{model}"
+
+
+def _parse_fingerprint(fp: str) -> dict[str, str]:
+    parts = str(fp or "").split(":", 3)
+    if len(parts) != 4:
+        return {"count": "", "latest_mtime": "", "provider": "", "model": ""}
+    return {
+        "count": parts[0],
+        "latest_mtime": parts[1],
+        "provider": parts[2],
+        "model": parts[3],
+    }
+
+
+def _log_rag_rebuild_event(base_path: Path, old_fp: str, new_fp: str, phase: str):
+    try:
+        old = _parse_fingerprint(old_fp)
+        new = _parse_fingerprint(new_fp)
+        reasons: list[str] = []
+        for k in ("count", "latest_mtime", "provider", "model"):
+            if old.get(k) != new.get(k):
+                reasons.append(k)
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "phase": phase,
+            "base_path": str(base_path),
+            "old_fingerprint": old_fp,
+            "new_fingerprint": new_fp,
+            "reasons": reasons,
+        }
+        _RAG_DIR.mkdir(parents=True, exist_ok=True)
+        with _RAG_REBUILD_LOG_PATH.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=True) + "\n")
+    except Exception:
+        return
 
 
 def _split_into_chunks(text: str, chunk_size: int = _RAG_CHUNK_SIZE, overlap: int = _RAG_OVERLAP) -> list[tuple[int, str]]:
@@ -175,7 +214,7 @@ def _get_embeddings():
     return None
 
 
-def _ensure_rag_index(base_path: Path):
+def _ensure_rag_index(base_path: Path, *, force_rebuild_when_stale: bool = False):
     if FAISS is None:
         return
     _RAG_DIR.mkdir(parents=True, exist_ok=True)
@@ -183,35 +222,51 @@ def _ensure_rag_index(base_path: Path):
     old = _RAG_STATE_PATH.read_text(encoding="utf-8").strip() if _RAG_STATE_PATH.exists() else ""
     if old == fingerprint and _RAG_INDEX_DIR.exists():
         return
-
-    embeddings = _get_embeddings()
-    if embeddings is None:
+    if _RAG_INDEX_DIR.exists() and not force_rebuild_when_stale:
+        _log_rag_rebuild_event(base_path, old, fingerprint, phase="skip_stale_index_reuse")
         return
+    _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_candidate")
 
-    texts: list[str] = []
-    metadatas: list[dict[str, Any]] = []
-    for p in _kb_files(base_path):
-        try:
-            content = p.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
-        for line_start, chunk in _split_into_chunks(content):
-            if _is_metadata_line(chunk[:120]):
+    with _RAG_REINDEX_LOCK:
+        fingerprint = _kb_fingerprint(base_path)
+        old = _RAG_STATE_PATH.read_text(encoding="utf-8").strip() if _RAG_STATE_PATH.exists() else ""
+        if old == fingerprint and _RAG_INDEX_DIR.exists():
+            _log_rag_rebuild_event(base_path, old, fingerprint, phase="skip_after_lock")
+            return
+        if _RAG_INDEX_DIR.exists() and not force_rebuild_when_stale:
+            _log_rag_rebuild_event(base_path, old, fingerprint, phase="skip_stale_index_reuse_after_lock")
+            return
+        _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_start")
+
+        embeddings = _get_embeddings()
+        if embeddings is None:
+            return
+
+        texts: list[str] = []
+        metadatas: list[dict[str, Any]] = []
+        for p in _kb_files(base_path):
+            try:
+                content = p.read_text(encoding="utf-8", errors="replace")
+            except Exception:
                 continue
-            texts.append(chunk)
-            metadatas.append(
-                {
-                    "path": str(p),
-                    "file": p.name,
-                    "line_num": line_start,
-                    "source": "rag",
-                }
-            )
-    if not texts:
-        return
-    vs = FAISS.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas)
-    vs.save_local(str(_RAG_INDEX_DIR))
-    _RAG_STATE_PATH.write_text(fingerprint, encoding="utf-8")
+            for line_start, chunk in _split_into_chunks(content):
+                if _is_metadata_line(chunk[:120]):
+                    continue
+                texts.append(chunk)
+                metadatas.append(
+                    {
+                        "path": str(p),
+                        "file": p.name,
+                        "line_num": line_start,
+                        "source": "rag",
+                    }
+                )
+        if not texts:
+            return
+        vs = FAISS.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas)
+        vs.save_local(str(_RAG_INDEX_DIR))
+        _RAG_STATE_PATH.write_text(fingerprint, encoding="utf-8")
+        _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_done")
 
 
 def _ensure_fts_index(base_path: Path):
@@ -338,7 +393,7 @@ def run_rag_search(query: str, base_path: Path, max_results: int = 20) -> list[d
     """
     if FAISS is None:
         return []
-    _ensure_rag_index(base_path)
+    _ensure_rag_index(base_path, force_rebuild_when_stale=False)
     if not _RAG_INDEX_DIR.exists():
         return []
     global _VECTORSTORE, _VECTORSTORE_FP
@@ -404,7 +459,7 @@ def reindex_kb(base_path: Path) -> dict:
     except Exception:
         pass
     _ensure_fts_index(base_path)
-    _ensure_rag_index(base_path)
+    _ensure_rag_index(base_path, force_rebuild_when_stale=True)
     return {"fts_db": str(_FTS_DB_PATH), "rag_dir": str(_RAG_INDEX_DIR)}
 
 
@@ -473,6 +528,17 @@ def index_files(paths: list[Path]) -> dict:
         tomb.discard(str(p))
     if len(tomb) != before:
         _save_tombstones(tomb)
+
+    # Keep rebuild state marker synchronized after incremental indexing.
+    # Without this, the next retrieval can incorrectly trigger full rebuild.
+    try:
+        kb_root = settings.kb_path_resolved
+        fp = _kb_fingerprint(kb_root)
+        _RAG_DIR.mkdir(parents=True, exist_ok=True)
+        _RAG_STATE_PATH.write_text(fp, encoding="utf-8")
+        _VECTORSTORE_FP = fp
+    except Exception:
+        pass
 
     return {"indexed_files": [str(p) for p in paths]}
 

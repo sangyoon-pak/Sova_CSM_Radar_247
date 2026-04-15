@@ -9,14 +9,14 @@ from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
 
-from src.agent.email_agent import run_agent
+from src.agent.email_agent import AgentRunCancelled, run_agent
 from src.agent.memory import compact_memory, refresh_learning_instructions
 from src.agent.probe_actions import (
     format_action_review_chat_prefix,
     format_probe_thread_reply,
     merge_csm_actions_metadata,
 )
-from src.agent.prompts import ACTION_REVIEW_SYSTEM_APPEND, PROBE_TRIGGER_MESSAGE
+from src.agent.prompts import get_action_review_append, get_probe_trigger_message
 from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
 from src.agent.tools.openrouter_web import run_web_search
@@ -24,6 +24,12 @@ from src.config import settings
 from src.runtime_config import (
     clear_gog_local_oauth_files,
     clear_runtime_configure_overrides,
+    persist_app_setting,
+    effective_guardrail_exclude_intent_keywords,
+    effective_guardrail_exclude_sender_domains,
+    effective_guardrail_include_intent_keywords,
+    effective_guardrail_include_sender_domains,
+    effective_guardrail_strictness,
     effective_llm_model_main,
     runtime_settings_snapshot,
 )
@@ -34,6 +40,16 @@ from fastapi import APIRouter
 router = APIRouter()
 
 _RUNTIME_SETTINGS_NO_CACHE = {"Cache-Control": "no-store, max-age=0"}
+
+
+def _guardrail_policy_metadata() -> dict[str, str]:
+    return {
+        "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
+        "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
+        "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
+        "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
+        "guardrail_strictness": effective_guardrail_strictness(),
+    }
 
 
 class RunAgentRequest(BaseModel):
@@ -108,13 +124,13 @@ def _tools_used_from_events(events: list[dict] | None) -> list[str]:
 @router.post("/agent/run", response_model=RunAgentResponse)
 def run_agent_endpoint(req: RunAgentRequest):
     try:
-        input_text = PROBE_TRIGGER_MESSAGE if req.probe else (req.input or "Hello, what can you do?")
+        input_text = get_probe_trigger_message() if req.probe else (req.input or "Hello, what can you do?")
         if req.web:
             res = run_web_search(query=input_text, model=effective_llm_model_main(), url=req.web_url)
             output = res.text or "No web search output."
         else:
             output = run_agent(input_text, probe=req.probe)
-        meta: dict = {"tools_used": [], "events": []}
+        meta: dict = {"tools_used": [], "events": [], **_guardrail_policy_metadata()}
         if req.probe:
             existing = database.latest_dashboard_actions_by_gmail_thread()
             meta = merge_csm_actions_metadata(output, meta, existing_by_thread=existing)
@@ -133,7 +149,7 @@ def run_agent_endpoint(req: RunAgentRequest):
 
 @router.post("/agent/run_async", response_model=RunAgentAsyncResponse)
 def run_agent_async_endpoint(req: RunAgentRequest):
-    input_text = PROBE_TRIGGER_MESSAGE if req.probe else (req.input or "Hello, what can you do?")
+    input_text = get_probe_trigger_message() if req.probe else (req.input or "Hello, what can you do?")
     trigger_type = "manual_probe" if req.probe else "manual"
     if req.web:
         trigger_type = trigger_type + "_web"
@@ -156,6 +172,7 @@ def run_agent_async_endpoint(req: RunAgentRequest):
                 "run_id": run_id,
                 "tools_used": _tools_used_from_events(events),
                 "events": events,
+                **_guardrail_policy_metadata(),
             }
             if req.probe:
                 existing = database.latest_dashboard_actions_by_gmail_thread()
@@ -169,6 +186,7 @@ def run_agent_async_endpoint(req: RunAgentRequest):
                 "run_id": run_id,
                 "tools_used": _tools_used_from_events(events),
                 "events": events,
+                **_guardrail_policy_metadata(),
             }
             database.log_interaction(
                 trigger_type,
@@ -189,6 +207,14 @@ def get_agent_run(run_id: str):
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return run
+
+
+@router.post("/agent/runs/{run_id}/cancel")
+def cancel_agent_run(run_id: str):
+    """Request cooperative cancellation of a running Workbench / thread agent run."""
+    if not run_state.request_cancel(run_id):
+        raise HTTPException(status_code=404, detail="Run not found or already finished")
+    return {"ok": True, "run_id": run_id}
 
 
 @router.get("/agent/profile")
@@ -227,11 +253,16 @@ class RuntimeSettingsPatch(BaseModel):
     gog_keyring_password: str | None = None
     xdg_config_home: str | None = None
     gog_credentials_path: str | None = None
-    scheduler_timezone: str | None = None
     guardrail_include_sender_domains: str | None = None
     guardrail_exclude_sender_domains: str | None = None
-    guardrail_exclude_subject_keywords: str | None = None
+    guardrail_include_intent_keywords: str | None = None
+    guardrail_exclude_intent_keywords: str | None = None
+    guardrail_team_guidance: str | None = None
     guardrail_strictness: str | None = None
+    prompt_email_agent_system_template: str | None = None
+    prompt_probe_user_message: str | None = None
+    prompt_probe_mode_append: str | None = None
+    prompt_action_review_append: str | None = None
 
 
 @router.get("/settings/runtime")
@@ -246,15 +277,20 @@ def get_runtime_settings():
 @router.patch("/settings/runtime")
 def patch_runtime_settings(req: RuntimeSettingsPatch):
     """Persist overrides in app_settings. Empty string clears that key (fall back to env + defaults)."""
+    from src.agent.prompt_seed import PROMPT_LIBRARY_KEYS, default_prompt_value
+
     raw = req.model_dump(exclude_unset=True)
     for key, val in raw.items():
         if val is None:
             continue
         s = str(val).strip()
         if not s:
-            database.delete_app_setting(key)
+            if key in PROMPT_LIBRARY_KEYS:
+                persist_app_setting(key, default_prompt_value(key))
+            else:
+                database.delete_app_setting(key)
         else:
-            database.set_app_setting(key, s)
+            persist_app_setting(key, s)
     return JSONResponse(
         content=runtime_settings_snapshot(),
         headers=_RUNTIME_SETTINGS_NO_CACHE,
@@ -319,7 +355,7 @@ def reindex_kb_documents():
                 paths.append(Path(p))
                 updated_doc_ids.append(int(d.get("id")))
 
-        result = doc_search.index_files(paths)
+        result = doc_search.reindex_kb(settings.kb_path_resolved)
 
         # Mark included docs as indexed (clear prior error marker).
         for d in docs:
@@ -757,13 +793,13 @@ def send_thread_message(req: ThreadSendRequest):
     )
 
     trigger_type = "thread_probe" if req.probe else "thread_message"
-    log_input = PROBE_TRIGGER_MESSAGE if req.probe else (text[:500] if text else "")
+    log_input = get_probe_trigger_message() if req.probe else (text[:500] if text else "")
     run_id = run_state.create_run(trigger_type=trigger_type, input_text=log_input[:500])
 
     th0 = database.get_thread_by_id(req.thread_id)
     md0 = (th0 or {}).get("metadata") or {}
     is_action_review = isinstance(md0, dict) and md0.get("kind") == "action_review"
-    system_append = ACTION_REVIEW_SYSTEM_APPEND if (not req.probe and is_action_review) else None
+    system_append = get_action_review_append() if (not req.probe and is_action_review) else None
     thread_history = None if req.probe else database.list_messages(req.thread_id, limit=200)
 
     def _worker():
@@ -776,6 +812,7 @@ def send_thread_message(req: ThreadSendRequest):
                 system_append=system_append,
                 conversation_messages=thread_history,
                 thread_is_action_review=is_action_review if not req.probe else False,
+                cancel_check=lambda: run_state.is_cancel_requested(run_id),
             )
             run_state.complete_run(run_id, output)
             run = run_state.get_run(run_id) or {}
@@ -788,6 +825,17 @@ def send_thread_message(req: ThreadSendRequest):
                 "user_message_id": user_msg.get("id"),
             }
             if req.probe:
+                # Effective Configure guardrails must be on this dict so merge_csm_actions_metadata
+                # applies exclude/include keywords (pick() only sees keys present on the dict).
+                metadata.update(
+                    {
+                        "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
+                        "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
+                        "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
+                        "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
+                        "guardrail_strictness": effective_guardrail_strictness(),
+                    }
+                )
                 existing = database.latest_dashboard_actions_by_gmail_thread()
                 metadata = merge_csm_actions_metadata(output, metadata, existing_by_thread=existing)
                 assistant_body = format_probe_thread_reply(output, metadata)
@@ -803,6 +851,32 @@ def send_thread_message(req: ThreadSendRequest):
                 trigger_type,
                 log_input[:500],
                 output,
+                "completed",
+                metadata=metadata,
+            )
+        except AgentRunCancelled:
+            run_state.mark_cancelled(run_id)
+            run = run_state.get_run(run_id) or {}
+            events = run.get("events") or []
+            metadata = {
+                "run_id": run_id,
+                "tools_used": _tools_used_from_events(events),
+                "events": events,
+                "thread_id": req.thread_id,
+                "user_message_id": user_msg.get("id"),
+                "cancelled": True,
+            }
+            assistant_body = "Stopped by user."
+            database.add_message(
+                thread_id=req.thread_id,
+                role="assistant",
+                content=assistant_body,
+                metadata=metadata,
+            )
+            database.log_interaction(
+                trigger_type,
+                log_input[:500],
+                assistant_body,
                 "completed",
                 metadata=metadata,
             )

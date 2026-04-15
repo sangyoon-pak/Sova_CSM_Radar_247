@@ -11,42 +11,20 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 from src.agent.tools.openrouter_web import run_web_search
+from src.agent.tools.search_agent import search_with_agent
 from src.runtime_config import effective_llm_model_main
 from src.db import database
 
 
-def _kb_context_insufficient(kb_text: str) -> bool:
-    t = (kb_text or "").strip()
-    if not t:
-        return True
-    if "No relevant documents found." in t:
-        return True
-    if "## Retrieved documents" not in t:
-        return True
-    return False
-
-
 def search_rc_web(query: str, max_domains: int = 5, max_results_per_domain: int = 5) -> str:
-    # Fundamental retrieval policy (global):
-    # 1) Search uploaded KB docs first
-    # 2) Run RC URL web search only when KB evidence is insufficient
-    from src.agent.tools.search_agent import search_with_agent
-
-    kb = search_with_agent(query=query, max_context_chars=14000)
-    if not _kb_context_insufficient(kb):
-        return (
-            "Used uploaded KB documents first (search_product_docs).\n"
-            "RC URL web fallback not needed because KB evidence is sufficient.\n\n"
-            f"{kb}"
-        )
+    # Always try uploaded KB first; web search is fallback only.
+    kb_result = (search_with_agent(query=query) or "").strip()
+    if kb_result and "No relevant documents found." not in kb_result:
+        return kb_result
 
     urls = database.list_rc_urls(limit=200, offset=0, enabled_only=True)
     if not urls:
-        return (
-            "KB retrieval was insufficient and no RC URLs are enabled in Knowledge > RC URLs.\n\n"
-            "[KB retrieval result]\n"
-            f"{kb}"
-        )
+        return kb_result or "No RC URLs are enabled."
 
     # Deduplicate by host; keep up to max_domains to control cost/latency.
     hosts: list[str] = []
@@ -87,20 +65,9 @@ def search_rc_web(query: str, max_domains: int = 5, max_results_per_domain: int 
                 citations.append(c)
 
     if not parts:
-        return (
-            "KB retrieval was insufficient, but RC URL web search returned no usable results.\n\n"
-            "[KB retrieval result]\n"
-            f"{kb}"
-        )
+        return "Web search returned no usable results from enabled RC URLs."
     cite_block = ""
     if citations:
         cite_block = "\n\n## Citations\n" + "\n".join(f"- {c}" for c in citations[:30])
-    web_block = "\n\n---\n\n".join(parts) + cite_block
-    return (
-        "[KB retrieval result]\n"
-        f"{kb}\n\n"
-        "---\n\n"
-        "[RC URL web retrieval fallback]\n"
-        f"{web_block}"
-    )
+    return "\n\n---\n\n".join(parts) + cite_block
 

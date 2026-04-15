@@ -1,126 +1,167 @@
-"""Parse structured CSM action items from probe agent output (JSON block)."""
+"""Parse structured CSM action items from probe agent output (JSON block).
+
+Intent for the action dashboard is **not** inferred with hard-coded keyword lists.
+
+1. **Configure (UI / runtime_config)** — operator rules: include/exclude sender domains and intent
+   keywords, plus strictness. These always apply first.
+2. **Probe LLM JSON** — `include_on_dashboard` and `category` are the model’s decisions; the
+   parser trusts them (subject to Configure). Tune the agent via prompts and UI memory, not
+   new Python regexes here.
+"""
 from __future__ import annotations
 
 import json
 import re
 from typing import Any
 
-from src.runtime_config import (
-    effective_guardrail_exclude_sender_domains,
-    effective_guardrail_exclude_subject_keywords,
-    effective_guardrail_include_sender_domains,
-    effective_guardrail_strictness,
-)
-
 _GMAIL_TID_RE = re.compile(r"^[a-zA-Z0-9_-]{6,128}$")
-_EMAIL_IN_ANGLE_RE = re.compile(r"<([^>]+@[^>]+)>")
 
 
 def _GMAIL_THREAD_ID_OK(s: str) -> bool:
     return bool(s and _GMAIL_TID_RE.match(s.strip()))
 
 
-_MEETING_ONLY_PAT = re.compile(
-    r"(?i)\b("
-    r"meeting|invite|invitation|intro(duction)?|kick[\s-]?off|sync|catch[\s-]?up|"
-    r"calendar|availability|schedule|scheduled|reschedul|zoom|meet|teams|webex|"
-    r"미팅|회의|소개\s*세션|소개\s*미팅|일정|캘린더|초대|줌|팀즈"
-    r")\b"
-)
-_TECH_OR_ACTION_PAT = re.compile(
-    r"(?i)\b("
-    r"api|sdk|error|bug|issue|troubleshoot|integration|config|payload|webhook|"
-    r"data|export|report|cid|user[_ -]?id|push|campaign|attribute|query|sql|"
-    r"장애|오류|이슈|설정|연동|리포트|데이터|문의|해결|원인|확인\s*요청"
-    r")\b"
-)
+def _include_dashboard_explicitly_no(a: dict[str, Any]) -> bool:
+    """JSON coercion only — not a business rule. Models sometimes emit string booleans."""
+    v = a.get("include_on_dashboard")
+    if v is False:
+        return True
+    if isinstance(v, str) and v.strip().lower() in ("false", "0", "no"):
+        return True
+    return False
 
-def _looks_non_actionable_meeting_invite(a: dict[str, Any]) -> bool:
+
+def _include_dashboard_explicitly_yes(a: dict[str, Any]) -> bool:
+    """JSON coercion only: read the LLM’s `include_on_dashboard` whether it is bool or string."""
+    v = a.get("include_on_dashboard")
+    if v is True:
+        return True
+    if isinstance(v, str) and v.strip().lower() in ("true", "1", "yes"):
+        return True
+    return False
+
+
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})")
+
+def _csv_set(v: Any) -> set[str]:
+    raw = str(v or "")
+    return {x.strip().lower() for x in raw.split(",") if x.strip()}
+
+
+def _guardrail_policy_for_merge(md: dict | None) -> dict[str, str]:
     """
-    Guardrail: skip cards that are only scheduling/intro invites with no product issue.
-    This runs server-side after model output to reduce noisy dashboard cards.
+    Resolve Configure guardrails for probe parsing. Interaction metadata often omits these
+    keys (e.g. thread probe), so we fall back to DB/env via runtime_config — otherwise
+    exclude keywords and strictness never apply.
     """
+    from src.runtime_config import (
+        effective_guardrail_exclude_intent_keywords,
+        effective_guardrail_exclude_sender_domains,
+        effective_guardrail_include_intent_keywords,
+        effective_guardrail_include_sender_domains,
+        effective_guardrail_strictness,
+    )
+
+    m = md or {}
+
+    def pick(key: str, fallback) -> str:
+        """If key is absent, use runtime/DB. If key is present (even empty string), use it."""
+        if key not in m:
+            return fallback()
+        v = m.get(key)
+        if v is None:
+            return fallback()
+        return str(v).strip()
+
+    return {
+        "include_sender_domains": pick("guardrail_include_sender_domains", effective_guardrail_include_sender_domains),
+        "exclude_sender_domains": pick("guardrail_exclude_sender_domains", effective_guardrail_exclude_sender_domains),
+        "include_intent_keywords": pick("guardrail_include_intent_keywords", effective_guardrail_include_intent_keywords),
+        "exclude_intent_keywords": pick("guardrail_exclude_intent_keywords", effective_guardrail_exclude_intent_keywords),
+        "strictness": pick("guardrail_strictness", effective_guardrail_strictness),
+    }
+
+
+def _guardrail_domain(email_from: str) -> str:
+    m = _EMAIL_RE.search(email_from or "")
+    return (m.group(1).strip().lower() if m else "")
+
+
+def _infer_relevance_outcome(a: dict[str, Any], policy: dict[str, str]) -> tuple[str, str]:
+    """
+    Decide whether a parsed action row belongs on the dashboard.
+
+    Order: Configure excludes → Configure includes (boost) → LLM `include_on_dashboard` →
+    LLM `category` → strictness default for ambiguous rows. No server-side “intent regex” lists.
+    """
+    from src.guardrail_semantic import parse_intent_phrases_blob, thread_text_matches_any_phrase
+
     text = " ".join(
         [
             str(a.get("title") or ""),
             str(a.get("brief") or ""),
             str(a.get("client_query_digest") or ""),
             str(a.get("thread_summary") or ""),
+            str(a.get("email_subject") or ""),
         ]
-    )
-    if not text.strip():
-        return False
-    has_meeting = bool(_MEETING_ONLY_PAT.search(text))
-    has_tech = bool(_TECH_OR_ACTION_PAT.search(text))
-    return has_meeting and not has_tech
+    ).strip()
+    if not text:
+        return "insufficient_context", "empty_text"
 
+    strictness = str(policy.get("strictness") or "balanced").strip().lower()
+    include_domains = _csv_set(policy.get("include_sender_domains"))
+    exclude_domains = _csv_set(policy.get("exclude_sender_domains"))
+    include_phrases = parse_intent_phrases_blob(str(policy.get("include_intent_keywords") or ""))
+    exclude_phrases = parse_intent_phrases_blob(str(policy.get("exclude_intent_keywords") or ""))
+    from_domain = _guardrail_domain(str(a.get("email_from") or ""))
 
-def _csv_tokens(v: str) -> list[str]:
-    return [x.strip().lower() for x in str(v or "").split(",") if x.strip()]
+    if from_domain and from_domain in exclude_domains:
+        return "internal_non_csm", f"excluded_domain:{from_domain}"
+    if exclude_phrases and thread_text_matches_any_phrase(exclude_phrases, a):
+        return "internal_non_csm", "excluded_intent_phrase"
 
+    # Operator “always surface” rules (Configure UI) — natural-language phrases + embeddings/fallback.
+    if include_phrases and thread_text_matches_any_phrase(include_phrases, a):
+        return "requires_csm_action", "user_include_intent_phrase"
+    if from_domain and include_domains and from_domain in include_domains:
+        return "requires_csm_action", "user_include_sender_domain"
 
-def _email_domain(v: str) -> str:
-    t = str(v or "").strip().lower()
-    if not t:
-        return ""
-    m = _EMAIL_IN_ANGLE_RE.search(t)
-    if m:
-        t = m.group(1).strip().lower()
-    if "@" not in t:
-        return ""
-    return t.split("@", 1)[1].strip()
+    # LLM-authored intent (probe JSON contract).
+    if _include_dashboard_explicitly_yes(a):
+        return "requires_csm_action", "model_include_dashboard"
 
+    cat = str(a.get("category") or "").strip().lower()
+    if cat in {"product_technical", "account"}:
+        return "requires_csm_action", f"model_category:{cat}"
 
-def _category_is_product_technical(cat: str) -> bool:
-    c = str(cat or "").strip().lower()
-    return c in {"product_technical", "product", "technical"}
-
-
-def _is_excluded_by_user_guardrails(a: dict[str, Any], *, strictness: str) -> bool:
-    include_domains = set(_csv_tokens(effective_guardrail_include_sender_domains()))
-    exclude_domains = set(_csv_tokens(effective_guardrail_exclude_sender_domains()))
-    exclude_subject_kw = _csv_tokens(effective_guardrail_exclude_subject_keywords())
-
-    sender = str(a.get("email_from") or a.get("from") or "").strip()
-    subject = str(a.get("email_subject") or a.get("subject") or "").strip().lower()
-    brief = str(a.get("brief") or "").strip().lower()
-    digest = str(a.get("client_query_digest") or a.get("client_ask_summary") or "").strip().lower()
-    domain = _email_domain(sender)
-
-    if include_domains and (not domain or domain not in include_domains):
-        return True
-    if domain and domain in exclude_domains:
-        return True
-    if exclude_subject_kw and any(kw in subject or kw in brief or kw in digest for kw in exclude_subject_kw):
-        return True
-
+    # Ambiguous: model did not set dashboard visibility or product/account category.
+    if strictness == "permissive":
+        return "requires_csm_action", "permissive_ambiguous_intent"
     if strictness == "strict":
-        # Strict mode suppresses low-signal cards with no concrete next step/evidence.
-        refs = a.get("references") or []
-        steps = a.get("next_steps") or []
-        has_refs = isinstance(refs, list) and len(refs) > 0
-        has_steps = isinstance(steps, list) and len(steps) > 0
-        text = " ".join([subject, brief, digest])
-        has_action_signal = bool(_TECH_OR_ACTION_PAT.search(text))
-        if not (has_refs or has_steps or has_action_signal):
-            return True
-
-    return False
+        return "informational_only", "strict_ambiguous_intent"
+    return "informational_only", "model_intent_not_dashboard"
 
 
-def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
+def _normalize_actions(
+    raw: Any, policy: dict[str, str] | None = None
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """
+    Returns (kept_actions, dropped_events) for diagnostics.
+    dropped_events entries: index, title_snippet, stage, relevance_outcome?, relevance_reason?
+    """
     if not isinstance(raw, list):
-        return []
+        return [], []
     out: list[dict[str, Any]] = []
-    strictness = effective_guardrail_strictness()
+    dropped: list[dict[str, Any]] = []
+    p = policy or {}
     for i, a in enumerate(raw):
         if not isinstance(a, dict):
             continue
-        if a.get("include_on_dashboard") is False:
-            continue
-        if strictness != "permissive" and _looks_non_actionable_meeting_invite(a):
-            continue
-        if _is_excluded_by_user_guardrails(a, strictness=strictness):
+        title_hint = str(a.get("title") or "")[:120]
+        if _include_dashboard_explicitly_no(a):
+            dropped.append(
+                {"index": i, "title": title_hint, "stage": "include_on_dashboard_false"}
+            )
             continue
         steps = a.get("next_steps") or []
         if not isinstance(steps, list):
@@ -182,10 +223,38 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
         st = str(a.get("status") or "").strip().lower()
         if st not in {"not_started", "in_progress", "completed"}:
             st = "not_started"
-        category = str(a.get("category") or "general")[:120]
-        # Reliability gate: product/technical cards must have retrieval evidence.
-        if strictness != "permissive" and _category_is_product_technical(category) and not refs:
+        relevance_outcome, relevance_reason = _infer_relevance_outcome(a, p)
+        if relevance_outcome == "insufficient_context":
+            dropped.append(
+                {
+                    "index": i,
+                    "title": title_hint,
+                    "stage": "insufficient_text",
+                    "relevance_outcome": relevance_outcome,
+                    "relevance_reason": relevance_reason,
+                }
+            )
             continue
+        if relevance_outcome in {"internal_non_csm", "informational_only"} and p.get("strictness", "balanced") != "permissive":
+            dropped.append(
+                {
+                    "index": i,
+                    "title": title_hint,
+                    "stage": "relevance_gate",
+                    "relevance_outcome": relevance_outcome,
+                    "relevance_reason": relevance_reason,
+                }
+            )
+            continue
+        thread_title = str(a.get("thread_title") or e_subj or a.get("title") or "").strip()[:400]
+        customer_identifier = str(a.get("customer_identifier") or "").strip()[:200]
+        customer_domain = _guardrail_domain(e_from)[:200]
+        priority = str(a.get("priority") or "medium").strip().lower()
+        if priority not in {"low", "medium", "high", "urgent"}:
+            priority = "medium"
+        confidence = str(a.get("confidence_label") or "medium").strip().lower()
+        if confidence not in {"high", "medium", "low"}:
+            confidence = "medium"
         out.append(
             {
                 "title": str(a.get("title") or f"Action {i + 1}")[:240],
@@ -200,12 +269,34 @@ def _normalize_actions(raw: Any) -> list[dict[str, Any]]:
                 "email_from": e_from,
                 "email_subject": e_subj,
                 "status": st,
-                "category": category,
+                "category": str(a.get("category") or "general")[:120],
+                "thread_title": thread_title,
+                "customer_identifier": customer_identifier,
+                "customer_domain": customer_domain,
+                "priority": priority,
+                "confidence_label": confidence,
+                "owner": str(a.get("owner") or "")[:160],
+                "feedback_notes": str(a.get("feedback_notes") or "")[:2000],
+                "source_messages": a.get("source_messages") if isinstance(a.get("source_messages"), list) else [],
+                "retrieval_evidence": a.get("retrieval_evidence") if isinstance(a.get("retrieval_evidence"), list) else [],
+                "relevance_outcome": relevance_outcome,
+                "relevance_reason": relevance_reason,
                 "next_steps": [str(x)[:800] for x in steps[:15]],
                 "references": [str(x)[:800] for x in refs[:12]],
             }
         )
-    return out
+    return out, dropped
+
+
+def _decision_log_summary(actions: list[dict[str, Any]]) -> dict[str, Any]:
+    by_outcome: dict[str, int] = {}
+    by_reason: dict[str, int] = {}
+    for a in actions:
+        out = str(a.get("relevance_outcome") or "").strip() or "unknown"
+        why = str(a.get("relevance_reason") or "").strip() or "unknown"
+        by_outcome[out] = by_outcome.get(out, 0) + 1
+        by_reason[why] = by_reason.get(why, 0) + 1
+    return {"total_actions": len(actions), "outcomes": by_outcome, "reasons": by_reason}
 
 
 def _action_fingerprint(a: dict[str, Any]) -> str:
@@ -231,14 +322,21 @@ def _dedupe_key(a: dict[str, Any]) -> str:
     return ""
 
 
-def parse_probe_dashboard_json(text: str) -> dict[str, Any]:
+def parse_probe_dashboard_json(text: str, *, policy: dict[str, str] | None = None) -> dict[str, Any]:
     """
     Extract dashboard JSON from model output.
     Looks for ```json ... ``` blocks (last valid wins) or a trailing JSON object with "actions".
-    Returns keys: actions (list), skipped_note (str|None), parse_error (str|None)
+    Returns keys: actions (list), skipped_note (str|None), parse_error (str|None),
+    normalization_dropped (list), raw_action_count (int).
     """
     if not text or not str(text).strip():
-        return {"actions": [], "skipped_note": None, "parse_error": "empty_output"}
+        return {
+            "actions": [],
+            "skipped_note": None,
+            "parse_error": "empty_output",
+            "normalization_dropped": [],
+            "raw_action_count": 0,
+        }
 
     t = str(text)
     # Fenced blocks, try from last to first
@@ -247,10 +345,14 @@ def parse_probe_dashboard_json(text: str) -> dict[str, Any]:
         try:
             data = json.loads(chunk)
             if isinstance(data, dict) and isinstance(data.get("actions"), list):
+                raw_list = data.get("actions") or []
+                kept, norm_dropped = _normalize_actions(raw_list, policy=policy)
                 return {
-                    "actions": _normalize_actions(data.get("actions")),
+                    "actions": kept,
                     "skipped_note": (str(data.get("skipped_note")).strip()[:2000] if data.get("skipped_note") else None),
                     "parse_error": None,
+                    "normalization_dropped": norm_dropped,
+                    "raw_action_count": len(raw_list),
                 }
         except json.JSONDecodeError:
             continue
@@ -274,15 +376,25 @@ def parse_probe_dashboard_json(text: str) -> dict[str, Any]:
             try:
                 data = json.loads(t[pos:end])
                 if isinstance(data, dict) and isinstance(data.get("actions"), list):
+                    raw_list = data.get("actions") or []
+                    kept, norm_dropped = _normalize_actions(raw_list, policy=policy)
                     return {
-                        "actions": _normalize_actions(data.get("actions")),
+                        "actions": kept,
                         "skipped_note": (str(data.get("skipped_note")).strip()[:2000] if data.get("skipped_note") else None),
                         "parse_error": None,
+                        "normalization_dropped": norm_dropped,
+                        "raw_action_count": len(raw_list),
                     }
             except json.JSONDecodeError:
                 continue
 
-    return {"actions": [], "skipped_note": None, "parse_error": "no_valid_json_actions_block"}
+    return {
+        "actions": [],
+        "skipped_note": None,
+        "parse_error": "no_valid_json_actions_block",
+        "normalization_dropped": [],
+        "raw_action_count": 0,
+    }
 
 
 def format_action_review_chat_prefix(
@@ -358,7 +470,9 @@ def merge_csm_actions_metadata(
 ) -> dict:
     """Attach csm_actions + skipped_note + parse_error to interaction metadata."""
     md = dict(base_metadata or {})
-    parsed = parse_probe_dashboard_json(output_text)
+    policy = _guardrail_policy_for_merge(md)
+    md["csm_guardrail_policy_resolved"] = policy
+    parsed = parse_probe_dashboard_json(output_text, policy=policy)
     actions = list(parsed["actions"] or [])
     by_thread = existing_by_thread or {}
     merged: list[dict[str, Any]] = []
@@ -384,6 +498,7 @@ def merge_csm_actions_metadata(
             a["status"] = "not_started"
         merged.append(a)
     md["csm_actions"] = merged
+    md["csm_decision_summary"] = _decision_log_summary(merged)
     if not merged and skipped_unchanged > 0 and not parsed.get("skipped_note"):
         md["csm_skipped_note"] = (
             f"No meaningful updates across previously tracked threads ({skipped_unchanged} unchanged)."
@@ -392,6 +507,13 @@ def merge_csm_actions_metadata(
         md["csm_skipped_note"] = parsed["skipped_note"]
     if parsed.get("parse_error"):
         md["csm_actions_parse_error"] = parsed["parse_error"]
+    md["csm_probe_diagnostics"] = {
+        "raw_action_count": int(parsed.get("raw_action_count") or 0),
+        "kept_after_normalization": len(actions),
+        "kept_after_merge": len(merged),
+        "normalization_dropped": list(parsed.get("normalization_dropped") or []),
+        "dedupe_skipped_unchanged": skipped_unchanged,
+    }
     return md
 
 

@@ -73,23 +73,18 @@ class Settings(BaseSettings):
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")
 
-    # Guardrails (optional; can be overridden in Configure)
-    guardrail_include_sender_domains: str = Field(
-        "",
-        validation_alias="GUARDRAIL_INCLUDE_SENDER_DOMAINS",
-    )
-    guardrail_exclude_sender_domains: str = Field(
-        "",
-        validation_alias="GUARDRAIL_EXCLUDE_SENDER_DOMAINS",
-    )
-    guardrail_exclude_subject_keywords: str = Field(
-        "",
-        validation_alias="GUARDRAIL_EXCLUDE_SUBJECT_KEYWORDS",
-    )
-    guardrail_strictness: str = Field(
-        "balanced",
-        validation_alias="GUARDRAIL_STRICTNESS",
-    )
+    # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
+    configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")
+    # Cosine similarity threshold for NL phrase vs thread text (when embeddings available).
+    guardrail_nl_similarity_threshold: float = Field(0.66, validation_alias="GUARDRAIL_NL_SIMILARITY_THRESHOLD")
+
+    # Guardrails
+    guardrail_include_sender_domains: str = Field("", validation_alias="GUARDRAIL_INCLUDE_SENDER_DOMAINS")
+    guardrail_exclude_sender_domains: str = Field("", validation_alias="GUARDRAIL_EXCLUDE_SENDER_DOMAINS")
+    guardrail_include_intent_keywords: str = Field("", validation_alias="GUARDRAIL_INCLUDE_INTENT_KEYWORDS")
+    guardrail_exclude_intent_keywords: str = Field("", validation_alias="GUARDRAIL_EXCLUDE_INTENT_KEYWORDS")
+    guardrail_team_guidance: str = Field("", validation_alias="GUARDRAIL_TEAM_GUIDANCE")
+    guardrail_strictness: str = Field("balanced", validation_alias="GUARDRAIL_STRICTNESS")
 
     # Database
     database_path: str = Field("./data/agent.db", validation_alias="DATABASE_PATH")

@@ -8,13 +8,20 @@ from __future__ import annotations
 
 import re
 import shutil
-from datetime import datetime
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from src.config import settings
 from src.db import database
+
+# Stored ciphertext in DB when CONFIGURE_ENCRYPTION_KEY is set; decrypted for API + policy.
+GUARDRAIL_ENCRYPTED_KEYS: frozenset[str] = frozenset(
+    {
+        "guardrail_include_intent_keywords",
+        "guardrail_exclude_intent_keywords",
+        "guardrail_team_guidance",
+    }
+)
 
 _SENSITIVE_KEY = re.compile(r"(?i)(key|secret|password|token|credential)")
 
@@ -46,11 +53,16 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "gog_keyring_password",
     "xdg_config_home",
     "gog_credentials_path",
-    "scheduler_timezone",
     "guardrail_include_sender_domains",
     "guardrail_exclude_sender_domains",
-    "guardrail_exclude_subject_keywords",
+    "guardrail_include_intent_keywords",
+    "guardrail_exclude_intent_keywords",
+    "guardrail_team_guidance",
     "guardrail_strictness",
+    "prompt_email_agent_system_template",
+    "prompt_probe_user_message",
+    "prompt_probe_mode_append",
+    "prompt_action_review_append",
 )
 
 
@@ -129,6 +141,11 @@ def clear_runtime_configure_overrides() -> None:
     """Remove all Configure-saved values from app_settings (effective config falls back to env + defaults)."""
     for key in RUNTIME_CONFIGURE_KEYS:
         database.delete_app_setting(key)
+    from src.agent.prompt_seed import LEGACY_PROMPT_KEYS, seed_prompt_library_if_needed
+
+    for key in LEGACY_PROMPT_KEYS:
+        database.delete_app_setting(key)
+    seed_prompt_library_if_needed()
 
 
 def _db_str(key: str) -> str | None:
@@ -138,6 +155,27 @@ def _db_str(key: str) -> str | None:
     if v is None:
         return None
     return str(v)
+
+
+def _db_str_decrypted(key: str) -> str | None:
+    raw = _db_str(key)
+    if raw is None:
+        return None
+    if key in GUARDRAIL_ENCRYPTED_KEYS:
+        from src.configure_crypto import decrypt_configure_value
+
+        return decrypt_configure_value(raw)
+    return raw
+
+
+def persist_app_setting(key: str, value: str) -> None:
+    """Persist a Configure value; encrypts guardrail text fields when encryption is enabled."""
+    v = value
+    if key in GUARDRAIL_ENCRYPTED_KEYS:
+        from src.configure_crypto import encrypt_configure_value
+
+        v = encrypt_configure_value(value)
+    database.set_app_setting(key, v)
 
 
 def effective_llm_model() -> str:
@@ -294,12 +332,15 @@ def effective_gog_credentials_path() -> str:
     return (settings.gog_credentials_path or "").strip()
 
 
-def effective_scheduler_timezone() -> str:
-    """IANA timezone for cron scheduler (Configure DB overrides env)."""
-    v = _db_str("scheduler_timezone")
-    if v is not None and v.strip():
-        return v.strip()
-    return (getattr(settings, "scheduler_timezone", None) or "Asia/Seoul").strip()
+def gog_credentials_path_resolved() -> Path | None:
+    p_raw = effective_gog_credentials_path().strip()
+    if not p_raw:
+        return None
+    p = Path(p_raw)
+    if not p.is_absolute():
+        root = Path(__file__).resolve().parent.parent
+        p = (root / p).resolve()
+    return p if p.exists() else None
 
 
 def effective_guardrail_include_sender_domains() -> str:
@@ -316,45 +357,74 @@ def effective_guardrail_exclude_sender_domains() -> str:
     return (getattr(settings, "guardrail_exclude_sender_domains", None) or "").strip()
 
 
-def effective_guardrail_exclude_subject_keywords() -> str:
-    v = _db_str("guardrail_exclude_subject_keywords")
+def effective_guardrail_include_intent_keywords() -> str:
+    v = _db_str_decrypted("guardrail_include_intent_keywords")
     if v is not None:
         return v.strip()
-    return (getattr(settings, "guardrail_exclude_subject_keywords", None) or "").strip()
+    return (getattr(settings, "guardrail_include_intent_keywords", None) or "").strip()
+
+
+def effective_guardrail_exclude_intent_keywords() -> str:
+    v = _db_str_decrypted("guardrail_exclude_intent_keywords")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_exclude_intent_keywords", None) or "").strip()
+
+
+def effective_guardrail_team_guidance() -> str:
+    v = _db_str_decrypted("guardrail_team_guidance")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_team_guidance", None) or "").strip()
 
 
 def effective_guardrail_strictness() -> str:
     v = _db_str("guardrail_strictness")
-    raw = (v if v is not None else getattr(settings, "guardrail_strictness", None) or "balanced").strip().lower()
-    if raw in {"strict", "balanced", "permissive"}:
-        return raw
-    return "balanced"
+    raw = ""
+    if v is not None:
+        raw = v.strip().lower()
+    else:
+        raw = (getattr(settings, "guardrail_strictness", None) or "balanced").strip().lower()
+    if raw not in {"strict", "balanced", "permissive"}:
+        return "balanced"
+    return raw
 
 
-def scheduler_timezone_offset_hours() -> int | None:
-    """Whole-hour UTC offset of the effective scheduler zone (for Configure GMT dropdown)."""
-    tz_name = effective_scheduler_timezone()
-    if not tz_name:
-        return 0
-    try:
-        z = ZoneInfo(tz_name)
-    except Exception:
-        return None
-    off = datetime.now(z).utcoffset()
-    if off is None:
-        return 0
-    return int(off.total_seconds() // 3600)
+def effective_prompt_email_agent_system_template() -> str:
+    """Full system prompt template with {vendor_name}, {role_title}, {product_context}, {learning_section}."""
+    v = _db_str("prompt_email_agent_system_template")
+    if v is not None and v.strip():
+        return v
+    from src.agent.prompts import EMAIL_AGENT_SYSTEM_TEMPLATE
+
+    return EMAIL_AGENT_SYSTEM_TEMPLATE
 
 
-def gog_credentials_path_resolved() -> Path | None:
-    p_raw = effective_gog_credentials_path().strip()
-    if not p_raw:
-        return None
-    p = Path(p_raw)
-    if not p.is_absolute():
-        root = Path(__file__).resolve().parent.parent
-        p = (root / p).resolve()
-    return p if p.exists() else None
+def effective_prompt_probe_user_message() -> str:
+    v = _db_str("prompt_probe_user_message")
+    if v is not None and v.strip():
+        return v.strip()
+    from src.agent.prompts import PROBE_TRIGGER_MESSAGE
+
+    return PROBE_TRIGGER_MESSAGE
+
+
+def effective_prompt_probe_mode_append() -> str:
+    v = _db_str("prompt_probe_mode_append")
+    if v is not None and v.strip():
+        return v.strip()
+    from src.agent.prompts import PROBE_MODE_SYSTEM_APPEND
+
+    return PROBE_MODE_SYSTEM_APPEND.strip()
+
+
+def effective_prompt_action_review_append() -> str:
+    v = _db_str("prompt_action_review_append")
+    if v is not None and v.strip():
+        return v.strip()
+    from src.agent.prompts import ACTION_REVIEW_SYSTEM_APPEND
+
+    return ACTION_REVIEW_SYSTEM_APPEND.strip()
 
 
 def _mask_env_row(key: str, val: str) -> str:
@@ -391,7 +461,13 @@ def configure_saved_masked() -> dict[str, str]:
         if not database.app_setting_is_set(k):
             continue
         v = database.get_app_setting(k, "") or ""
-        out[k] = _mask_env_row(k, str(v))
+        s = str(v)
+        if k in GUARDRAIL_ENCRYPTED_KEYS and s.startswith("enc:v1:"):
+            out[k] = "••• (encrypted at rest — forms above show decrypted text)"
+        elif k.startswith("prompt_") and len(s) > 0:
+            out[k] = f"••• ({len(s)} chars — see Prompt overrides above)"
+        else:
+            out[k] = _mask_env_row(k, s)
     return out
 
 
@@ -480,8 +556,26 @@ def runtime_settings_snapshot() -> dict:
         (database.get_app_setting("gog_keyring_password") or "").strip()
     )
     oai_k = getattr(settings, "openai_api_key", None) or ""
+    from src.agent.prompts import build_prompt_effective_by_mode
+    from src.configure_crypto import encryption_enabled
+
+    # Preview must never take down the whole snapshot: a bad template (missing `{placeholder}`)
+    # would otherwise 500 GET /settings/runtime and leave Configure fields empty.
+    try:
+        prompt_effective_by_mode = build_prompt_effective_by_mode()
+    except Exception as e:
+        prompt_effective_by_mode = {
+            "assemble_order": (
+                "Preview failed — usually a `{placeholder}` mismatch in the main system template. "
+                "Keep {vendor_name}, {product_context}, {role_title}, {learning_section}."
+            ),
+            "modes": [],
+            "preview_error": f"{type(e).__name__}: {e}",
+        }
+
     return {
-        "scheduler_timezone_offset_hours": scheduler_timezone_offset_hours(),
+        "configure_encryption_enabled": encryption_enabled(),
+        "prompt_effective_by_mode": prompt_effective_by_mode,
         "effective": {
             "llm_provider_preset": effective_llm_provider_preset(),
             "llm_model": effective_llm_model(),
@@ -497,11 +591,16 @@ def runtime_settings_snapshot() -> dict:
             "gog_keyring_backend": effective_gog_keyring_backend(),
             "xdg_config_home": effective_xdg_config_home(),
             "gog_credentials_path": effective_gog_credentials_path(),
-            "scheduler_timezone": effective_scheduler_timezone(),
             "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
             "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
-            "guardrail_exclude_subject_keywords": effective_guardrail_exclude_subject_keywords(),
+            "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
+            "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
+            "guardrail_team_guidance": effective_guardrail_team_guidance(),
             "guardrail_strictness": effective_guardrail_strictness(),
+            "prompt_email_agent_system_template": effective_prompt_email_agent_system_template(),
+            "prompt_probe_user_message": effective_prompt_probe_user_message(),
+            "prompt_probe_mode_append": effective_prompt_probe_mode_append(),
+            "prompt_action_review_append": effective_prompt_action_review_append(),
         },
         "stored_in_database": {k: stored[k] for k in keys_db},
         "openrouter_api_key_set_in_database": or_key_db,

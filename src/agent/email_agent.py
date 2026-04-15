@@ -2,17 +2,57 @@
 import os
 import re
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
-from src.runtime_config import effective_llm_model_main, effective_llm_model_search_json
-from src.agent.prompts import PROBE_MODE_SYSTEM_APPEND, render_email_agent_system
+from src.runtime_config import (
+    effective_guardrail_team_guidance,
+    effective_llm_model_main,
+    effective_llm_model_search_json,
+)
+from src.agent.prompts import (
+    get_probe_mode_system_append,
+    render_email_agent_system,
+)
 from src.db import database
+
+
+class AgentRunCancelled(Exception):
+    """Raised when the user requests stop (cooperative cancellation between LLM/tool steps)."""
+
+
+class _CancelPatrolCallback(BaseCallbackHandler):
+    """Raises AgentRunCancelled when cancel_check() returns True (see run_state.request_cancel)."""
+
+    # LangChain swallows callback exceptions unless this is True (see callbacks/manager.handle_event).
+    raise_error = True
+
+    def __init__(self, cancel_check: Callable[[], bool]):
+        self._cancel_check = cancel_check
+
+    def _maybe_cancel(self) -> None:
+        try:
+            if self._cancel_check():
+                raise AgentRunCancelled()
+        except AgentRunCancelled:
+            raise
+        except Exception:
+            pass
+
+    def on_chain_start(self, serialized, inputs, **kwargs):  # noqa: ARG002
+        self._maybe_cancel()
+
+    def on_chat_model_start(self, serialized, messages, **kwargs):  # noqa: ARG002
+        self._maybe_cancel()
+
+    def on_tool_start(self, serialized, input_str, **kwargs):  # noqa: ARG002
+        self._maybe_cancel()
 
 
 def _ensure_langsmith_env():
@@ -73,43 +113,6 @@ def _route_user_request(text: str) -> str:
     except Exception:
         pass
     return "agent_run"
-
-
-_ACTION_REVIEW_DOC_HINT_PAT = re.compile(
-    r"(?i)\b(rc|docs?|document|reference|kb|retrieve|retrieval|search|api|integration|campaign|sdk|webhook)\b|"
-    r"(문서|검색|찾아|근거|레퍼런스|참고|api|연동|기술|문의|캠페인)"
-)
-
-
-def _latest_action_review_snapshot_text(conversation_messages: list[dict] | None) -> str:
-    if not conversation_messages:
-        return ""
-    for row in reversed(conversation_messages):
-        if (row.get("role") or "").strip().lower() != "system":
-            continue
-        c = str(row.get("content") or "")
-        if c.lstrip().startswith("[Action review"):
-            return c
-    return ""
-
-
-def _looks_like_action_review_product_turn(*, user_text: str, snapshot_text: str) -> bool:
-    # Product/technical follow-up often omits "search" wording.
-    # Use both current user turn and action snapshot to detect likely product context.
-    combo = f"{user_text}\n{snapshot_text}"
-    return bool(_ACTION_REVIEW_DOC_HINT_PAT.search(combo))
-
-
-def _kb_context_insufficient(kb_text: str) -> bool:
-    t = (kb_text or "").strip()
-    if not t:
-        return True
-    if "No relevant documents found." in t:
-        return True
-    # search_with_agent appends a "## Retrieved documents" section when there are usable sources.
-    if "## Retrieved documents" not in t:
-        return True
-    return False
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
 
@@ -213,12 +216,19 @@ def _draft_needs_citations(draft: str) -> bool:
     return False
 
 
-def _add_citations_pass(*, draft: str, source_tags: list[str]) -> str:
+def _add_citations_pass(
+    *,
+    draft: str,
+    source_tags: list[str],
+    cancel_check: Callable[[], bool] | None = None,
+) -> str:
     """
     Second-pass enforcement: append citations to each numbered item.
     """
     if not draft or not source_tags:
         return draft
+    if cancel_check and cancel_check():
+        raise AgentRunCancelled()
     llm = get_chat_llm(model=effective_llm_model_main(), temperature=0.0)
     tags = "\n".join(f"- {t}" for t in source_tags)
     prompt = (
@@ -237,6 +247,8 @@ def _add_citations_pass(*, draft: str, source_tags: list[str]) -> str:
         "\n"
         "Return the updated draft only."
     )
+    if cancel_check and cancel_check():
+        raise AgentRunCancelled()
     resp = llm.invoke([HumanMessage(content=prompt)])
     out = (resp.content or "").strip()
     return out or draft
@@ -284,8 +296,11 @@ def create_agent_executor(
         role_title=profile["role_title"],
         learning_instructions=learning,
     )
+    team_g = (effective_guardrail_team_guidance() or "").strip()
+    if team_g:
+        system_prompt = system_prompt.rstrip() + "\n\n## Team guidance (Configure)\n" + team_g
     if probe:
-        system_prompt = system_prompt.rstrip() + "\n\n" + PROBE_MODE_SYSTEM_APPEND.strip()
+        system_prompt = system_prompt.rstrip() + "\n\n" + get_probe_mode_system_append()
     extra = (system_append or "").strip()
     if extra:
         system_prompt = system_prompt.rstrip() + "\n\n" + extra
@@ -300,6 +315,7 @@ def run_agent(
     system_append: str | None = None,
     conversation_messages: list[dict] | None = None,
     thread_is_action_review: bool = False,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> str:
     _ensure_langsmith_env()
 
@@ -322,58 +338,32 @@ def run_agent(
         from src.agent.tools.gmail_tool import fetch_inbox_emails as _fetch
         # Emit trace events (tool_start/tool_end) so the UI Trace inspector stays useful.
         cbs = list(callbacks) if callbacks else []
+        if cancel_check:
+            cbs.append(_CancelPatrolCallback(cancel_check))
         for cb in cbs:
             try:
                 cb.on_tool_start({"name": "fetch_inbox_emails"}, f"max_results=5 search=default")  # type: ignore[attr-defined]
+            except AgentRunCancelled:
+                raise
             except Exception:
                 pass
+        if cancel_check and cancel_check():
+            raise AgentRunCancelled()
         out = _fetch(max_results=5)
         for cb in cbs:
             try:
                 cb.on_tool_end(out)  # type: ignore[attr-defined]
+            except AgentRunCancelled:
+                raise
             except Exception:
                 pass
         return out
 
-    # Strong safety net for action-review UX:
-    # for product-related action threads, prefetch retrieval context every turn with priority:
-    #   1) uploaded KB docs (search_product_docs path)
-    #   2) RC URL web search only when KB evidence is insufficient
-    snapshot_text = _latest_action_review_snapshot_text(conversation_messages)
-    if (
-        _action_review
-        and not probe
-        and _looks_like_action_review_product_turn(user_text=route_text, snapshot_text=snapshot_text)
-    ):
-        try:
-            from src.agent.tools.search_agent import search_with_agent as _kb_lookup
-            from src.agent.tools.rc_web_search import search_rc_web as _rc_lookup
-            q = route_text.strip()
-            if snapshot_text:
-                q = f"{q}\n\nAction snapshot:\n{snapshot_text[:5000]}"
-            kb_prefetched = _kb_lookup(query=q, max_context_chars=14000)
-            prefetched = kb_prefetched
-            if _kb_context_insufficient(kb_prefetched):
-                rc_prefetched = _rc_lookup(query=q)
-                prefetched = (
-                    "[KB retrieval result]\n"
-                    f"{kb_prefetched}\n\n"
-                    "---\n\n"
-                    "[RC URL web retrieval fallback]\n"
-                    f"{rc_prefetched}"
-                )
-            extra = (
-                "\n\n[Auto-prefetched retrieval context for this action-review turn]\n"
-                "Use this as evidence; if insufficient, you may call tools again.\n\n"
-                f"{prefetched}"
-            )
-            system_append = ((system_append or "").rstrip() + extra).strip()
-        except Exception:
-            # If prefetch fails, continue normal agent flow.
-            pass
-
     agent = create_agent_executor(probe=probe, system_append=system_append)
-    config = {"callbacks": list(callbacks)} if callbacks else None
+    cbs = list(callbacks) if callbacks else []
+    if cancel_check:
+        cbs.append(_CancelPatrolCallback(cancel_check))
+    config = {"callbacks": cbs} if cbs else None
     if conversation_messages is not None and not probe:
         lc_messages = db_conversation_to_langchain(conversation_messages)
         if not lc_messages:
@@ -381,7 +371,15 @@ def run_agent(
         invoke_messages = lc_messages
     else:
         invoke_messages = [HumanMessage(content=input_text)]
-    result = agent.invoke({"messages": invoke_messages}, config=config)
+    try:
+        result = agent.invoke({"messages": invoke_messages}, config=config)
+    except Exception as e:
+        ex: BaseException | None = e
+        while ex is not None:
+            if isinstance(ex, AgentRunCancelled):
+                raise ex
+            ex = ex.__cause__
+        raise
     messages = result.get("messages", [])
     draft = None
     for m in reversed(messages):
@@ -400,5 +398,7 @@ def run_agent(
     if _draft_needs_citations(draft):
         source_tags = _extract_source_tags_from_messages(messages)
         if source_tags:
-            draft = _add_citations_pass(draft=draft, source_tags=source_tags)
+            draft = _add_citations_pass(
+                draft=draft, source_tags=source_tags, cancel_check=cancel_check
+            )
     return draft
