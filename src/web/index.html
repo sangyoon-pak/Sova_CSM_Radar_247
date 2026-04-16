@@ -595,14 +595,88 @@
     ul.landing-next-ul {
       margin: 0.35rem 0 0.25rem 0;
       padding-left: 1.25rem;
-      max-width: 48rem;
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
       font-size: 0.88rem;
       line-height: 1.5;
       color: var(--text);
     }
     ul.landing-next-ul li { margin-bottom: 0.45rem; }
+    /* Deeper inset + spacing vs. lead copy (only in Next steps card) */
+    .landing-next-steps .landing-next-ul {
+      margin-top: 0.5rem;
+      margin-bottom: 0.35rem;
+      padding-left: 1.65rem;
+      list-style-position: outside;
+    }
+    .landing-next-steps .landing-next-ul li {
+      padding-left: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
     ul.landing-next-ul code { font-size: 0.84em; }
     .landing-docs-line a { font-weight: 600; }
+    /* Landing: full-width “Next steps” card (matches container width; inner blocks use full row) */
+    .landing-panel.landing-next-steps {
+      width: 100%;
+      max-width: none;
+      margin-bottom: 0.75rem;
+      padding: 0;
+      overflow: hidden;
+      background: var(--surface-raised);
+    }
+    .landing-next-steps > summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin: 0;
+      padding: 0.7rem 1.35rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: color-mix(in srgb, var(--accent) 9%, var(--surface-raised));
+      border-bottom: 1px solid transparent;
+    }
+    .landing-next-steps[open] > summary {
+      border-bottom-color: var(--border-subtle);
+    }
+    .landing-next-steps > summary:focus { outline: none; }
+    .landing-next-steps > summary:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      outline-offset: -2px;
+    }
+    .landing-next-steps > :not(summary) {
+      max-width: none;
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: 1.35rem;
+      padding-right: 1.35rem;
+    }
+    .landing-next-steps > :not(summary):first-of-type {
+      padding-top: 1rem;
+    }
+    .landing-next-steps > :not(summary):last-child {
+      padding-bottom: 1.15rem;
+    }
+    .landing-next-steps .landing-disclaimer {
+      width: 100%;
+      max-width: none;
+      margin: 0.75rem 0 0.35rem;
+      padding: 0.85rem 1rem;
+    }
+    .landing-next-steps .landing-cta {
+      margin-top: 0.5rem;
+    }
+    .landing-next-steps__lead {
+      margin-bottom: 0.55rem;
+    }
+    .landing-next-steps__docs {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin: 0.65rem 0 0.5rem 0;
+    }
     .landing-cta {
       display: flex;
       flex-wrap: wrap;
@@ -1413,28 +1487,28 @@
     <section>
       <h2 data-i18n="landingTitle">Welcome to Sova</h2>
       <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.</p>
-      <details class="landing-panel" style="max-width:52rem;margin-bottom:0.75rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.1rem 1rem 0.75rem 1rem;background:var(--surface-raised);">
-        <summary style="cursor:pointer;list-style:none;color:var(--text);font-weight:700;padding:0.7rem 0;">
+      <details class="landing-panel landing-next-steps">
+        <summary>
           <span class="section-caret">▸</span>
           <span data-i18n="landingNextStepsTitle">Next steps</span>
         </summary>
-        <p class="landing-copy" style="margin-bottom:0.55rem;" data-i18n-html="landingNextStepsLead">You already cloned the repo and started the server—continue here in the UI:</p>
+        <p class="landing-copy landing-next-steps__lead" data-i18n-html="landingNextStepsLead">You already cloned the repo and started the server—continue here in the UI:</p>
         <ul class="landing-next-ul">
           <li data-i18n-html="landingNextStepsLi1"></li>
           <li data-i18n-html="landingNextStepsLi2"></li>
           <li data-i18n-html="landingNextStepsLi3"></li>
           <li data-i18n-html="landingNextStepsLi4"></li>
         </ul>
-        <div class="landing-disclaimer" style="max-width:48rem;margin:0.65rem 0 0.3rem 0;">
+        <div class="landing-disclaimer">
           <div class="landing-disclaimer__title" data-i18n="landingDisclaimerTitle">Email provider note</div>
           <p data-i18n-html="landingDisclaimerBody">Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.</p>
         </div>
-        <p class="landing-copy landing-docs-line" style="font-size:0.84rem;color:var(--muted);margin:0.65rem 0 0.5rem 0;">
+        <p class="landing-copy landing-docs-line landing-next-steps__docs">
           <span data-i18n-html="landingDocsGithubBefore"></span>
           <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
           <span data-i18n-html="landingDocsGithubAfter"></span>
         </p>
-        <div class="landing-cta" style="margin-top:0;">
+        <div class="landing-cta">
           <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
           <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
         </div>
