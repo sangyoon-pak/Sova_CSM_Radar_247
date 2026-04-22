@@ -1,29 +1,14 @@
 # Project TODO
 
-Last updated: 2026-04-15
+Last updated: 2026-04-16
 
 Single checklist: **completed** work from the rebuild + **remaining** tasks (merged from the former `docs/IMPLEMENTATION_TODO_STATUS.md` and this file). For implementation detail, see paths in the completed section.
 
+### to do Fix 
+- [x] what is the best way to make use of the retrieved data after the initial run generating card ? if user asks an extensive question, agent should know about the data retrieved so that it can answers based on both retrieved information + email thread content. 
+- [x] the thread time and action card time are not matched with the time set on configure. all the time related parts should be based on the single time set via configure. don't know why the time is all over the place on the thread and chatbox on workbench. 
 
 
-### Configure / observability
-
-
-- [x] **LangSmith**: API + trace settings in Configure so users can opt in to tracing/monitoring (`docs/LANGSMITH.md` alignment)
-- [x] **Workbench** message/thread timestamps use the same **timezone** as Configure (not only browser local)
-
-### Landing & layout
-
-- [x] **Landing**: “Next steps” **collapsed by default**, expand on click; fold **email provider** note into that block; remove empty spacing
-- [x] **Knowledge — uploaded documents** list: **collapsed by default**, expand on click; tighten spacing (no large empty gaps)
-
-### Action dashboard / cards
-
-- [ ] **Action cards**: **collapsed by default**, expand on click; **bulk select + bulk delete** dismiss
-- [ ] **Action board**: **text feedback** to the agent (not only like/dislike / Run history)
-- [ ] **Optional**: sort/filter by **priority** or **customer domain** (metadata exists; UI controls not built yet)
-- [ ] each card should have the retrieved doc data in metadata. It might not have to show all the details but when user asks an extensive question, agent should be able to answer. 
-- [ ] action cards are made but it does not retrieve from document to curate the card yet..
 ### Workbench / threads
 
 - [ ] **Bulk select + bulk delete** for threads
@@ -31,11 +16,10 @@ Single checklist: **completed** work from the rebuild + **remaining** tasks (mer
 ### Cron
 
 - [ ] Cron tab **UX** (clearer interval-oriented flows, presets, copy)
-- [ ] Optional: user asks agent to **create/adjust** cron jobs in natural language (beyond manual CRON expression)
+- [ ] user should be able to ask agent on workb to **create/adjust** cron jobs in natural language (beyond manual CRON expression)
 
 ---
 
-## Remaining — agent behavior & docs
 
 ### Foundations (from original backlog)
 
@@ -45,18 +29,16 @@ Single checklist: **completed** work from the rebuild + **remaining** tasks (mer
 - [ ] **Docs**: why retrieval is designed this way (business-critical / sustainable)
 - [ ] **Docs**: self-evolution / learning from feedback
 
+
 ### Agent utility / RAG
 
-- [ ] Card should be created based on the launguage the email is mostly used in. 
-- [ ] Investigate runs where inbox is fetched but **RAG is not used** 
 - [ ] **Less-refined uploads** (PDF, noisy docs): expected behavior, limits, and UX messaging
+- [ ] what is the best way to improve web search ? now currently once you upload a RC url, agent will trigger LLM to come up with 9 more sub url to search if I am right. I wonder how web search feature works differently for difference cases 1) when users decided to use openAI with the openAI API, and 2) when users decided to use openrouter for this case. 
+- [ ] verify and test the agent feedback memory part and do fine tuning ? Since this will be also part of the system prompt for agents, we are now collecting user's feedback from each of the action cards and run history for each agent run. We should be able to curate all the feedbacks for agent to understand by LLM first and let users also see the curated feedback on the UI, ideally on configure ? 
+- [ ] how do we change the current agent prompt finetune feature for users to understand from multi-agentic perspective ? currently it only shows what are the prompts for what but users can hardly understand which is for what agent or subagent. 
+## docs
+- [ ] I think we should show the agent architecture, that shows what are the flows and agent to agent or subagent working here end to end on the md file and links to configure where users can see and finetune. and linked this archicture document on where on the landing page tab
 
-### Action cards (edge cases)
-
-- [ ] **Internal-only** mail (e.g. quota notices) still surfacing as cards: tune guardrails / optional **query-analysis** sub-step
-- [ ] **Re-probe after DB reset** still missing threads/cards: verify dedupe keys and probe merge behavior when “fresh start” is intended
-
----
 
 ## Remaining — pre-distribution / distribution
 
@@ -69,7 +51,7 @@ Single checklist: **completed** work from the rebuild + **remaining** tasks (mer
 
 ### Distribution
 
-- [ ] Repo/product naming: **Sova — CSM Radar Agent 24/7** (local + GitHub) when ready
+- [ ] change the project folder name to Sova_CSM_Radar_247 when ready 
 - [ ] **Host install** story: mac/linux/windows via venv + `run.py` (not container-first); `gog`/OAuth need a normal OS env (`docs/GMAIL_SETUP.md`)
 - [ ] **Public docs UX**: canonical `docs/INSTALLATION.md`; README links; optional future docs site; landing links when published
 
@@ -78,7 +60,7 @@ Single checklist: **completed** work from the rebuild + **remaining** tasks (mer
 - [ ] Landing links to **GitHub** guides once the repo is public
 - [ ] Configure **gog** section links to the published GitHub doc page
 - [ ] simple user-guide video that shows what it does. you can 
----
+
 
 ## Pointer
 

@@ -432,6 +432,10 @@
       overflow-y: auto;
       font-family: var(--mono);
     }
+    .run-queue-list { margin-top: 0.45rem; display:flex; flex-direction:column; gap:0.4rem; }
+    .run-queue-item { border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.6rem; background:var(--surface); }
+    .run-queue-meta { color:var(--muted); font-size:0.78rem; }
+    .run-queue-status { font-weight:800; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.04em; }
     .hero-blurb {
       color: var(--muted);
       font-size: 0.875rem;
@@ -1116,9 +1120,27 @@
     .csm-action-card .csm-action-card__main > summary .csm-action-card__title {
       color: var(--text);
       margin: 0;
+      text-align: left;
+    }
+    .csm-action-card__summary-main {
       flex: 1;
       min-width: 0;
-      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .csm-action-card__meta-preview {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .csm-action-card__meta-preview strong {
+      color: var(--text);
+      font-weight: 700;
+      margin-right: 0.25rem;
     }
     .csm-action-card__main > summary::-webkit-details-marker {
       display: none;
@@ -1318,6 +1340,96 @@
       margin-top: auto;
       padding-top: 0.35rem;
       border-top: 1px solid var(--border-subtle);
+    }
+    .csm-action-card__head {
+      display: flex;
+      gap: 0.45rem;
+      align-items: flex-start;
+      margin-bottom: 0.35rem;
+    }
+    .csm-action-card__cbwrap {
+      flex: 0 0 auto;
+      padding-top: 0.12rem;
+    }
+    .csm-action-card__cbwrap input {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .csm-action-card__head-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .csm-action-card__identity {
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.65rem;
+      align-items: baseline;
+    }
+    .csm-action-card__identity strong {
+      color: var(--text);
+      font-weight: 700;
+      margin-right: 0.2rem;
+    }
+    .csm-action-card__meta-expanded {
+      margin-top: 0.42rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--accent-soft) 32%, var(--surface));
+    }
+    .csm-action-card__feedback {
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px dashed var(--border-subtle);
+    }
+    .csm-action-card__feedback-details summary {
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+    }
+    .csm-action-card__feedback-details summary::-webkit-details-marker { display: none; }
+    .csm-action-card__feedback-details summary::marker { content: ''; }
+    .csm-action-card__feedback-caret {
+      display: inline-block;
+      margin-right: 0.3rem;
+      color: var(--muted);
+      font-weight: 900;
+      transition: transform 0.16s ease;
+    }
+    .csm-action-card__feedback-details[open] .csm-action-card__feedback-caret {
+      transform: rotate(90deg);
+    }
+    .csm-action-card__feedback-details[open] summary {
+      margin-bottom: 0.35rem;
+    }
+    .csm-action-card__feedback-label {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: 700;
+      margin-bottom: 0.28rem;
+      color: var(--text);
+    }
+    .csm-action-card__feedback-ta {
+      width: 100%;
+      min-height: 3.25rem;
+      font-size: 0.82rem;
+      margin-bottom: 0.4rem;
+      resize: vertical;
+    }
+    .dashboard-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.5rem;
+      margin-right: 0.5rem;
     }
     .csm-legacy-card {
       border: 1px dashed var(--border);
@@ -1578,7 +1690,7 @@
             <p class="configure-hint" data-i18n-html="configureOrHint">Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.</p>
             <div class="configure-field"><label for="cfg_openrouter_base_url" data-i18n="cfgOpenrouterUrl">Base URL</label><input id="cfg_openrouter_base_url" type="text" /><span class="configure-env" id="cfg_env_openrouter_base_url"></span></div>
             <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
-            <p class="configure-hint" style="margin-top:0.55rem;">Optional observability and display timezone. LangSmith emits traces for new runs only when tracing is on and a key is set.</p>
+            <p class="configure-hint" style="margin-top:0.55rem;">Use a valid IANA zone (e.g. Asia/Seoul). Thread list, message times, action cards, run traces, and cron summaries all display in this timezone. LangSmith emits traces for new runs only when tracing is on and a key is set.</p>
             <div class="configure-field"><label for="cfg_scheduler_timezone">Scheduler / UI timezone</label><input id="cfg_scheduler_timezone" type="text" placeholder="Asia/Seoul" /><span class="configure-env" id="cfg_env_scheduler_timezone"></span></div>
             <div class="configure-field"><label for="cfg_langsmith_tracing">LangSmith tracing</label>
               <select id="cfg_langsmith_tracing">
@@ -1634,7 +1746,8 @@
         <details class="configure-details">
           <summary>Agent prompts (database)</summary>
           <div class="configure-details__body">
-            <p class="configure-hint">These strings are stored in the app database and are what the agent uses at runtime. On first start, defaults are copied from <code>src/agent/prompts.py</code>. Clear a field and <strong>Save configuration</strong> to reset that row to the built-in default (still saved in the database).</p>
+            <p class="configure-hint"><strong>Source of truth:</strong> these four prompts live in the <strong>app database</strong> (<code>app_settings</code>). The agent reads them from there at runtime. Bundled text in <code>src/agent/prompts.py</code> is only used to <strong>fill or repair</strong> empty rows.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;">On server start or when you open Configure, any prompt row that is missing or blank is <strong>back-filled</strong> with the current bundled default and saved to the database. If you <strong>clear a field</strong> (all whitespace) and click <strong>Save configuration</strong>, that row is reset to the bundled default and <strong>written to the database</strong> again—so you always see the full text here after save or reload, not an invisible fallback.</p>
             <p class="configure-hint" style="margin-top:0.35rem;"><strong>Curly braces <code>{…}</code></strong> are <strong>runtime placeholders</strong>—do not paste your vendor name or product list in place of them. Keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code> exactly as written. At run time, the first three are filled from <strong>Workbench → Agent profile</strong> (vendor, product scope, role title). <code>{learning_section}</code> is filled from <strong>learning memory</strong> (distilled from Run history feedback), not from the profile form. <strong>Everything else</strong> in the template is yours to edit—rules, tone, and instructions—without changing those four placeholder names.</p>
             <div class="configure-field"><label for="cfg_prompt_email_agent_system_template">Main system prompt template <span class="configure-hint" id="cfg_prompt_email_agent_system_template_sync"></span></label><textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea></div>
             <div class="configure-field"><label for="cfg_prompt_probe_user_message">Probe user message (Scan inbox / cron) <span class="configure-hint" id="cfg_prompt_probe_user_message_sync"></span></label><textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea></div>
@@ -1705,9 +1818,29 @@
             <input id="profileRoleTitle" type="text" data-i18n-placeholder="rolePlaceholder" placeholder="Role title" style="min-width:260px;flex:1;" />
           </div>
           <textarea id="profileProductContext" data-i18n-placeholder="productPlaceholder" placeholder="Product lines / scope (comma-separated)"></textarea>
+          <div style="margin-top:0.7rem;">
+            <p class="profile-help" style="margin-bottom:0.4rem;">Inbox scan range setup (saved in Configure settings):</p>
+            <div class="row" style="margin-bottom:0.5rem;">
+              <div style="display:flex;flex-direction:column;gap:0.25rem;min-width:260px;flex:1;">
+                <label for="cfg_probe_inbox_max_results" style="font-size:0.8rem;color:var(--muted);font-weight:700;">Probe inbox scan range (Scan inbox / cron)</label>
+                <input id="cfg_probe_inbox_max_results" type="number" min="1" max="100" step="1" placeholder="10" style="min-width:200px;" />
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.25rem;min-width:260px;flex:1;">
+                <label for="cfg_user_inbox_peek_max_results" style="font-size:0.8rem;color:var(--muted);font-weight:700;">User inbox peek range (e.g. latest email)</label>
+                <input id="cfg_user_inbox_peek_max_results" type="number" min="1" max="100" step="1" placeholder="5" style="min-width:200px;" />
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.25rem;margin-bottom:0.5rem;">
+              <label for="cfg_probe_inbox_gmail_search" style="font-size:0.8rem;color:var(--muted);font-weight:700;" data-i18n="profileProbeGmailSearchLabel">Probe Gmail search query (Scan inbox / cron)</label>
+              <input id="cfg_probe_inbox_gmail_search" type="text" data-i18n-placeholder="profileProbeGmailSearchPlaceholder" placeholder="in:inbox category:primary newer_than:30d" style="width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:0.82rem;" autocomplete="off" spellcheck="false" />
+              <p class="profile-help" style="margin:0;" data-i18n-html="profileProbeGmailSearchHelp">Gmail query used when the tool does not pass a custom <code>search</code> argument. Widen <code>newer_than:</code> or remove <code>category:primary</code> if threads are missing from the slice.</p>
+            </div>
+          </div>
           <div class="row" style="margin-top:0.5rem;">
             <button type="button" class="ghost" onclick="saveAgentProfile()" data-i18n="saveProfile">Save profile</button>
+            <button type="button" class="ghost" onclick="saveWorkbenchInboxRangeSettings()">Save inbox ranges</button>
             <span id="profileSaveStatus" style="color:var(--muted);font-size:0.82rem;" data-i18n="profileLoaded">Loaded saved profile.</span>
+            <span id="workbenchSetupSaveStatus" style="color:var(--muted);font-size:0.82rem;"></span>
           </div>
         </div>
       </details>
@@ -1763,6 +1896,10 @@
             </div>
             <div id="runTrace" class="trace-list" style="display:block;"></div>
           </details>
+          <details id="runQueueDetails" style="margin-top:0.6rem;">
+            <summary style="cursor:pointer;color:var(--muted);font-weight:700;"><span class="section-caret">▸</span><span>Run queue</span></summary>
+            <div id="runQueueList" class="run-queue-list"></div>
+          </details>
         </div>
       </div>
     </section>
@@ -1785,7 +1922,7 @@
           </div>
           <div class="filter-field">
             <label for="dashboardActionStatusFilter" data-i18n="dashboardActionStatusFilter">Action status</label>
-            <select id="dashboardActionStatusFilter" onchange="loadActionBoard(true)">
+            <select id="dashboardActionStatusFilter" onchange="rerenderActionBoardFromCache()">
               <option value="all" data-i18n="dashboardActionStatusAll">All actions</option>
               <option value="not_started" data-i18n="dashboardActionStatusNotStarted">Not started</option>
               <option value="in_progress" data-i18n="dashboardActionStatusInProgress">In progress</option>
@@ -1800,13 +1937,29 @@
               <option value="error" data-i18n="dashboardStatusError">Error</option>
             </select>
           </div>
+          <div class="filter-field">
+            <label for="dashboardPriorityFilter" data-i18n="dashboardPriorityFilter">Priority</label>
+            <select id="dashboardPriorityFilter" onchange="rerenderActionBoardFromCache()">
+              <option value="all" data-i18n="dashboardPriorityAll">All priorities</option>
+              <option value="urgent" data-i18n="dashboardPriorityUrgent">Urgent</option>
+              <option value="high" data-i18n="dashboardPriorityHigh">High</option>
+              <option value="medium" data-i18n="dashboardPriorityMedium">Medium</option>
+              <option value="low" data-i18n="dashboardPriorityLow">Low</option>
+            </select>
+          </div>
+          <div class="filter-field" style="min-width:11rem;flex:1;">
+            <label for="dashboardDomainFilter" data-i18n="dashboardDomainFilter">Customer domain</label>
+            <input type="text" id="dashboardDomainFilter" data-i18n-placeholder="dashboardDomainPlaceholder" placeholder="Filter by domain…" oninput="scheduleRerenderActionBoard()" />
+          </div>
         </div>
         <div class="dashboard-controls__right row dashboard-layout-bar">
           <label for="dashboardActionSort" class="action-board-hint" data-i18n="dashboardActionSort">Sort</label>
-          <select id="dashboardActionSort" onchange="loadActionBoard(true)">
+          <select id="dashboardActionSort" onchange="rerenderActionBoardFromCache()">
             <option value="updated_desc" data-i18n="dashboardSortUpdatedDesc">Newest update</option>
             <option value="updated_asc" data-i18n="dashboardSortUpdatedAsc">Oldest update</option>
             <option value="status" data-i18n="dashboardSortStatus">Status</option>
+            <option value="priority_desc" data-i18n="dashboardSortPriorityDesc">Priority (urgent first)</option>
+            <option value="priority_asc" data-i18n="dashboardSortPriorityAsc">Priority (low first)</option>
           </select>
           <span class="action-board-hint" data-i18n="dashboardLayoutLabel">Layout</span>
           <button type="button" class="ghost btn-compact" id="dashLayoutList" onclick="setDashboardLayout('list')" data-i18n-title="dashboardLayoutListTitle" title="List (grouped by run)">List</button>
@@ -1815,6 +1968,12 @@
       </div>
       <div id="actionBoardFeed" class="dashboard-feed dashboard-feed--list"><div class="empty" style="padding:0.75rem 0;" data-i18n="loading">Loading…</div></div>
       <div class="action-board-toolbar">
+        <div class="dashboard-bulk-bar">
+          <button type="button" class="ghost btn-compact" onclick="dashboardSelectAllCards()" data-i18n="dashboardSelectAll">Select all</button>
+          <button type="button" class="ghost btn-compact" onclick="dashboardClearCardSelection()" data-i18n="dashboardSelectNone">Clear</button>
+          <button type="button" class="danger btn-compact" onclick="dashboardBulkDismissSelected()" data-i18n="dashboardDismissSelected">Remove selected</button>
+          <span id="dashboardBulkSelectionHint" class="action-board-hint"></span>
+        </div>
         <button type="button" class="ghost btn-compact" onclick="loadActionBoard(true)" data-i18n="actionBoardRefresh">Refresh</button>
         <button type="button" class="ghost btn-compact" id="dashboardLoadMoreBtn" style="display:none;" onclick="loadActionBoard(false)" data-i18n="dashboardLoadMore">Load more</button>
         <span class="action-board-hint" data-i18n="actionBoardHelp">Full detail and feedback stay under Run history.</span>
@@ -2043,6 +2202,10 @@
         profileConfigure: 'Configure',
         profilePill: 'Applies to all runs',
         profileHelp: 'Vendor and product context is merged into the system prompt on every run (CSM assistant behavior).',
+        profileProbeGmailSearchLabel: 'Probe Gmail search query (Scan inbox / cron)',
+        profileProbeGmailSearchPlaceholder: 'in:inbox category:primary newer_than:30d',
+        profileProbeGmailSearchHelp:
+          'Gmail query used when the tool does not pass a custom <code>search</code> argument. Widen <code>newer_than:</code> or remove <code>category:primary</code> if threads are missing from the slice.',
         vendorPlaceholder: 'Vendor name',
         rolePlaceholder: 'Role title (e.g. CSM)',
         productPlaceholder: 'Product lines / scope (comma-separated)',
@@ -2151,7 +2314,7 @@
         deleteKbConfirm: 'Delete this document?',
         removeUrlConfirm: 'Remove this URL?',
         deleteThreadConfirm: 'Delete thread {id}? All messages and linked run-history rows for this chat will be removed.',
-        langHelp: 'UI language only — assistant replies follow your message language.',
+        langHelp: 'UI language controls labels only. Chat follows your message language; probe card text follows each customer thread, not UI.',
         optimizeConfirm: 'Run database cleanup now? This may delete older rows and report files.',
         clearHistoryConfirm: 'Delete all run history?',
         compactConfirm: 'Summarize and trim interactions older than 7 days?',
@@ -2166,7 +2329,7 @@
         actionBoardTitle: 'Action dashboard',
         actionBoardLead: 'Structured actions for CSM review after each inbox probe. Full model output stays in Run history.',
         actionBoardRefresh: 'Refresh',
-        actionBoardHelp: 'Full detail and feedback stay under Run history.',
+        actionBoardHelp: 'Card notes are sent to learning memory; Discuss opens a scoped Workbench thread.',
         actionBoardEmpty: 'No inbox reviews yet. Run Scan inbox, a thread probe, or a cron job.',
         actionBoardFail: 'Could not load action board',
         dashboardFilterSource: 'Source',
@@ -2187,6 +2350,30 @@
         dashboardSortUpdatedDesc: 'Newest update',
         dashboardSortUpdatedAsc: 'Oldest update',
         dashboardSortStatus: 'Status',
+        dashboardSortPriorityDesc: 'Priority (urgent first)',
+        dashboardSortPriorityAsc: 'Priority (low first)',
+        dashboardPriorityFilter: 'Priority',
+        dashboardPriorityAll: 'All priorities',
+        dashboardPriorityUrgent: 'Urgent',
+        dashboardPriorityHigh: 'High',
+        dashboardPriorityMedium: 'Medium',
+        dashboardPriorityLow: 'Low',
+        dashboardDomainFilter: 'Customer domain',
+        dashboardDomainPlaceholder: 'Filter by domain…',
+        dashboardSelectAll: 'Select all',
+        dashboardSelectNone: 'Clear',
+        dashboardDismissSelected: 'Remove selected',
+        dashboardBulkSelectedCount: '{count} selected',
+        dashboardDismissBulkConfirm: 'Remove {count} selected task(s) from the Action dashboard? Run history is kept.',
+        dashboardEmailFrom: 'From',
+        dashboardClientEmail: 'Client email',
+        dashboardEmailSubject: 'Subject',
+        dashboardFeedbackLabel: 'Give feedback for Sova to learn',
+        dashboardFeedbackPlaceholder: 'What should improve for this kind of action? Tell your agent to learn from your feedback.',
+        dashboardFeedbackSend: 'Send note',
+        dashboardFeedbackSaved: 'Feedback saved.',
+        dashboardFeedbackFail: 'Could not save feedback',
+        dashboardFeedbackEmpty: 'Enter a short note first.',
         dashboardLoadMore: 'Load more',
         dashboardViewInHistory: 'View in Run history',
         dashboardPollingHint: 'Auto-refresh every 60s on this tab.',
@@ -2219,6 +2406,19 @@
         dashboardConfidence: 'Confidence',
         dashboardRelevance: 'Relevance',
         dashboardRetrievalEvidence: 'Retrieval evidence',
+        dashboardGmailThread: 'Gmail thread',
+        dashboardRunStatusRunning: 'Running',
+        dashboardRunStatusQueued: 'Queued',
+        dashCatGeneral: 'General',
+        dashCatProductTechnical: 'Product · technical',
+        dashCatAccount: 'Account',
+        relReasonModelIncludeDashboard: 'Model flagged include on dashboard',
+        relReasonPermissiveAmbiguous: 'Permissive mode — ambiguous intent surfaced',
+        relReasonStrictAmbiguous: 'Strict mode — ambiguous intent not surfaced as action',
+        relReasonModelIntentNotDashboard: 'Model did not flag dashboard action',
+        relReasonUserIncludeSenderDomain: 'Matched Configure include-sender domain',
+        relReasonEmptyText: 'No assessable text',
+        relReasonModelCategory: 'Model category: {category}',
         relOutcomeRequiresCsm: 'Needs CSM follow-up',
         relOutcomeInformational: 'Informational only',
         relOutcomeInternalNonCsm: 'Internal / filtered (non-CSM)',
@@ -2299,6 +2499,10 @@
         profileConfigure: '설정',
         profilePill: '모든 Run에 적용',
         profileHelp: 'Vendor·Product 컨텍스트는 매 Run의 system prompt에 반영됩니다 (CSM 어시스턴트 동작).',
+        profileProbeGmailSearchLabel: 'Probe Gmail 검색 쿼리 (Inbox 스캔 / cron)',
+        profileProbeGmailSearchPlaceholder: 'in:inbox category:primary newer_than:30d',
+        profileProbeGmailSearchHelp:
+          '에이전트가 <code>search</code>를 넘기지 않을 때 gog에 전달되는 Gmail 검색입니다. <code>newer_than:</code>을 넓히거나 <code>category:primary</code>를 빼면 누락되는 스레드를 포함할 수 있습니다.',
         vendorPlaceholder: 'Vendor 이름',
         rolePlaceholder: 'Role (예: CSM)',
         productPlaceholder: 'Product / scope (comma-separated)',
@@ -2407,7 +2611,7 @@
         deleteKbConfirm: '이 문서 삭제할까요?',
         removeUrlConfirm: '이 URL 제거할까요?',
         deleteThreadConfirm: 'Thread {id} 삭제? 이 채팅 메시지와 연결된 실행 이력도 함께 삭제됩니다.',
-        langHelp: 'UI만 한/영. 답장 언어는 메시지 따름 (Sova와 무관).',
+        langHelp: 'UI는 꼭지·라벨만 한/영. 채팅은 메시지 언어. Probe 카드 본문은 고객 스레드 기준(UI와 무관).',
         optimizeConfirm: 'DB cleanup 실행? 오래된 row·report 파일 삭제될 수 있음',
         clearHistoryConfirm: 'Run history 전부 삭제?',
         compactConfirm: '7일 지난 interaction 요약·정리?',
@@ -2422,7 +2626,7 @@
         actionBoardTitle: 'Action dashboard',
         actionBoardLead: 'Inbox Probe마다 CSM 검토용 구조화 액션이 쌓입니다. 전체 모델 출력은 Run history에 있습니다.',
         actionBoardRefresh: '새로고침',
-        actionBoardHelp: '상세·피드백은 Run history에서 확인하세요.',
+        actionBoardHelp: '카드 메모는 학습 메모리로 저장되며, 논의는 Workbench 스레드로 열립니다.',
         actionBoardEmpty: '아직 inbox 리뷰가 없습니다. Inbox 스캔, 스레드 Probe, 또는 Cron을 실행하세요.',
         actionBoardFail: 'Action dashboard를 불러오지 못했습니다',
         dashboardFilterSource: '출처',
@@ -2443,6 +2647,30 @@
         dashboardSortUpdatedDesc: '최신 업데이트',
         dashboardSortUpdatedAsc: '오래된 업데이트',
         dashboardSortStatus: '상태',
+        dashboardSortPriorityDesc: '우선순위(긴급 우선)',
+        dashboardSortPriorityAsc: '우선순위(낮은 순)',
+        dashboardPriorityFilter: '우선순위',
+        dashboardPriorityAll: '전체',
+        dashboardPriorityUrgent: '긴급',
+        dashboardPriorityHigh: '높음',
+        dashboardPriorityMedium: '보통',
+        dashboardPriorityLow: '낮음',
+        dashboardDomainFilter: '고객 도메인',
+        dashboardDomainPlaceholder: '도메인으로 필터…',
+        dashboardSelectAll: '전체 선택',
+        dashboardSelectNone: '선택 해제',
+        dashboardDismissSelected: '선택 항목 제거',
+        dashboardBulkSelectedCount: '{count}개 선택',
+        dashboardDismissBulkConfirm: '선택한 {count}개 작업을 Action dashboard에서 제거할까요? Run history는 유지됩니다.',
+        dashboardEmailFrom: '발신',
+        dashboardClientEmail: '고객 이메일',
+        dashboardEmailSubject: '제목',
+        dashboardFeedbackLabel: 'Sova 학습을 위한 피드백 남기기',
+        dashboardFeedbackPlaceholder: '이 유형의 액션에서 무엇을 바꾸면 좋을지 적어 주세요. 에이전트가 이 피드백에서 학습하도록 알려주세요.',
+        dashboardFeedbackSend: '보내기',
+        dashboardFeedbackSaved: '피드백을 저장했습니다.',
+        dashboardFeedbackFail: '피드백을 저장하지 못했습니다',
+        dashboardFeedbackEmpty: '메모를 먼저 입력하세요.',
         dashboardLoadMore: '더 보기',
         dashboardViewInHistory: 'Run history에서 보기',
         dashboardPollingHint: '이 탭에서 60초마다 자동 새로고침.',
@@ -2475,6 +2703,19 @@
         dashboardConfidence: '신뢰도',
         dashboardRelevance: '관련성',
         dashboardRetrievalEvidence: '검색 근거',
+        dashboardGmailThread: 'Gmail 스레드',
+        dashboardRunStatusRunning: '실행 중',
+        dashboardRunStatusQueued: '대기 중',
+        dashCatGeneral: '일반',
+        dashCatProductTechnical: '제품 · 기술',
+        dashCatAccount: '계정',
+        relReasonModelIncludeDashboard: '모델이 대시보드 포함으로 표시',
+        relReasonPermissiveAmbiguous: '허용 모드 — 모호한 의도도 노출',
+        relReasonStrictAmbiguous: '엄격 모드 — 모호한 의도는 액션으로 노출 안 함',
+        relReasonModelIntentNotDashboard: '모델이 대시보드 액션으로 표시하지 않음',
+        relReasonUserIncludeSenderDomain: '설정의 포함 발신 도메인과 일치',
+        relReasonEmptyText: '판단할 텍스트 없음',
+        relReasonModelCategory: '모델 카테고리: {category}',
         relOutcomeRequiresCsm: 'CSM 후속 조치 필요',
         relOutcomeInformational: '정보성(조치 불필요)',
         relOutcomeInternalNonCsm: '내부·비CSM으로 분류',
@@ -2564,11 +2805,21 @@
         daf.options[2].text = uiText('dashboardActionStatusInProgress');
         daf.options[3].text = uiText('dashboardActionStatusCompleted');
       }
+      const dpf = document.getElementById('dashboardPriorityFilter');
+      if (dpf && dpf.options && dpf.options.length >= 5) {
+        dpf.options[0].text = uiText('dashboardPriorityAll');
+        dpf.options[1].text = uiText('dashboardPriorityUrgent');
+        dpf.options[2].text = uiText('dashboardPriorityHigh');
+        dpf.options[3].text = uiText('dashboardPriorityMedium');
+        dpf.options[4].text = uiText('dashboardPriorityLow');
+      }
       const das = document.getElementById('dashboardActionSort');
-      if (das && das.options && das.options.length >= 3) {
+      if (das && das.options && das.options.length >= 5) {
         das.options[0].text = uiText('dashboardSortUpdatedDesc');
         das.options[1].text = uiText('dashboardSortUpdatedAsc');
         das.options[2].text = uiText('dashboardSortStatus');
+        das.options[3].text = uiText('dashboardSortPriorityDesc');
+        das.options[4].text = uiText('dashboardSortPriorityAsc');
       }
       const cfgRoot = document.getElementById('tab-configure');
       if (cfgRoot) {
@@ -2615,31 +2866,81 @@
     let _activeThreadId = null;
     let _dashboardOffset = 0;
     let _dashboardProbeRows = [];
+    let _dashboardDomainFilterTimer = null;
     let _dashboardPollTimer = null;
     const DASHBOARD_TAB_ID = 'tab-action-dashboard';
     const DASHBOARD_HASH = 'action-dashboard';
     const CONFIGURE_TAB_ID = 'tab-configure';
     const CONFIGURE_HASH = 'configure';
     const DASHBOARD_LAYOUT_KEY = 'sova_action_dashboard_layout';
-    let _configuredTimeZone = '';
+    /** Default matches server `SCHEDULER_TIMEZONE` / Configure until runtime settings load. */
+    const DEFAULT_DISPLAY_TIMEZONE = 'Asia/Seoul';
+    let _configuredTimeZone = DEFAULT_DISPLAY_TIMEZONE;
     const TAB_TO_HASH = {
       [DASHBOARD_TAB_ID]: DASHBOARD_HASH,
       [CONFIGURE_TAB_ID]: CONFIGURE_HASH,
     };
+    /**
+     * Naive ISO / SQLite "YYYY-MM-DD HH:MM:SS" values are stored as UTC on the server.
+     * Append Z so the browser does not interpret them in the user's local timezone.
+     */
+    function _coerceUtcInstantString(ts) {
+      const s0 = String(ts || '').trim();
+      if (!s0) return s0;
+      let s = s0.replace(' ', 'T');
+      if (/[zZ]$/.test(s)) return s;
+      if (/[+-]\d{2}:\d{2}$/.test(s)) return s0;
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(s)) return s + 'Z';
+      return s0;
+    }
+    function _parseUtcMs(ts) {
+      const raw = _coerceUtcInstantString(ts);
+      if (!raw) return 0;
+      const ms = Date.parse(raw);
+      return Number.isFinite(ms) ? ms : 0;
+    }
     function _safeTimeZone() {
-      const tz = String(_configuredTimeZone || '').trim();
-      if (!tz) return undefined;
+      const tz = String(_configuredTimeZone || '').trim() || DEFAULT_DISPLAY_TIMEZONE;
       try {
         new Intl.DateTimeFormat(undefined, { timeZone: tz });
         return tz;
       } catch {
-        return undefined;
+        try {
+          new Intl.DateTimeFormat(undefined, { timeZone: DEFAULT_DISPLAY_TIMEZONE });
+          return DEFAULT_DISPLAY_TIMEZONE;
+        } catch {
+          return undefined;
+        }
       }
     }
     function _fmtTime(ts) {
       try {
+        const raw = _coerceUtcInstantString(ts);
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return String(ts || '');
         const tz = _safeTimeZone();
-        return tz ? new Date(ts).toLocaleString(undefined, { timeZone: tz }) : new Date(ts).toLocaleString();
+        return tz ? d.toLocaleString(undefined, { timeZone: tz }) : d.toLocaleString();
+      } catch {
+        return '';
+      }
+    }
+    /** Time-of-day only; same configured timezone as thread list and action cards. */
+    function _fmtTimeShort(ts) {
+      try {
+        const raw = _coerceUtcInstantString(ts);
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return '';
+        const tz = _safeTimeZone();
+        if (!tz) return d.toLocaleTimeString();
+        return d.toLocaleTimeString(undefined, {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
       } catch {
         return '';
       }
@@ -2733,7 +3034,12 @@
         const started = await fetchJson('/threads/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ thread_id: _activeThreadId, text: text || '', probe: !!probe })
+          body: JSON.stringify({
+          thread_id: _activeThreadId,
+          text: text || '',
+          probe: !!probe,
+          ui_locale: _uiLang === 'ko' ? 'ko' : 'en',
+        })
         });
         _workbenchActiveRunId = started.run_id;
         setWorkbenchStopVisible(true);
@@ -3008,7 +3314,8 @@
       const expr = document.getElementById('cronExpr').value.trim();
       if (!name || !expr) { alert(uiText('cronNeedName')); return; }
       try {
-        await fetchJson('/cron', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, cron_expression: expr, timezone: 'Asia/Seoul' }) });
+        const tzCron = (String(_configuredTimeZone || '').trim() || DEFAULT_DISPLAY_TIMEZONE);
+        await fetchJson('/cron', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, cron_expression: expr, timezone: tzCron }) });
         loadCronJobs();
         document.getElementById('cronName').value = '';
         document.getElementById('cronExpr').value = '';
@@ -3041,6 +3348,7 @@
     let _traceLen = 0;
     let _traceAll = [];
     let _workbenchActiveRunId = null;
+    let _runQueuePollTimer = null;
 
     function setWorkbenchStopVisible(show) {
       document.querySelectorAll('.workbench-stop-btn').forEach((b) => {
@@ -3081,7 +3389,7 @@
       el.className = 'trace-item';
       const hasDetail = !!(e.detail && String(e.detail).trim());
       const detailHtml = hasDetail ? `<div class="trace-detail">${escapeHtml(e.detail)}</div>` : '';
-      const ts = e.ts ? new Date(e.ts).toLocaleTimeString() : '';
+      const ts = e.ts ? _fmtTimeShort(e.ts) : '';
       // Per-event collapsible to reduce "log wall" feeling.
       if (hasDetail) {
         el.innerHTML = `
@@ -3114,6 +3422,48 @@
       _traceAll = [];
       const el = document.getElementById('runTrace');
       if (el) el.innerHTML = '';
+    }
+
+    function renderRunQueue(items) {
+      const el = document.getElementById('runQueueList');
+      if (!el) return;
+      const rows = Array.isArray(items) ? items : [];
+      if (!rows.length) {
+        el.innerHTML = `<div class="empty">${escapeHtml(_uiLang === 'ko' ? '대기/실행 중인 런이 없습니다.' : 'No queued or running runs.')}</div>`;
+        return;
+      }
+      el.innerHTML = rows.map((r) => {
+        const st = String(r.status || '');
+        const rid = String(r.run_id || '').slice(0, 8);
+        const trig = String(r.trigger_type || '');
+        const when = _fmtTime(String(r.updated_at || r.created_at || ''));
+        const prompt = String(r.input_text || '').trim().slice(0, 140);
+        return `<div class="run-queue-item">
+          <div class="row" style="justify-content:space-between;align-items:center;gap:0.6rem;">
+            <span class="run-queue-status">${escapeHtml(st)}</span>
+            <span class="run-queue-meta">#${escapeHtml(rid)} · ${escapeHtml(when)}</span>
+          </div>
+          <div class="run-queue-meta" style="margin-top:0.2rem;">${escapeHtml(trig)}</div>
+          ${prompt ? `<div style="font-size:0.82rem;margin-top:0.3rem;white-space:pre-wrap;">${escapeHtml(prompt)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    async function loadRunQueue() {
+      try {
+        const pack = await fetchJson('/agent/runs?limit=40&status=all');
+        const items = (pack && Array.isArray(pack.items)) ? pack.items : [];
+        const active = items.filter((x) => ['queued', 'running'].includes(String(x.status || '').toLowerCase()));
+        renderRunQueue(active);
+      } catch (_e) {
+        renderRunQueue([]);
+      }
+    }
+
+    function startRunQueuePolling() {
+      if (_runQueuePollTimer) clearInterval(_runQueuePollTimer);
+      void loadRunQueue();
+      _runQueuePollTimer = window.setInterval(() => { void loadRunQueue(); }, 1500);
     }
 
     function isImportantEvent(e) {
@@ -3228,6 +3578,19 @@
       gog_keyring_password: 'GOG_KEYRING_PASSWORD',
       xdg_config_home: 'XDG_CONFIG_HOME',
       gog_credentials_path: 'GOG_CREDENTIALS_PATH',
+      guardrail_include_sender_domains: 'GUARDRAIL_INCLUDE_SENDER_DOMAINS',
+      guardrail_exclude_sender_domains: 'GUARDRAIL_EXCLUDE_SENDER_DOMAINS',
+      guardrail_include_intent_keywords: 'GUARDRAIL_INCLUDE_INTENT_KEYWORDS',
+      guardrail_exclude_intent_keywords: 'GUARDRAIL_EXCLUDE_INTENT_KEYWORDS',
+      guardrail_team_guidance: 'GUARDRAIL_TEAM_GUIDANCE',
+      guardrail_strictness: 'GUARDRAIL_STRICTNESS',
+      langsmith_api_key: 'LANGSMITH_API_KEY',
+      langsmith_project: 'LANGSMITH_PROJECT',
+      langsmith_tracing: 'LANGSMITH_TRACING',
+      scheduler_timezone: 'SCHEDULER_TIMEZONE',
+      probe_inbox_max_results: 'PROBE_INBOX_MAX_RESULTS',
+      probe_inbox_gmail_search: 'PROBE_INBOX_GMAIL_SEARCH',
+      user_inbox_peek_max_results: 'USER_INBOX_PEEK_MAX_RESULTS',
     };
     function _canonicalEnvKey(k) {
       if (!k) return k;
@@ -3428,6 +3791,19 @@
           const el = document.getElementById(id);
           if (el) el.value = val != null ? String(val) : '';
         };
+        /** When no DB row exists yet, do not replace a non-empty field with empty effective (avoids racing GET wiping drafts before Save). */
+        const setvCfgGuardrail = (id, storeKey, effVal) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const incoming = effVal != null ? String(effVal) : '';
+          if (stored[storeKey]) {
+            el.value = incoming;
+            return;
+          }
+          const cur = (el.value || '').trim();
+          if (cur && !incoming.trim()) return;
+          el.value = incoming;
+        };
         const pp = document.getElementById('cfg_llm_provider_preset');
         if (pp) pp.value = eff.llm_provider_preset || 'openrouter';
         setv('cfg_llm_model', stored.llm_model ? eff.llm_model : (eff.llm_model || ''));
@@ -3458,12 +3834,37 @@
         setv('cfg_langsmith_tracing', eff.langsmith_tracing != null ? String(eff.langsmith_tracing) : 'false');
         setv('cfg_langsmith_project', eff.langsmith_project != null ? String(eff.langsmith_project) : 'email_draft_agent');
         setv('cfg_langsmith_api_key', '');
-        setv('cfg_guardrail_include_sender_domains', eff.guardrail_include_sender_domains != null ? String(eff.guardrail_include_sender_domains) : '');
-        setv('cfg_guardrail_exclude_sender_domains', eff.guardrail_exclude_sender_domains != null ? String(eff.guardrail_exclude_sender_domains) : '');
-        setv('cfg_guardrail_include_intent_keywords', eff.guardrail_include_intent_keywords != null ? String(eff.guardrail_include_intent_keywords) : '');
-        setv('cfg_guardrail_exclude_intent_keywords', eff.guardrail_exclude_intent_keywords != null ? String(eff.guardrail_exclude_intent_keywords) : '');
-        setv('cfg_guardrail_team_guidance', eff.guardrail_team_guidance != null ? String(eff.guardrail_team_guidance) : '');
+        setvCfgGuardrail(
+          'cfg_guardrail_include_sender_domains',
+          'guardrail_include_sender_domains',
+          eff.guardrail_include_sender_domains,
+        );
+        setvCfgGuardrail(
+          'cfg_guardrail_exclude_sender_domains',
+          'guardrail_exclude_sender_domains',
+          eff.guardrail_exclude_sender_domains,
+        );
+        setvCfgGuardrail(
+          'cfg_guardrail_include_intent_keywords',
+          'guardrail_include_intent_keywords',
+          eff.guardrail_include_intent_keywords,
+        );
+        setvCfgGuardrail(
+          'cfg_guardrail_exclude_intent_keywords',
+          'guardrail_exclude_intent_keywords',
+          eff.guardrail_exclude_intent_keywords,
+        );
+        setvCfgGuardrail('cfg_guardrail_team_guidance', 'guardrail_team_guidance', eff.guardrail_team_guidance);
         setv('cfg_guardrail_strictness', eff.guardrail_strictness != null ? String(eff.guardrail_strictness) : 'balanced');
+        setv('cfg_probe_inbox_max_results', eff.probe_inbox_max_results != null ? String(eff.probe_inbox_max_results) : '10');
+        setv(
+          'cfg_probe_inbox_gmail_search',
+          eff.probe_inbox_gmail_search != null ? String(eff.probe_inbox_gmail_search) : '',
+        );
+        setv(
+          'cfg_user_inbox_peek_max_results',
+          eff.user_inbox_peek_max_results != null ? String(eff.user_inbox_peek_max_results) : '5'
+        );
         setv('cfg_prompt_email_agent_system_template', String(eff.prompt_email_agent_system_template || ''));
         setv('cfg_prompt_probe_user_message', String(eff.prompt_probe_user_message || ''));
         setv('cfg_prompt_probe_mode_append', String(eff.prompt_probe_mode_append || ''));
@@ -3493,7 +3894,9 @@
             ? 'LangSmith API key stored in app database'
             : (data.langsmith_api_key_set_in_env ? 'LangSmith API key set in server environment' : 'No LangSmith API key saved');
         }
-        _configuredTimeZone = String(eff.scheduler_timezone || '');
+        _configuredTimeZone = String(eff.scheduler_timezone || '').trim() || DEFAULT_DISPLAY_TIMEZONE;
+        void loadThreads();
+        void loadThreadMessages();
         _setConfigureEnvSpans(_mergeRecommendedHints(data), stored);
         refreshPresetDatalists();
         onConfigurePresetChange();
@@ -3569,6 +3972,9 @@
       payload.guardrail_exclude_intent_keywords = gv('cfg_guardrail_exclude_intent_keywords');
       payload.guardrail_team_guidance = gv('cfg_guardrail_team_guidance');
       payload.guardrail_strictness = gv('cfg_guardrail_strictness') || 'balanced';
+      payload.probe_inbox_max_results = gv('cfg_probe_inbox_max_results') || '10';
+      payload.probe_inbox_gmail_search = gv('cfg_probe_inbox_gmail_search');
+      payload.user_inbox_peek_max_results = gv('cfg_user_inbox_peek_max_results') || '5';
       payload.prompt_email_agent_system_template = gv('cfg_prompt_email_agent_system_template');
       payload.prompt_probe_user_message = gv('cfg_prompt_probe_user_message');
       payload.prompt_probe_mode_append = gv('cfg_prompt_probe_mode_append');
@@ -3584,6 +3990,28 @@
         await loadRuntimeSettings();
       } catch (e) {
         if (st) st.textContent = configureUiText('configureSaveFail') + ': ' + e.message;
+      }
+    }
+
+    async function saveWorkbenchInboxRangeSettings() {
+      const st = document.getElementById('workbenchSetupSaveStatus');
+      const gv = (id) => (document.getElementById(id)?.value || '').trim();
+      const payload = {
+        probe_inbox_max_results: gv('cfg_probe_inbox_max_results') || '10',
+        probe_inbox_gmail_search: gv('cfg_probe_inbox_gmail_search'),
+        user_inbox_peek_max_results: gv('cfg_user_inbox_peek_max_results') || '5',
+      };
+      try {
+        if (st) st.textContent = 'Saving…';
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (st) st.textContent = 'Saved.';
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = `Save failed: ${e.message}`;
       }
     }
 
@@ -3670,10 +4098,30 @@
       }
     }
 
+    function formatDashboardTriggerType(tt) {
+      const t = String(tt || '').trim();
+      if (t === 'thread_probe') return uiText('dashboardSourceThread');
+      if (t === 'manual_probe' || t.startsWith('manual_probe')) return uiText('dashboardSourceManual');
+      if (t.startsWith('cron:')) {
+        const job = t.slice(5).trim();
+        return job ? `${uiText('dashboardSourceCron')} (${job})` : uiText('dashboardSourceCron');
+      }
+      return t;
+    }
+
+    function formatDashboardRunStatus(st) {
+      const s = String(st || '').trim().toLowerCase();
+      if (s === 'completed') return uiText('dashboardStatusCompleted');
+      if (s === 'error') return uiText('dashboardStatusError');
+      if (s === 'running') return uiText('dashboardRunStatusRunning');
+      if (s === 'queued') return uiText('dashboardRunStatusQueued');
+      return s ? titleCaseWordsFromSnake(s) : '';
+    }
+
     function dashboardProbeMetaLine(row) {
       const when = _fmtTime(row.created_at);
-      const tt = String(row.trigger_type || '');
-      const st = String(row.status || '');
+      const tt = formatDashboardTriggerType(row.trigger_type);
+      const st = formatDashboardRunStatus(row.status);
       return `${when} · ${tt} · ${st}`;
     }
 
@@ -3686,8 +4134,29 @@
         .join(' · ');
     }
 
+    const _prioConfI18n = {
+      urgent: 'dashboardPriorityUrgent',
+      high: 'dashboardPriorityHigh',
+      medium: 'dashboardPriorityMedium',
+      low: 'dashboardPriorityLow',
+    };
+
+    function formatPriorityOrConfidenceLabel(raw) {
+      const v = String(raw || '').trim().toLowerCase();
+      const k = _prioConfI18n[v];
+      return k ? uiText(k) : String(raw || '').trim();
+    }
+
     function formatActionCategoryLabel(raw) {
-      return titleCaseWordsFromSnake(String(raw || 'general'));
+      const c = String(raw || 'general').trim().toLowerCase();
+      const map = {
+        general: 'dashCatGeneral',
+        product_technical: 'dashCatProductTechnical',
+        account: 'dashCatAccount',
+      };
+      const key = map[c];
+      if (key) return uiText(key);
+      return titleCaseWordsFromSnake(c);
     }
 
     function formatRelevanceOutcomeHuman(outcome) {
@@ -3710,6 +4179,11 @@
         const domain = r.slice('excluded_domain:'.length).trim();
         return uiFmt('relReasonExcludedDomain', { domain });
       }
+      if (r.startsWith('model_category:')) {
+        const tail = r.slice('model_category:'.length).trim();
+        const lab = formatActionCategoryLabel(tail);
+        return uiFmt('relReasonModelCategory', { category: lab });
+      }
       const map = {
         customer_ask_or_risk: 'relReasonCustomerAsk',
         no_action_signal: 'relReasonNoAction',
@@ -3717,8 +4191,13 @@
         excluded_keyword: 'relReasonExcludedKeyword',
         excluded_intent_phrase: 'relReasonExcludedNl',
         user_include_intent_phrase: 'relReasonIncludeNl',
+        user_include_sender_domain: 'relReasonUserIncludeSenderDomain',
         default_internal_signal: 'relReasonDefaultInternal',
-        empty_text: 'relOutcomeInsufficientContext',
+        empty_text: 'relReasonEmptyText',
+        model_include_dashboard: 'relReasonModelIncludeDashboard',
+        permissive_ambiguous_intent: 'relReasonPermissiveAmbiguous',
+        strict_ambiguous_intent: 'relReasonStrictAmbiguous',
+        model_intent_not_dashboard: 'relReasonModelIntentNotDashboard',
       };
       const key = map[r];
       if (key) return uiText(key);
@@ -3735,6 +4214,18 @@
     function extractEmailDomainFrom(from) {
       const m = String(from || '').match(/@([a-z0-9.-]+\.[a-z]{2,})/i);
       return m ? m[1].toLowerCase() : '';
+    }
+    function extractEmailAddressFrom(text) {
+      const m = String(text || '').match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+      return m ? m[0].toLowerCase() : '';
+    }
+    function stripEmailFromHeader(text) {
+      const raw = String(text || '').trim();
+      if (!raw) return '';
+      // "Name <email@x.com>" -> "Name"
+      const m = raw.match(/^\s*"?([^"<]+?)"?\s*<[^>]+>\s*$/);
+      if (m) return m[1].trim();
+      return raw.replace(/\s*<[^>]+>\s*$/, '').trim();
     }
 
     function renderRetrievalEvidenceBlock(ev) {
@@ -3755,6 +4246,17 @@
         .join('');
       if (!items) return '';
       return `<details class="csm-action-card__evidence" style="margin-top:0.5rem;"><summary>${escapeHtml(uiText('dashboardRetrievalEvidence'))}</summary><ul style="margin:0.35rem 0 0 1rem;">${items}</ul></details>`;
+    }
+
+    function renderReferenceItem(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const m = raw.match(/https?:\/\/[^\s)>\]"]+/i);
+      if (!m) return `<li>${escapeHtml(raw)}</li>`;
+      const url = m[0];
+      const label = raw.replace(url, '').replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '').trim();
+      const link = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+      return `<li>${label ? `${escapeHtml(label)} — ` : ''}${link}</li>`;
     }
 
     function dashboardCardFoot(row, md, opts) {
@@ -3794,7 +4296,10 @@
 
     function renderCsmActionCard(row, action, md, actionIndex) {
       const cat = escapeHtml(formatActionCategoryLabel(action.category));
-      const title = escapeHtml(String(action.title || '—'));
+      const rawCardTitle = String(action.title || '').trim();
+      const threadTitle = String(action.thread_title || '').trim();
+      const displayTitleRaw = threadTitle || rawCardTitle || '—';
+      const title = escapeHtml(displayTitleRaw);
       const brief = String(action.brief || '').trim();
       const technicalRationale = String(action.technical_rationale || '').trim();
       const escalationGuidance = String(action.escalation_guidance || '').trim();
@@ -3819,7 +4324,7 @@
         ? `<div><strong>${escapeHtml(uiText('dashboardNextSteps'))}</strong><ul>${steps.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
         : '';
       const refsBlock = refs.length
-        ? `<div><strong>${escapeHtml(uiText('dashboardReferences'))}</strong><ul>${refs.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
+        ? `<div><strong>${escapeHtml(uiText('dashboardReferences'))}</strong><ul>${refs.map((s) => renderReferenceItem(s)).join('')}</ul></div>`
         : '';
       const foot = dashboardCardFoot(row, md, { actionIndex });
       const actionStatus = normalizeActionStatus(action && action.status);
@@ -3832,20 +4337,44 @@
         ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionStatusLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionStatus(${iid}, ${Number(actionIndex)}, this.value)">${statusOptions}</select></div>`
         : '';
       const gmailTid = String(action.gmail_thread_id || '').trim();
-      const gmailLine = gmailTid
-        ? `<div class="csm-action-card__meta" title="Gmail thread id — used when discussing this action">Gmail thread · ${escapeHtml(gmailTid)}</div>`
-        : '';
       const subj = String(action.email_subject || '').trim();
       const from = String(action.email_from || '').trim();
-      const subjLine = subj ? `<div class="csm-action-card__meta" title="Email subject">${escapeHtml(subj)}</div>` : '';
-      const fromLine = from ? `<div class="csm-action-card__meta" title="Email from">${escapeHtml(from)}</div>` : '';
-      const metaLine = `${statusControl}${gmailLine}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      const customerEmail = String(action.customer_email || '').trim();
+      const metaLine = `${statusControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
 
-      const rawCardTitle = String(action.title || '').trim();
-      const threadTitle = String(action.thread_title || '').trim();
       const clientId = String(action.customer_identifier || '').trim();
       const clientDomain =
         String(action.customer_domain || '').trim() || extractEmailDomainFrom(from);
+      const identityParts = [];
+      if (from) {
+        const fromName = stripEmailFromHeader(from);
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardEmailFrom'))}</strong> ${escapeHtml(fromName || from)}</span>`
+        );
+      }
+      if (customerEmail) {
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardClientEmail'))}</strong> ${escapeHtml(customerEmail)}</span>`
+        );
+      }
+      if (clientId) {
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardClientId'))}</strong> ${escapeHtml(clientId)}</span>`
+        );
+      }
+      if (clientDomain) {
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardClientDomain'))}</strong> ${escapeHtml(clientDomain)}</span>`
+        );
+      }
+      if (gmailTid) {
+        identityParts.push(
+          `<span title="${escapeHtml(gmailTid)}"><strong>${escapeHtml(uiText('dashboardGmailThread'))}</strong> ${escapeHtml(gmailTid)}</span>`
+        );
+      }
+      const identityExpanded = identityParts.length
+        ? `<div class="csm-action-card__identity csm-action-card__meta-expanded">${identityParts.join('')}</div>`
+        : '';
       const prio = String(action.priority || '').trim().toLowerCase();
       const conf = String(action.confidence_label || '').trim().toLowerCase();
       const relOut = String(action.relevance_outcome || '').trim();
@@ -3853,32 +4382,22 @@
       const relevanceHuman = formatRelevanceLineHuman(relOut, relWhy);
 
       const factsParts = [];
-      if (threadTitle && threadTitle !== rawCardTitle) {
-        factsParts.push(
-          `<span><strong>${escapeHtml(uiText('dashboardThreadTitle'))}:</strong> ${escapeHtml(threadTitle)}</span>`
-        );
-      }
-      if (clientId) {
-        factsParts.push(`<span><strong>${escapeHtml(uiText('dashboardClientId'))}:</strong> ${escapeHtml(clientId)}</span>`);
-      }
-      if (clientDomain) {
-        factsParts.push(
-          `<span><strong>${escapeHtml(uiText('dashboardClientDomain'))}:</strong> ${escapeHtml(clientDomain)}</span>`
-        );
-      }
       if (prio && conf && prio === conf) {
+        const pcLabel = formatPriorityOrConfidenceLabel(prio);
         factsParts.push(
-          `<span class="csm-action-card__pill" title="${escapeHtml(uiText('relPrioConfCombinedTitle'))}: ${escapeHtml(prio)}">${escapeHtml(prio)}</span>`
+          `<span class="csm-action-card__pill" title="${escapeHtml(uiText('relPrioConfCombinedTitle'))}: ${escapeHtml(pcLabel)}">${escapeHtml(pcLabel)}</span>`
         );
       } else {
         if (prio) {
+          const pl = formatPriorityOrConfidenceLabel(prio);
           factsParts.push(
-            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardPriority'))}">${escapeHtml(prio)}</span>`
+            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardPriority'))}">${escapeHtml(pl)}</span>`
           );
         }
         if (conf) {
+          const cl = formatPriorityOrConfidenceLabel(conf);
           factsParts.push(
-            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardConfidence'))}">${escapeHtml(conf)}</span>`
+            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardConfidence'))}">${escapeHtml(cl)}</span>`
           );
         }
       }
@@ -3896,28 +4415,48 @@
       const briefBlock = brief
         ? `<p class="csm-action-card__brief">${escapeHtml(brief)}</p>`
         : '';
+      const cb =
+        Number.isFinite(iid) && Number.isFinite(Number(actionIndex))
+          ? `<label class="csm-action-card__cbwrap"><input type="checkbox" class="dashboard-action-cb" data-iid="${iid}" data-aidx="${Number(actionIndex)}" onclick="event.stopPropagation()" onchange="updateDashboardBulkHint()" /></label>`
+          : '';
+      const feedbackBlock = Number.isFinite(iid)
+        ? `<div class="csm-action-card__feedback">
+            <details class="csm-action-card__feedback-details">
+              <summary><span class="csm-action-card__feedback-caret">▸</span>${escapeHtml(uiText('dashboardFeedbackLabel'))}</summary>
+              <textarea id="daf_${iid}_${Number(actionIndex)}" class="csm-action-card__feedback-ta" placeholder="${escapeHtml(uiText('dashboardFeedbackPlaceholder'))}"></textarea>
+              <button type="button" class="ghost btn-compact" onclick="submitDashboardActionFeedback(${iid}, ${Number(actionIndex)})">${escapeHtml(uiText('dashboardFeedbackSend'))}</button>
+            </details>
+          </div>`
+        : '';
       const bodyRest = `
         ${rationaleBlock}
         ${escalationBlock}
         ${stepsBlock}
         ${refsBlock}
         ${evidenceBlock}
-        ${subjLine}
-        ${fromLine}
+        ${feedbackBlock}
+        ${foot}
         ${metaLine}`;
       return `<article class="csm-action-card">
-        <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
-        <details class="csm-action-card__main" open>
+        <div class="csm-action-card__head">
+          ${cb}
+          <div class="csm-action-card__head-body">
+            <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
+          </div>
+        </div>
+        <details class="csm-action-card__main">
           <summary>
-            <h3 class="csm-action-card__title">${title}</h3>
+            <div class="csm-action-card__summary-main">
+              <h3 class="csm-action-card__title">${title}</h3>
+            </div>
             <span class="csm-action-card__chev" aria-hidden="true">▸</span>
           </summary>
+          ${identityExpanded}
           ${factsBlock}
           ${briefBlock}
           ${queriesBlock}
           <div class="csm-action-card__main-inner">${bodyRest}</div>
         </details>
-        ${foot}
       </article>`;
     }
 
@@ -3934,6 +4473,31 @@
       return 3;
     }
 
+    function normalizeDashboardPriority(v) {
+      const s = String(v || '').trim().toLowerCase();
+      if (['urgent', 'high', 'medium', 'low'].includes(s)) return s;
+      return 'medium';
+    }
+
+    function prioritySortRank(p) {
+      const n = normalizeDashboardPriority(p);
+      if (n === 'urgent') return 0;
+      if (n === 'high') return 1;
+      if (n === 'low') return 3;
+      return 2;
+    }
+
+    function getDashboardPriorityFilter() {
+      const el = document.getElementById('dashboardPriorityFilter');
+      const v = (el && el.value) || 'all';
+      return ['all', 'urgent', 'high', 'medium', 'low'].includes(v) ? v : 'all';
+    }
+
+    function getDashboardDomainFilter() {
+      const el = document.getElementById('dashboardDomainFilter');
+      return (el && el.value ? String(el.value) : '').trim().toLowerCase();
+    }
+
     function getDashboardActionStatusFilter() {
       const el = document.getElementById('dashboardActionStatusFilter');
       const v = (el && el.value) || 'all';
@@ -3943,7 +4507,9 @@
     function getDashboardActionSortMode() {
       const el = document.getElementById('dashboardActionSort');
       const v = (el && el.value) || 'updated_desc';
-      return ['updated_desc', 'updated_asc', 'status'].includes(v) ? v : 'updated_desc';
+      return ['updated_desc', 'updated_asc', 'status', 'priority_desc', 'priority_asc'].includes(v)
+        ? v
+        : 'updated_desc';
     }
 
     function flattenDedupDashboardActions(rows) {
@@ -3966,22 +4532,47 @@
             byThread.set(key, item);
             continue;
           }
-          const tPrev = Date.parse(prev.row.created_at || '') || 0;
-          const tNow = Date.parse(row.created_at || '') || 0;
+          const tPrev = _parseUtcMs(prev.row.created_at || '');
+          const tNow = _parseUtcMs(row.created_at || '');
           if (tNow >= tPrev) byThread.set(key, item);
         }
       }
       out.push(...Array.from(byThread.values()));
       const stFilter = getDashboardActionStatusFilter();
-      const filtered = out.filter((x) => stFilter === 'all' || normalizeActionStatus(x.action.status) === stFilter);
+      let filtered = out.filter((x) => stFilter === 'all' || normalizeActionStatus(x.action.status) === stFilter);
+      const pr = getDashboardPriorityFilter();
+      if (pr !== 'all') {
+        filtered = filtered.filter(
+          (x) => normalizeDashboardPriority(x.action && x.action.priority) === pr
+        );
+      }
+      const domQ = getDashboardDomainFilter();
+      if (domQ) {
+        filtered = filtered.filter((x) => {
+          const a = x.action || {};
+          const cd = String(a.customer_domain || '').toLowerCase();
+          const em = String(a.email_from || '').toLowerCase();
+          const dom2 = extractEmailDomainFrom(em);
+          return (
+            cd.includes(domQ) || em.includes(domQ) || (dom2 && dom2.includes(domQ))
+          );
+        });
+      }
       const sortMode = getDashboardActionSortMode();
       filtered.sort((a, b) => {
-        const ta = Date.parse(a.row.created_at || '') || 0;
-        const tb = Date.parse(b.row.created_at || '') || 0;
+        const ta = _parseUtcMs(a.row.created_at || '');
+        const tb = _parseUtcMs(b.row.created_at || '');
         if (sortMode === 'updated_asc') return ta - tb;
         if (sortMode === 'status') {
           const rs = statusSortRank(a.action.status) - statusSortRank(b.action.status);
           if (rs !== 0) return rs;
+          return tb - ta;
+        }
+        if (sortMode === 'priority_desc' || sortMode === 'priority_asc') {
+          const ra = prioritySortRank(a.action && a.action.priority);
+          const rb = prioritySortRank(b.action && b.action.priority);
+          const cmp = ra - rb;
+          if (cmp !== 0) return sortMode === 'priority_desc' ? cmp : -cmp;
           return tb - ta;
         }
         return tb - ta;
@@ -4130,6 +4721,96 @@
       }
     }
 
+    function updateDashboardBulkHint() {
+      const n = document.querySelectorAll('#actionBoardFeed .dashboard-action-cb:checked').length;
+      const el = document.getElementById('dashboardBulkSelectionHint');
+      if (el) el.textContent = n ? uiFmt('dashboardBulkSelectedCount', { count: n }) : '';
+    }
+
+    function dashboardSelectAllCards() {
+      document.querySelectorAll('#actionBoardFeed .dashboard-action-cb').forEach((c) => {
+        c.checked = true;
+      });
+      updateDashboardBulkHint();
+    }
+
+    function dashboardClearCardSelection() {
+      document.querySelectorAll('#actionBoardFeed .dashboard-action-cb').forEach((c) => {
+        c.checked = false;
+      });
+      updateDashboardBulkHint();
+    }
+
+    async function dashboardBulkDismissSelected() {
+      const boxes = Array.from(document.querySelectorAll('#actionBoardFeed .dashboard-action-cb:checked'));
+      if (!boxes.length) return;
+      const n = boxes.length;
+      if (!confirm(uiFmt('dashboardDismissBulkConfirm', { count: n }))) return;
+      try {
+        // Delete per interaction in descending action index order to avoid index-shift failures.
+        const byInteraction = new Map();
+        for (const c of boxes) {
+          const id = Number(c.getAttribute('data-iid'));
+          const idx = Number(c.getAttribute('data-aidx'));
+          if (!id || !Number.isFinite(idx) || idx < 0) continue;
+          if (!byInteraction.has(id)) byInteraction.set(id, new Set());
+          byInteraction.get(id).add(idx);
+        }
+        for (const [id, idxSet] of byInteraction.entries()) {
+          const ordered = Array.from(idxSet).sort((a, b) => b - a);
+          for (const idx of ordered) {
+            const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}`, { method: 'DELETE' });
+            // Selection can go stale after prior deletes or auto-refresh; treat 404 as already removed.
+            if (!r.ok && r.status !== 404) throw new Error(await r.text());
+          }
+        }
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardDismissFail')}: ${e.message}`);
+      }
+    }
+
+    function scheduleRerenderActionBoard() {
+      clearTimeout(_dashboardDomainFilterTimer);
+      _dashboardDomainFilterTimer = setTimeout(() => rerenderActionBoardFromCache(), 240);
+    }
+
+    function rerenderActionBoardFromCache() {
+      const el = document.getElementById('actionBoardFeed');
+      if (!el || !_dashboardProbeRows) return;
+      applyDashboardFeedLayoutClass();
+      syncDashboardLayoutButtons();
+      el.innerHTML = renderDashboardFeedHtml(_dashboardProbeRows);
+      updateDashboardBulkHint();
+    }
+
+    async function submitDashboardActionFeedback(interactionId, actionIndex) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      const ta = document.getElementById(`daf_${id}_${idx}`);
+      const text = (ta && ta.value ? String(ta.value) : '').trim();
+      if (!text) {
+        alert(uiText('dashboardFeedbackEmpty'));
+        return;
+      }
+      try {
+        await fetchJson('/memory/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            interaction_id: id,
+            verdict: 'useful',
+            note: text,
+            action_index: idx,
+          }),
+        });
+        if (ta) ta.value = '';
+        alert(uiText('dashboardFeedbackSaved'));
+      } catch (e) {
+        alert(`${uiText('dashboardFeedbackFail')}: ${e.message}`);
+      }
+    }
+
     async function loadActionBoard(reset) {
       const el = document.getElementById('actionBoardFeed');
       const moreBtn = document.getElementById('dashboardLoadMoreBtn');
@@ -4163,6 +4844,7 @@
         if (reset && !items.length) {
           el.innerHTML = `<div class="empty">${escapeHtml(uiText('actionBoardEmpty'))}</div>`;
           if (moreBtn) moreBtn.style.display = 'none';
+          updateDashboardBulkHint();
           return;
         }
         if (!reset && !items.length) {
@@ -4170,11 +4852,13 @@
           return;
         }
         el.innerHTML = renderDashboardFeedHtml(_dashboardProbeRows);
+        updateDashboardBulkHint();
         _dashboardOffset += items.length;
         if (moreBtn) moreBtn.style.display = pack.has_more ? 'inline-block' : 'none';
       } catch (e) {
         if (reset) el.innerHTML = `<div class="empty">${escapeHtml(uiText('actionBoardFail'))}: ${escapeHtml(e.message)}</div>`;
         if (moreBtn) moreBtn.style.display = 'none';
+        updateDashboardBulkHint();
       }
     }
 
@@ -4187,17 +4871,35 @@
       });
     }
     async function pollRun(runId) {
+      let transientFails = 0;
       while (true) {
-        const run = await fetchJson(`/agent/runs/${encodeURIComponent(runId)}`);
+        let run = null;
+        try {
+          run = await fetchJson(`/agent/runs/${encodeURIComponent(runId)}`);
+          transientFails = 0;
+        } catch (e) {
+          transientFails += 1;
+          setProcessingUI(true, _uiLang === 'ko' ? '연결 재시도 중…' : 'Connection retry…');
+          if (transientFails >= 40) {
+            throw e;
+          }
+          await new Promise(r => setTimeout(r, 700));
+          continue;
+        }
         const events = run.events || [];
+        const st = String(run.status || '').toLowerCase();
+        const live = st === 'running' || st === 'queued';
+
         if (events.length > _traceLen) {
           for (let i = _traceLen; i < events.length; i++) {
             _traceAll.push(events[i]);
           }
           _traceLen = events.length;
           rerenderTraceFiltered();
-          // Live spinner text based on most recent event.
-          const latest = events[events.length - 1];
+        }
+        // Keep spinner + label fresh for long probes even between trace events (e.g. long LLM calls).
+        const latest = events.length ? events[events.length - 1] : null;
+        if (live) {
           setProcessingUI(true, processingTextFromEvent(latest));
         }
 
@@ -4327,6 +5029,7 @@
     applyUiLang();
     syncDashboardLayoutButtons();
     applyDashboardFeedLayoutClass();
+    startRunQueuePolling();
 
     loadAgentProfile();
     loadThreads();

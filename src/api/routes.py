@@ -12,6 +12,7 @@ from datetime import datetime
 from src.agent.email_agent import AgentRunCancelled, run_agent
 from src.agent.memory import compact_memory, refresh_learning_instructions
 from src.agent.probe_actions import (
+    build_action_review_runtime_hydration,
     format_action_review_chat_prefix,
     format_probe_thread_reply,
     merge_csm_actions_metadata,
@@ -52,11 +53,22 @@ def _guardrail_policy_metadata() -> dict[str, str]:
     }
 
 
+def _probe_ui_locale(raw: str | None) -> str | None:
+    """Normalize browser UI locale for probe language hints (ko | en)."""
+    s = (raw or "").strip().lower()
+    if s in ("ko", "kr", "korean"):
+        return "ko"
+    if s in ("en", "english"):
+        return "en"
+    return None
+
+
 class RunAgentRequest(BaseModel):
     input: str | None = None
     probe: bool = False
     web: bool = False
     web_url: str | None = None
+    ui_locale: str | None = None
 
 
 class RunAgentResponse(BaseModel):
@@ -125,6 +137,7 @@ def _tools_used_from_events(events: list[dict] | None) -> list[str]:
 def run_agent_endpoint(req: RunAgentRequest):
     try:
         input_text = get_probe_trigger_message() if req.probe else (req.input or "Hello, what can you do?")
+        loc = _probe_ui_locale(req.ui_locale)
         if req.web:
             res = run_web_search(query=input_text, model=effective_llm_model_main(), url=req.web_url)
             output = res.text or "No web search output."
@@ -132,6 +145,8 @@ def run_agent_endpoint(req: RunAgentRequest):
             output = run_agent(input_text, probe=req.probe)
         meta: dict = {"tools_used": [], "events": [], **_guardrail_policy_metadata()}
         if req.probe:
+            if loc:
+                meta["ui_locale"] = loc
             existing = database.latest_dashboard_actions_by_gmail_thread()
             meta = merge_csm_actions_metadata(output, meta, existing_by_thread=existing)
         database.log_interaction(
@@ -150,6 +165,7 @@ def run_agent_endpoint(req: RunAgentRequest):
 @router.post("/agent/run_async", response_model=RunAgentAsyncResponse)
 def run_agent_async_endpoint(req: RunAgentRequest):
     input_text = get_probe_trigger_message() if req.probe else (req.input or "Hello, what can you do?")
+    loc0 = _probe_ui_locale(req.ui_locale)
     trigger_type = "manual_probe" if req.probe else "manual"
     if req.web:
         trigger_type = trigger_type + "_web"
@@ -157,6 +173,7 @@ def run_agent_async_endpoint(req: RunAgentRequest):
 
     def _worker():
         cb = _UITraceCallback(run_id)
+        run_state.mark_running(run_id)
         try:
             if req.web:
                 run_state.add_event(run_id, "model_start", "Web search started")
@@ -175,6 +192,8 @@ def run_agent_async_endpoint(req: RunAgentRequest):
                 **_guardrail_policy_metadata(),
             }
             if req.probe:
+                if loc0:
+                    metadata["ui_locale"] = loc0
                 existing = database.latest_dashboard_actions_by_gmail_thread()
                 metadata = merge_csm_actions_metadata(output, metadata, existing_by_thread=existing)
             database.log_interaction(trigger_type, input_text[:500], output, "completed", metadata=metadata)
@@ -207,6 +226,18 @@ def get_agent_run(run_id: str):
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return run
+
+
+@router.get("/agent/runs")
+def list_agent_runs(limit: int = 50, status: str = "all"):
+    if limit < 1:
+        limit = 50
+    if limit > 200:
+        limit = 200
+    st = (status or "all").strip().lower()
+    if st not in {"all", "queued", "running", "completed", "error", "cancelled"}:
+        raise HTTPException(status_code=400, detail="Invalid status filter.")
+    return {"items": run_state.list_runs(limit=limit, status=st), "limit": limit, "status": st}
 
 
 @router.post("/agent/runs/{run_id}/cancel")
@@ -257,6 +288,9 @@ class RuntimeSettingsPatch(BaseModel):
     langsmith_tracing: str | None = None
     langsmith_api_key: str | None = None
     langsmith_project: str | None = None
+    probe_inbox_max_results: str | None = None
+    probe_inbox_gmail_search: str | None = None
+    user_inbox_peek_max_results: str | None = None
     guardrail_include_sender_domains: str | None = None
     guardrail_exclude_sender_domains: str | None = None
     guardrail_include_intent_keywords: str | None = None
@@ -280,7 +314,7 @@ def get_runtime_settings():
 
 @router.patch("/settings/runtime")
 def patch_runtime_settings(req: RuntimeSettingsPatch):
-    """Persist overrides in app_settings. Empty string clears that key (fall back to env + defaults)."""
+    """Persist Configure overrides in app_settings."""
     from src.agent.prompt_seed import PROMPT_LIBRARY_KEYS, default_prompt_value
 
     raw = req.model_dump(exclude_unset=True)
@@ -290,6 +324,7 @@ def patch_runtime_settings(req: RuntimeSettingsPatch):
         s = str(val).strip()
         if not s:
             if key in PROMPT_LIBRARY_KEYS:
+                # Re-persist bundled default from src/agent/prompts.py so DB remains the single source of truth.
                 persist_app_setting(key, default_prompt_value(key))
             else:
                 database.delete_app_setting(key)
@@ -623,6 +658,8 @@ class FeedbackRequest(BaseModel):
     verdict: str
     note: str | None = None
     correction: str | None = None
+    # When set, feedback is scoped to one Action dashboard card (stored in feedback metadata).
+    action_index: int | None = None
 
 
 class OptimizeRequest(BaseModel):
@@ -650,6 +687,7 @@ class ThreadSendRequest(BaseModel):
     thread_id: int
     text: str
     probe: bool = False
+    ui_locale: str | None = None
 
 
 @router.post("/memory/compact")
@@ -671,11 +709,15 @@ def memory_compact(req: CompactMemoryRequest):
 
 @router.post("/memory/feedback")
 def memory_feedback(req: FeedbackRequest):
+    meta = None
+    if req.action_index is not None:
+        meta = {"source": "action_dashboard", "action_index": int(req.action_index)}
     row = database.insert_feedback(
         interaction_id=req.interaction_id,
         verdict=req.verdict,
         note=req.note,
         correction=req.correction,
+        metadata=meta,
     )
     try:
         refresh = refresh_learning_instructions()
@@ -788,6 +830,8 @@ def send_thread_message(req: ThreadSendRequest):
     if not text and not req.probe:
         raise HTTPException(status_code=400, detail="text is required")
 
+    probe_ui_loc = _probe_ui_locale(req.ui_locale)
+
     # Persist the user message immediately.
     user_msg = database.add_message(
         thread_id=req.thread_id,
@@ -803,14 +847,48 @@ def send_thread_message(req: ThreadSendRequest):
     th0 = database.get_thread_by_id(req.thread_id)
     md0 = (th0 or {}).get("metadata") or {}
     is_action_review = isinstance(md0, dict) and md0.get("kind") == "action_review"
-    system_append = get_action_review_append() if (not req.probe and is_action_review) else None
+    system_append = None
+    if (not req.probe) and is_action_review:
+        base = (get_action_review_append() or "").strip()
+        hydration: str | None = None
+        try:
+            src_raw = md0.get("source_interaction_id")
+            act_raw = md0.get("action_index")
+            if src_raw is not None and act_raw is not None:
+                src_id = int(src_raw)
+                act_idx = int(act_raw)
+                src_row = database.get_interaction_by_id(src_id)
+                if src_row:
+                    md_src = database.parse_interaction_metadata(src_row.get("metadata"))
+                    pbt = md0.get("probe_source_thread_id")
+                    try:
+                        probe_tid = int(pbt) if pbt is not None else None
+                    except (TypeError, ValueError):
+                        probe_tid = None
+                    hydration = build_action_review_runtime_hydration(
+                        interaction_metadata=md_src,
+                        action_index=act_idx,
+                        source_interaction_id=src_id,
+                        probe_source_thread_id=probe_tid,
+                    )
+        except Exception:
+            hydration = None
+        if hydration:
+            system_append = (base + "\n\n" + hydration).strip() if base else hydration
+        else:
+            system_append = base or None
     thread_history = None if req.probe else database.list_messages(req.thread_id, limit=200)
+
+    agent_input = (text or "").strip()
+    if req.probe and not agent_input:
+        agent_input = get_probe_trigger_message()
 
     def _worker():
         cb = _UITraceCallback(run_id)
+        run_state.mark_running(run_id)
         try:
             output = run_agent(
-                text or "",
+                agent_input,
                 callbacks=[cb],
                 probe=req.probe,
                 system_append=system_append,
@@ -840,6 +918,8 @@ def send_thread_message(req: ThreadSendRequest):
                         "guardrail_strictness": effective_guardrail_strictness(),
                     }
                 )
+                if probe_ui_loc:
+                    metadata["ui_locale"] = probe_ui_loc
                 existing = database.latest_dashboard_actions_by_gmail_thread()
                 metadata = merge_csm_actions_metadata(output, metadata, existing_by_thread=existing)
                 assistant_body = format_probe_thread_reply(output, metadata)

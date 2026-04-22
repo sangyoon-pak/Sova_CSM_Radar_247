@@ -5,7 +5,7 @@ Uses gog's raw format and decodes MIME parts with correct charset (EUC-KR, UTF-8
 Fixes garbled text from emails sent with non-UTF-8 encodings (e.g. from Korean Outlook).
 
 Usage:
-  gmail-get-decoded.py [--search QUERY] [--max N]   # Probe inbox (default: in:inbox category:primary newer_than:2d)
+  gmail-get-decoded.py [--search QUERY] [--max N]   # Probe inbox (default: in:inbox category:primary newer_than:30d)
   gmail-get-decoded.py <message_id> [thread]        # Single message or full thread
 
 Local testing (Mac): GMAIL_SCRIPT_LOCAL=1 python3 gmail-get-decoded.py --max 5 --verbose
@@ -371,8 +371,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Fetch Gmail messages with proper charset decoding (Korean, Japanese, etc.)"
     )
-    parser.add_argument("--search", nargs="?", const="in:inbox category:primary newer_than:2d",
-        metavar="QUERY", help="Search (default: in:inbox category:primary newer_than:2d)")
+    parser.add_argument("--search", nargs="?", const="in:inbox category:primary newer_than:30d",
+        metavar="QUERY", help="Search (default: in:inbox category:primary newer_than:30d)")
     parser.add_argument("--max", type=int, default=10, help="Max results for --search (default: 10)")
     parser.add_argument("--page", default=None, help="Page token for --search pagination")
     parser.add_argument("--verbose", "-v", action="store_true", help="Print thread/msg debug to stderr")

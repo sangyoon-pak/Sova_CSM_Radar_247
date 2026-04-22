@@ -17,6 +17,9 @@ from src.runtime_config import (
     effective_langsmith_tracing,
     effective_llm_model_main,
     effective_llm_model_search_json,
+    effective_probe_inbox_gmail_search,
+    effective_probe_inbox_max_results,
+    effective_user_inbox_peek_max_results,
 )
 from src.agent.prompts import (
     get_probe_mode_system_append,
@@ -261,8 +264,8 @@ def _add_citations_pass(
 
 
 @tool
-def fetch_inbox_emails(search: str = "in:inbox category:primary newer_than:2d", max_results: int = 10) -> str:
-    """Fetch recent emails from Gmail Primary inbox. Use for probing new messages."""
+def fetch_inbox_emails(search: str | None = None, max_results: int = 10) -> str:
+    """Fetch Gmail threads using the server's default inbox search (Configure: probe Gmail query), or pass `search` to override."""
     from src.agent.tools.gmail_tool import fetch_inbox_emails as _fetch_emails
     return _fetch_emails(search=search, max_results=max_results)
 
@@ -342,20 +345,28 @@ def run_agent(
     _action_review = thread_is_action_review or (input_text or "").lstrip().startswith("[Action review")
     if _peek and not _action_review:
         from src.agent.tools.gmail_tool import fetch_inbox_emails as _fetch
+        try:
+            max_results = int(effective_user_inbox_peek_max_results())
+        except Exception:
+            max_results = 5
+        if max_results < 1:
+            max_results = 1
+        if max_results > 100:
+            max_results = 100
         # Emit trace events (tool_start/tool_end) so the UI Trace inspector stays useful.
         cbs = list(callbacks) if callbacks else []
         if cancel_check:
             cbs.append(_CancelPatrolCallback(cancel_check))
         for cb in cbs:
             try:
-                cb.on_tool_start({"name": "fetch_inbox_emails"}, f"max_results=5 search=default")  # type: ignore[attr-defined]
+                cb.on_tool_start({"name": "fetch_inbox_emails"}, f"max_results={max_results} search=default")  # type: ignore[attr-defined]
             except AgentRunCancelled:
                 raise
             except Exception:
                 pass
         if cancel_check and cancel_check():
             raise AgentRunCancelled()
-        out = _fetch(max_results=5)
+        out = _fetch(max_results=max_results)
         for cb in cbs:
             try:
                 cb.on_tool_end(out)  # type: ignore[attr-defined]
@@ -364,6 +375,28 @@ def run_agent(
             except Exception:
                 pass
         return out
+
+    if probe:
+        probe_limit = effective_probe_inbox_max_results()
+        probe_gmail_q = effective_probe_inbox_gmail_search()
+        probe_hint = (
+            "**Probe JSON vs. UI language:** Workbench EN/KR is only for app chrome — it does **not** pick the language "
+            "of `actions` text. After Gmail tools, each block ends with `csm_output_language` (**ko** or **inferred**) and a note. "
+            "When the tag is **ko**, write **every** string field for that thread's action in **Korean** — no English dashboard prose. "
+            "When **inferred**, choose language from the **customer's substantive email** (main ask / body), not from UI.\n"
+            f"**Gmail slice:** When the tool omits `search`, the server uses this query: `{probe_gmail_q}`. "
+            "Threads outside that slice never appear in `fetch_inbox_emails` (and `category:primary` hides other tabs). "
+            "Widen `newer_than:` or drop `category:primary` in `search` if needed, or use `fetch_gmail_thread` when the id is known.\n"
+            f"For `fetch_inbox_emails`, use max_results={probe_limit} unless the user explicitly asks otherwise.\n"
+            "If any action is `product_technical`, you MUST call `search_product_docs` before final JSON. "
+            "If docs are truly unavailable, keep `references` and `retrieval_evidence` empty rather than fabricating sources.\n"
+            "Language: follow the inferred-language note per thread. Do not default to English for dashboard strings "
+            "just because the latest reply is an internal English ping — read who actually asked for help and in which language."
+        )
+        if system_append and system_append.strip():
+            system_append = system_append.rstrip() + "\n\n" + probe_hint
+        else:
+            system_append = probe_hint
 
     agent = create_agent_executor(probe=probe, system_append=system_append)
     cbs = list(callbacks) if callbacks else []

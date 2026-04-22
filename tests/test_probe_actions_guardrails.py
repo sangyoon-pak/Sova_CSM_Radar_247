@@ -1,6 +1,8 @@
 import importlib.util
+import json
 import unittest
 from pathlib import Path
+from unittest import mock
 
 _PROBE_ACTIONS_PATH = Path(__file__).resolve().parents[1] / "src" / "agent" / "probe_actions.py"
 _SPEC = importlib.util.spec_from_file_location("probe_actions", _PROBE_ACTIONS_PATH)
@@ -286,5 +288,36 @@ class TestRelevanceHeuristic(unittest.TestCase):
         self.assertEqual(d.get("kept_after_normalization"), 0)
         self.assertIn("normalization_dropped", d)
         self.assertIn("kept_after_merge", d)
+
+
+def test_same_fingerprint_reappears_when_prior_source_run_is_dashboard_removed():
+    """Deleting the last card marks the run removed; merge must not skip on identical model text."""
+    gid = "thread_ghost_rm_1"
+    key = f"gid:{gid}"
+    action = {
+        "title": "T1",
+        "brief": "B1",
+        "email_from": "c@d.com",
+        "gmail_thread_id": gid,
+        "include_on_dashboard": True,
+    }
+    prev = {**action, "_probe_merge_interaction_id": 99, "status": "completed"}
+    output = _probe_output([action])
+    removed_md = {"csm_dashboard_removed": True, "csm_actions": []}
+    fake_row = {"metadata": json.dumps(removed_md)}
+    base = {
+        "guardrail_strictness": "balanced",
+        "guardrail_include_sender_domains": "",
+        "guardrail_exclude_sender_domains": "",
+        "guardrail_include_intent_keywords": "",
+        "guardrail_exclude_intent_keywords": "",
+    }
+    with mock.patch("src.db.database.get_interaction_by_id", return_value=fake_row):
+        md = merge_csm_actions_metadata(output, base, existing_by_thread={key: prev})
+    acts = md.get("csm_actions") or []
+    assert len(acts) == 1
+    assert acts[0].get("status") == "not_started"
+    diag = md.get("csm_probe_diagnostics") or {}
+    assert diag.get("dedupe_skipped_unchanged") == 0
 
 

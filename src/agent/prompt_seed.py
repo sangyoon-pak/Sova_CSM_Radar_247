@@ -2,6 +2,8 @@
 
 Runtime reads prompts from the database only; this module is the bridge from code
 defaults to the DB on first start and after full Configure clear.
+
+See docs/PROMPTS.md for when edits to prompts.py reach existing databases.
 """
 from __future__ import annotations
 
@@ -29,6 +31,23 @@ PROMPT_LIBRARY_KEYS: tuple[str, ...] = (
 
 # Removed from Configure but may still exist in older DBs; cleared with "clear all".
 LEGACY_PROMPT_KEYS: tuple[str, ...] = ("prompt_system_extra", "prompt_probe_trigger")
+
+
+def ensure_prompt_library_materialized() -> None:
+    """
+    Ensure every prompt library row in app_settings contains non-empty text.
+
+    If a key is missing or only whitespace, write the bundled default from
+    `default_prompt_value` so Configure and runtime share one source: the database.
+    Safe to call repeatedly (idempotent once rows are valid).
+    """
+    for key in PROMPT_LIBRARY_KEYS:
+        if not database.app_setting_is_set(key):
+            database.set_app_setting(key, default_prompt_value(key))
+            continue
+        raw = database.get_app_setting(key)
+        if raw is None or not str(raw).strip():
+            database.set_app_setting(key, default_prompt_value(key))
 
 
 def seed_prompt_library_if_needed() -> None:
@@ -67,3 +86,5 @@ def seed_prompt_library_if_needed() -> None:
 
     if not database.app_setting_is_set("prompt_action_review_append"):
         database.set_app_setting("prompt_action_review_append", P.ACTION_REVIEW_SYSTEM_APPEND.strip())
+
+    ensure_prompt_library_materialized()

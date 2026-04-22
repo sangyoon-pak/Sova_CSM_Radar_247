@@ -57,6 +57,10 @@ Action card schema and UX contract is defined in [ACTION_CARD_SPEC.md](ACTION_CA
 - Knowledge sources include `knowledge-base/` and uploaded docs in app-managed storage.
 - Action cards, history, and related metadata persist via the local database layer in `src/db/`.
 
+## Prompts (important for developers)
+
+Editable agent prompts are stored in **`app_settings`** (keys like `prompt_probe_mode_append`), not read directly from `src/agent/prompts.py` on every request. Repo defaults live in `prompts.py` and are seeded or reapplied via `src/agent/prompt_seed.py` and Configure. See [PROMPTS.md](PROMPTS.md) before changing prompt text or expecting upgrades to pick up edits automatically.
+
 ## Operational Interfaces
 
 - Workbench: interactive runs and thread-focused work

@@ -72,6 +72,9 @@ class Settings(BaseSettings):
 
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")
+    probe_inbox_max_results: int = Field(10, validation_alias="PROBE_INBOX_MAX_RESULTS")
+    probe_inbox_gmail_search: str = Field("", validation_alias="PROBE_INBOX_GMAIL_SEARCH")
+    user_inbox_peek_max_results: int = Field(5, validation_alias="USER_INBOX_PEEK_MAX_RESULTS")
 
     # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
     configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")

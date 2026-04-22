@@ -23,13 +23,22 @@ GUARDRAIL_ENCRYPTED_KEYS: frozenset[str] = frozenset(
     }
 )
 
-_SENSITIVE_KEY = re.compile(r"(?i)(key|secret|password|token|credential)")
+# Only true secrets (API keys / passwords). Avoid matching substrings like "key" in
+# "keywords" or "credential" in "credentials_path" — those would hide real updates
+# in the Configure "Saved" table.
+_SENSITIVE_CONFIGURE_KEYS: frozenset[str] = frozenset(
+    {
+        "openrouter_api_key",
+        "gog_keyring_password",
+        "langsmith_api_key",
+    }
+)
 
 
 def mask_env_display(key: str, value: str) -> str:
     if not value:
         return ""
-    if _SENSITIVE_KEY.search(key):
+    if key in _SENSITIVE_CONFIGURE_KEYS:
         return "••••••••" if len(value) > 6 else "••••"
     if len(value) > 120:
         return value[:117] + "…"
@@ -63,6 +72,9 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "guardrail_exclude_intent_keywords",
     "guardrail_team_guidance",
     "guardrail_strictness",
+    "probe_inbox_max_results",
+    "probe_inbox_gmail_search",
+    "user_inbox_peek_max_results",
     "prompt_email_agent_system_template",
     "prompt_probe_user_message",
     "prompt_probe_mode_append",
@@ -426,6 +438,65 @@ def effective_guardrail_strictness() -> str:
     return raw
 
 
+def _bounded_int_str(raw: str | None, *, default: int, min_v: int, max_v: int) -> str:
+    try:
+        n = int(str(raw or "").strip())
+    except (TypeError, ValueError):
+        n = int(default)
+    if n < min_v:
+        n = min_v
+    if n > max_v:
+        n = max_v
+    return str(n)
+
+
+def effective_probe_inbox_max_results() -> str:
+    v = _db_str("probe_inbox_max_results")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=10, min_v=1, max_v=100)
+    return _bounded_int_str(getattr(settings, "probe_inbox_max_results", 10), default=10, min_v=1, max_v=100)
+
+
+_DEFAULT_PROBE_INBOX_GMAIL_SEARCH = "in:inbox category:primary newer_than:30d"
+
+
+def _sanitize_probe_inbox_gmail_search(raw: str) -> str | None:
+    """Single-line Gmail search string; reject obvious injection / binary."""
+    s = " ".join((raw or "").splitlines()).strip()
+    if not s or len(s) > 500:
+        return None
+    if "\x00" in s or "`" in s:
+        return None
+    return s
+
+
+def effective_probe_inbox_gmail_search() -> str:
+    """
+    Gmail query passed to gog when the agent calls fetch_inbox_emails without a custom search.
+    Default is Primary + ~30 days so older client threads are not silently dropped (2d was too tight).
+    """
+    v = _db_str("probe_inbox_gmail_search")
+    if v:
+        cleaned = _sanitize_probe_inbox_gmail_search(v)
+        if cleaned:
+            return cleaned
+    env_v = (getattr(settings, "probe_inbox_gmail_search", None) or "").strip()
+    if env_v:
+        cleaned = _sanitize_probe_inbox_gmail_search(env_v)
+        if cleaned:
+            return cleaned
+    return _DEFAULT_PROBE_INBOX_GMAIL_SEARCH
+
+
+def effective_user_inbox_peek_max_results() -> str:
+    v = _db_str("user_inbox_peek_max_results")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=5, min_v=1, max_v=100)
+    return _bounded_int_str(
+        getattr(settings, "user_inbox_peek_max_results", 5), default=5, min_v=1, max_v=100
+    )
+
+
 def effective_prompt_email_agent_system_template() -> str:
     """Full system prompt template with {vendor_name}, {role_title}, {product_context}, {learning_section}."""
     v = _db_str("prompt_email_agent_system_template")
@@ -489,6 +560,13 @@ def recommended_ui_hints() -> dict[str, str]:
         "scheduler_timezone": (getattr(s, "scheduler_timezone", None) or "Asia/Seoul").strip(),
         "langsmith_project": (getattr(s, "langsmith_project", None) or "email_draft_agent").strip(),
         "guardrail_strictness": "balanced",
+        "probe_inbox_max_results": _bounded_int_str(
+            getattr(s, "probe_inbox_max_results", 10), default=10, min_v=1, max_v=100
+        ),
+        "probe_inbox_gmail_search": _DEFAULT_PROBE_INBOX_GMAIL_SEARCH,
+        "user_inbox_peek_max_results": _bounded_int_str(
+            getattr(s, "user_inbox_peek_max_results", 5), default=5, min_v=1, max_v=100
+        ),
     }
 
 
@@ -585,6 +663,9 @@ def gog_setup_diagnostics() -> dict[str, Any]:
 
 def runtime_settings_snapshot() -> dict:
     """Payload for GET /settings/runtime (values + metadata for the Configure UI)."""
+    from src.agent.prompt_seed import ensure_prompt_library_materialized
+
+    ensure_prompt_library_materialized()
     keys_db = RUNTIME_CONFIGURE_KEYS
     stored = {k: database.app_setting_is_set(k) for k in keys_db}
     or_key_db = database.app_setting_is_set("openrouter_api_key") and bool(
@@ -597,12 +678,12 @@ def runtime_settings_snapshot() -> dict:
         (database.get_app_setting("langsmith_api_key") or "").strip()
     )
     oai_k = getattr(settings, "openai_api_key", None) or ""
-    from src.agent.prompts import build_prompt_effective_by_mode
-    from src.configure_crypto import encryption_enabled
 
     # Preview must never take down the whole snapshot: a bad template (missing `{placeholder}`)
     # would otherwise 500 GET /settings/runtime and leave Configure fields empty.
     try:
+        from src.agent.prompts import build_prompt_effective_by_mode
+
         prompt_effective_by_mode = build_prompt_effective_by_mode()
     except Exception as e:
         prompt_effective_by_mode = {
@@ -614,8 +695,16 @@ def runtime_settings_snapshot() -> dict:
             "preview_error": f"{type(e).__name__}: {e}",
         }
 
+    # Optional dependency: cryptography (see requirements.txt). Missing wheel must not 500 Configure.
+    try:
+        from src.configure_crypto import encryption_enabled
+
+        _enc_flag = bool(encryption_enabled())
+    except Exception:
+        _enc_flag = False
+
     return {
-        "configure_encryption_enabled": encryption_enabled(),
+        "configure_encryption_enabled": _enc_flag,
         "prompt_effective_by_mode": prompt_effective_by_mode,
         "effective": {
             "llm_provider_preset": effective_llm_provider_preset(),
@@ -635,6 +724,9 @@ def runtime_settings_snapshot() -> dict:
             "scheduler_timezone": effective_scheduler_timezone(),
             "langsmith_tracing": "true" if effective_langsmith_tracing() else "false",
             "langsmith_project": effective_langsmith_project(),
+            "probe_inbox_max_results": effective_probe_inbox_max_results(),
+            "probe_inbox_gmail_search": effective_probe_inbox_gmail_search(),
+            "user_inbox_peek_max_results": effective_user_inbox_peek_max_results(),
             "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
             "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
             "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),

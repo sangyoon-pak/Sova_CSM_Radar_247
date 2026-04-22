@@ -3,6 +3,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from src.config import settings
+from src.api import run_state
 from src.db import database
 from src.runtime_config import (
     effective_guardrail_exclude_intent_keywords,
@@ -20,12 +21,17 @@ def _run_probe_job(name: str = "default"):
     from src.agent.probe_actions import merge_csm_actions_metadata
     from src.agent.prompts import get_probe_trigger_message
     from src.agent.email_agent import run_agent
+    run_id = run_state.create_run(trigger_type=f"cron:{name}", input_text=get_probe_trigger_message()[:500])
+    run_state.mark_running(run_id)
+    run_state.add_event(run_id, "chain_start", f"Cron job started: {name}")
     try:
         output = run_agent(get_probe_trigger_message(), probe=True)
+        run_state.complete_run(run_id, output)
         existing = database.latest_dashboard_actions_by_gmail_thread()
         meta = merge_csm_actions_metadata(
             output,
             {
+                "run_id": run_id,
                 "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
                 "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
                 "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
@@ -38,6 +44,7 @@ def _run_probe_job(name: str = "default"):
             f"cron:{name}", get_probe_trigger_message(), output, "completed", metadata=meta
         )
     except Exception as e:
+        run_state.fail_run(run_id, str(e))
         database.log_interaction(f"cron:{name}", get_probe_trigger_message(), "", "error", str(e))
 
 
