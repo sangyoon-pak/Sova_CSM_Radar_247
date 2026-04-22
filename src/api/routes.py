@@ -9,7 +9,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
 
-from src.agent.email_agent import AgentRunCancelled, run_agent
+from src.agent.email_agent import AgentRunCancelled, is_cron_management_request, run_agent
 from src.agent.memory import compact_memory, refresh_learning_instructions
 from src.agent.probe_actions import (
     build_action_review_runtime_hydration,
@@ -840,7 +840,12 @@ def send_thread_message(req: ThreadSendRequest):
         metadata={"kind": "probe" if req.probe else "message"},
     )
 
-    trigger_type = "thread_probe" if req.probe else "thread_message"
+    hist_for_route = None if req.probe else database.list_messages(req.thread_id, limit=30)
+    cron_admin = (not req.probe) and is_cron_management_request(
+        text,
+        conversation_messages=hist_for_route,
+    )
+    trigger_type = "thread_probe" if req.probe else ("thread_cron_admin" if cron_admin else "thread_message")
     log_input = get_probe_trigger_message() if req.probe else (text[:500] if text else "")
     run_id = run_state.create_run(trigger_type=trigger_type, input_text=log_input[:500])
 

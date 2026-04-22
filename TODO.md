@@ -7,18 +7,15 @@ Single checklist: **completed** work from the rebuild + **remaining** tasks (mer
 ### to do Fix 
 - [x] what is the best way to make use of the retrieved data after the initial run generating card ? if user asks an extensive question, agent should know about the data retrieved so that it can answers based on both retrieved information + email thread content. 
 - [x] the thread time and action card time are not matched with the time set on configure. all the time related parts should be based on the single time set via configure. don't know why the time is all over the place on the thread and chatbox on workbench. 
+- [ ] landing page requires instruction for cron jobs as well
+- [ ] agent should be able to do probe mode [true] if user's prompt intent is to actually probe the inbox and make action cards. what is the best way to do that but not to trigger this that could cause unnecessary API cost ?
 
 
 ### Workbench / threads
 
 - [ ] **Bulk select + bulk delete** for threads
 
-### Cron
 
-- [ ] Cron tab **UX** (clearer interval-oriented flows, presets, copy)
-- [ ] user should be able to ask agent on workb to **create/adjust** cron jobs in natural language (beyond manual CRON expression)
-
----
 
 
 ### Foundations (from original backlog)

@@ -1,4 +1,6 @@
 """Cron job manager using APScheduler."""
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -15,6 +17,50 @@ from src.runtime_config import (
 
 
 _scheduler: BackgroundScheduler | None = None
+
+
+def describe_cron_expression(cron_expr: str) -> str:
+    """Return a user-facing schedule summary for common patterns."""
+    parts = (cron_expr or "").strip().split()
+    if len(parts) != 5:
+        return "Custom cron schedule"
+    minute, hour, day, month, dow = parts
+    if minute == "0" and hour.startswith("*/") and day == "*" and month == "*" and dow in {"*", "1-5"}:
+        n = hour[2:] or "?"
+        if dow == "1-5":
+            return f"Every {n} hours on weekdays"
+        return f"Every {n} hours (all days)"
+    if minute.isdigit() and hour.isdigit() and day == "*" and month == "*" and dow in {"*", "1-5"}:
+        hh = int(hour)
+        mm = int(minute)
+        if dow == "1-5":
+            return f"At {hh:02d}:{mm:02d} on weekdays"
+        return f"Daily at {hh:02d}:{mm:02d}"
+    if day == "*" and month == "*" and dow == "1-5":
+        return "Weekdays only (custom time)"
+    return "Custom cron schedule"
+
+
+def preview_next_runs(cron_expr: str, tz: str, count: int = 3) -> list[str]:
+    """Return next N run times formatted in the given timezone."""
+    out: list[str] = []
+    try:
+        zone = ZoneInfo((tz or "Asia/Seoul").strip() or "Asia/Seoul")
+    except Exception:
+        zone = ZoneInfo("Asia/Seoul")
+    try:
+        trigger = CronTrigger.from_crontab((cron_expr or "").strip(), timezone=zone)
+    except Exception:
+        return out
+    now = datetime.now(zone)
+    prev = None
+    for _ in range(max(0, int(count))):
+        nxt = trigger.get_next_fire_time(prev, now if prev is None else prev)
+        if not nxt:
+            break
+        out.append(nxt.astimezone(zone).strftime("%Y-%m-%d %H:%M"))
+        prev = nxt
+    return out
 
 
 def _run_probe_job(name: str = "default"):

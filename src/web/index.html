@@ -1985,11 +1985,29 @@
   <div class="tab-pane" id="tab-cron">
     <section>
       <h2 data-i18n="cronTitle">Cron jobs</h2>
-      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+      <p class="configure-hint" style="margin:0 0 0.5rem 0;" data-i18n="cronHelp">
+        Schedule automatic "Scan inbox" runs. Use a preset first, then adjust the cron expression if needed.
+      </p>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+        <select id="cronPreset" onchange="applyCronPreset(this.value)" style="min-width:240px;">
+          <option value="" data-i18n="cronPresetSelect">Preset cadence…</option>
+          <option value="0 * * * *" data-i18n="cronPresetHourly">Every hour</option>
+          <option value="0 */2 * * *" data-i18n="cronPresetEvery2h">Every 2 hours</option>
+          <option value="0 */4 * * *" data-i18n="cronPresetEvery4h">Every 4 hours</option>
+          <option value="0 9 * * 1-5" data-i18n="cronPresetWeekdayMorning">Weekdays 09:00</option>
+          <option value="0 9,18 * * *" data-i18n="cronPresetDailyTwice">Daily 09:00 + 18:00</option>
+          <option value="0 9 * * *" data-i18n="cronPresetDaily">Daily 09:00</option>
+        </select>
+        <button type="button" class="ghost" onclick="document.getElementById('cronExpr').value='0 * * * *'" data-i18n="cronQuickHourly">Use hourly</button>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
         <input type="text" id="cronName" data-i18n-placeholder="cronNamePh" placeholder="Job name">
         <input type="text" id="cronExpr" data-i18n-placeholder="cronExprPh" placeholder="0 * * * *">
         <button type="button" onclick="addCron()" data-i18n="add">Add</button>
       </div>
+      <p class="configure-hint" style="margin:-0.55rem 0 0.75rem 0;" data-i18n="cronWorkbenchHint">
+        Workbench also supports natural language: "create a cron job every 2 hours", "disable nightly probe", "delete job X".
+      </p>
       <div id="cronList"></div>
       <details style="margin-top:0.75rem;">
         <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span><span data-i18n="recentCron">Recent cron summaries</span></summary>
@@ -2076,6 +2094,16 @@
         <div id="maintenanceStats" style="margin-top:0.45rem;color:var(--muted);font-size:0.78rem;"></div>
       </details>
       <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.55rem;" data-i18n="historyTip">Tip: expand a run and submit feedback. Feedback updates learning memory.</p>
+      <div class="row" style="margin-bottom:0.55rem;gap:0.45rem;align-items:center;">
+        <label for="historyTriggerFilter" style="font-size:0.8rem;color:var(--muted);" data-i18n="historyTriggerFilter">Run type</label>
+        <select id="historyTriggerFilter" onchange="loadInteractions()">
+          <option value="all" data-i18n="historyTriggerAll">All</option>
+          <option value="thread_cron_admin" data-i18n="historyTriggerCronAdmin">Cron admin (Workbench)</option>
+          <option value="thread_probe">Thread probe</option>
+          <option value="thread_message">Thread message</option>
+          <option value="cron:">Cron scheduler</option>
+        </select>
+      </div>
       <div id="interactions"><div class="empty" data-i18n="loading">Loading…</div></div>
     </section>
   </div>
@@ -2246,6 +2274,19 @@
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
         cronTitle: 'Cron jobs',
+        cronHelp: 'Schedule automatic "Scan inbox" runs. Start with a preset, then fine-tune the cron expression if needed.',
+        cronPresetSelect: 'Preset cadence…',
+        cronPresetHourly: 'Every hour',
+        cronPresetEvery2h: 'Every 2 hours',
+        cronPresetEvery4h: 'Every 4 hours',
+        cronPresetWeekdayMorning: 'Weekdays 09:00',
+        cronPresetDailyTwice: 'Daily 09:00 + 18:00',
+        cronPresetDaily: 'Daily 09:00',
+        cronQuickHourly: 'Use hourly',
+        cronWorkbenchHint: 'Workbench also supports natural language cron requests (create / adjust / disable / delete).',
+        cronScheduleMeaning: 'Meaning',
+        cronNextRuns: 'Next scheduled runs (preview)',
+        cronNoNextRuns: 'No upcoming runs preview.',
         cronNamePh: 'Job name',
         cronExprPh: '0 * * * *',
         add: 'Add',
@@ -2284,6 +2325,9 @@
         optPurgeMemory: 'Purge memory table',
         maintenanceStatsFail: 'Could not load database stats.',
         historyTip: 'Tip: expand a run and submit feedback. Feedback updates learning memory.',
+        historyTriggerFilter: 'Run type',
+        historyTriggerAll: 'All',
+        historyTriggerCronAdmin: 'Cron admin (Workbench)',
         noRunHistory: 'No run history yet.',
         noToolCalls: 'No tool calls recorded',
         expandDetails: 'Expand details',
@@ -2543,6 +2587,19 @@
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
         cronTitle: 'Cron',
+        cronHelp: 'Inbox 스캔 자동 실행 스케줄입니다. 프리셋을 먼저 고르고 필요하면 cron 식을 미세 조정하세요.',
+        cronPresetSelect: '실행 주기 프리셋…',
+        cronPresetHourly: '매시간',
+        cronPresetEvery2h: '2시간마다',
+        cronPresetEvery4h: '4시간마다',
+        cronPresetWeekdayMorning: '평일 09:00',
+        cronPresetDailyTwice: '매일 09:00 + 18:00',
+        cronPresetDaily: '매일 09:00',
+        cronQuickHourly: '매시간으로 채우기',
+        cronWorkbenchHint: 'Workbench에서도 자연어로 cron 관리가 가능합니다 (생성/수정/중지/삭제).',
+        cronScheduleMeaning: '의미',
+        cronNextRuns: '다음 예약 실행(미리보기)',
+        cronNoNextRuns: '예상 실행 시간을 계산할 수 없습니다.',
         cronNamePh: 'Job 이름',
         cronExprPh: '0 * * * *',
         add: 'Add',
@@ -2581,6 +2638,9 @@
         optPurgeMemory: 'Memory 테이블 purge',
         maintenanceStatsFail: 'DB stats 로드 실패',
         historyTip: 'Run을 펼쳐 피드백 — learning memory 반영',
+        historyTriggerFilter: 'Run 유형',
+        historyTriggerAll: '전체',
+        historyTriggerCronAdmin: 'Cron 관리 (Workbench)',
         noRunHistory: 'Run history 없음',
         noToolCalls: 'Tool call 기록 없음',
         expandDetails: '펼치기',
@@ -3330,11 +3390,38 @@
       await fetchJson(`/cron/${encodeURIComponent(name)}`, { method: 'DELETE' });
       loadCronJobs();
     }
+    function applyCronPreset(expr) {
+      const e = document.getElementById('cronExpr');
+      if (!e) return;
+      const v = String(expr || '').trim();
+      if (!v) return;
+      e.value = v;
+    }
     async function loadCronJobs() {
       const jobs = await fetchJson('/cron');
       const el = document.getElementById('cronList');
       if (!jobs.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noCronJobs'))}</div>`; return; }
-      el.innerHTML = jobs.map(j => `<div class="cron-item"><span style="flex:1">${j.name}</span><code>${j.cron_expression}</code><label><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron('${j.name}', this.checked)"> ${escapeHtml(uiText('cronEnabled'))}</label><button type="button" class="danger" onclick="deleteCron('${j.name}')">${escapeHtml(uiText('delete'))}</button></div>`).join('');
+      el.innerHTML = jobs.map(j => {
+        const nm = String(j.name || '');
+        const expr = String(j.cron_expression || '');
+        const human = String(j.human_schedule || '').trim();
+        const nextRuns = Array.isArray(j.next_runs) ? j.next_runs : [];
+        const nextHtml = nextRuns.length
+          ? nextRuns.map((x) => `<code style="margin-right:0.3rem;">${escapeHtml(String(x))}</code>`).join('')
+          : `<span class="configure-hint">${escapeHtml(uiText('cronNoNextRuns'))}</span>`;
+        return `<div class="cron-item" style="align-items:flex-start;gap:0.75rem;">
+          <div style="flex:1;min-width:280px;">
+            <div style="display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;">
+              <strong>${escapeHtml(nm)}</strong>
+              <code>${escapeHtml(expr)}</code>
+            </div>
+            <div class="configure-hint" style="margin-top:0.2rem;">${escapeHtml(uiText('cronScheduleMeaning'))}: ${escapeHtml(human || 'Custom cron schedule')}</div>
+            <div class="configure-hint" style="margin-top:0.2rem;">${escapeHtml(uiText('cronNextRuns'))}: ${nextHtml}</div>
+          </div>
+          <label style="white-space:nowrap;"><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron(decodeURIComponent('${encodeURIComponent(nm)}'), this.checked)"> ${escapeHtml(uiText('cronEnabled'))}</label>
+          <button type="button" class="danger" onclick="deleteCron(decodeURIComponent('${encodeURIComponent(nm)}'))">${escapeHtml(uiText('delete'))}</button>
+        </div>`;
+      }).join('');
     }
     async function loadCronSummary() {
       const data = await fetchJson('/cron/summary?limit=20');
@@ -4871,6 +4958,12 @@
       });
     }
     async function pollRun(runId) {
+      const startedAtMs = Date.now();
+      const _ensureMinVisible = async () => {
+        const minMs = 900;
+        const remain = minMs - (Date.now() - startedAtMs);
+        if (remain > 0) await new Promise(r => setTimeout(r, remain));
+      };
       let transientFails = 0;
       while (true) {
         let run = null;
@@ -4893,6 +4986,10 @@
         if (events.length > _traceLen) {
           for (let i = _traceLen; i < events.length; i++) {
             _traceAll.push(events[i]);
+            if (String(events[i]?.type || '').startsWith('tool_')) {
+              const td = document.getElementById('traceDetails');
+              if (td) td.open = true;
+            }
           }
           _traceLen = events.length;
           rerenderTraceFiltered();
@@ -4915,28 +5012,38 @@
         if (run.status === 'completed') {
           if (runResultEl) runResultEl.textContent = run.output || 'Done.';
           setRunStatus('completed');
+          await _ensureMinVisible();
           setProcessingUI(false);
           return run;
         }
         if (run.status === 'cancelled') {
           setRunStatus('cancelled');
+          await _ensureMinVisible();
           setProcessingUI(false);
           return run;
         }
         if (run.status === 'error') {
           setRunStatus('error');
+          await _ensureMinVisible();
           setProcessingUI(false);
           throw new Error(run.error || 'Run failed');
         }
         if (lastEnd && runResultEl) runResultEl.textContent = lastEnd;
-        await new Promise(r => setTimeout(r, 700));
+        await new Promise(r => setTimeout(r, 250));
       }
     }
     async function loadInteractions() {
       const data = await fetchJson('/interactions');
       const el = document.getElementById('interactions');
-      if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRunHistory'))}</div>`; return; }
-      el.innerHTML = data.map(i => {
+      const tf = String(document.getElementById('historyTriggerFilter')?.value || 'all');
+      const rows = (Array.isArray(data) ? data : []).filter((i) => {
+        if (tf === 'all') return true;
+        const trig = String(i.trigger_type || '');
+        if (tf === 'cron:') return trig.startsWith('cron:');
+        return trig === tf;
+      });
+      if (!rows.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRunHistory'))}</div>`; return; }
+      el.innerHTML = rows.map(i => {
         const md = parseInteractionMetadata(i.metadata);
         const tools = Array.isArray(md.tools_used) ? md.tools_used : [];
         const toolChips = tools.length

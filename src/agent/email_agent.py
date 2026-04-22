@@ -26,6 +26,7 @@ from src.agent.prompts import (
     render_email_agent_system,
 )
 from src.db import database
+from src.scheduler import cron_manager
 
 
 class AgentRunCancelled(Exception):
@@ -122,6 +123,276 @@ def _route_user_request(text: str) -> str:
     except Exception:
         pass
     return "agent_run"
+
+
+_CRON_NAME_RE = re.compile(r"[A-Za-z0-9._:-]{3,80}")
+_CRON_EXPR_RE = re.compile(
+    r"(?<!\S)([\d*/,\-]+\s+[\d*/,\-]+\s+[\d*/,\-]+\s+[\d*/,\-]+\s+[\d*/,\-]+)(?!\S)"
+)
+
+
+def _recent_user_text(conversation_messages: list[dict] | None, *, limit: int = 6) -> str:
+    if not conversation_messages:
+        return ""
+    vals: list[str] = []
+    for row in reversed(conversation_messages):
+        if (row.get("role") or "").strip().lower() != "user":
+            continue
+        c = str(row.get("content") or "").strip()
+        if c:
+            vals.append(c)
+        if len(vals) >= limit:
+            break
+    vals.reverse()
+    return "\n".join(vals)
+
+
+def _extract_cron_name(text: str) -> str | None:
+    t = (text or "").strip()
+    if not t:
+        return None
+    m = re.search(r"(?:named|name)\s+[`'\"]?([A-Za-z0-9._:-]{3,80})[`'\"]?", t, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r"(?:create|add|update|adjust)\s+(?:a\s+)?cron(?:\s+job)?\s+([A-Za-z0-9._:-]{3,80})", t, re.IGNORECASE)
+    if m:
+        cand = m.group(1).strip()
+        if cand.lower() not in {"job", "cron"}:
+            return cand
+    m = re.search(r"`([^`]{3,80})`", t)
+    if m and _CRON_NAME_RE.fullmatch(m.group(1).strip() or ""):
+        return m.group(1).strip()
+    # Quoted free-form name (allows spaces for manually created jobs).
+    m = re.search(r"[\"']([^\"']{3,120})[\"']", t)
+    if m:
+        return m.group(1).strip()
+    return None
+
+
+def _extract_cron_expr(text: str) -> str | None:
+    t = " ".join((text or "").split())
+    if not t:
+        return None
+    # Explicit 5-field numeric/wildcard expression
+    m = _CRON_EXPR_RE.search(t)
+    if m:
+        expr = m.group(1).strip()
+        parts = expr.split()
+        if len(parts) == 5:
+            return expr
+
+    low = t.lower()
+    every_h = re.search(r"every\s+(\d{1,2})\s*hours?", low)
+    if every_h:
+        n = int(every_h.group(1))
+        if 1 <= n <= 23:
+            dow = "1-5" if re.search(r"week\s*days?|weekdays?", low) else "*"
+            return f"0 */{n} * * {dow}"
+
+    if re.search(r"\bdaily\b", low):
+        hh = 9
+        mm = 0
+        tm = re.search(r"(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", low)
+        if tm:
+            hh = int(tm.group(1))
+            mm = int(tm.group(2) or "0")
+            ap = (tm.group(3) or "").lower()
+            if ap == "pm" and hh < 12:
+                hh += 12
+            if ap == "am" and hh == 12:
+                hh = 0
+            hh = max(0, min(23, hh))
+            mm = max(0, min(59, mm))
+        dow = "1-5" if re.search(r"week\s*days?|weekdays?", low) else "*"
+        return f"{mm} {hh} * * {dow}"
+    return None
+
+
+def _maybe_handle_cron_request(
+    *,
+    input_text: str,
+    conversation_messages: list[dict] | None = None,
+    callbacks: Sequence | None = None,
+) -> str | None:
+    """
+    Deterministic Workbench cron ops path (independent of prompt overrides).
+    Handles create/update/delete/enable/disable/list and asks for missing details.
+    """
+    latest = (input_text or "").strip()
+    low = latest.lower()
+    hist = _recent_user_text(conversation_messages)
+    low_hist = hist.lower()
+
+    if "cron" not in low and "cron" not in low_hist:
+        return None
+
+    op = ""
+    if re.search(r"\b(list|show)\b.*\bcron\b", low):
+        op = "list"
+    elif re.search(r"\b(delete|remove)\b", low) and "cron" in low:
+        op = "delete"
+    elif re.search(r"\b(disable|pause|turn off|stop)\b", low) and "cron" in low:
+        op = "disable"
+    elif re.search(r"\b(enable|resume|turn on|start)\b", low) and "cron" in low:
+        op = "enable"
+    elif re.search(r"\b(create|add|make|update|adjust)\b", low) and "cron" in low:
+        op = "upsert"
+    elif re.search(r"\b(yes|ok|sure|please)\b", low) and re.search(r"\b(create|add|do it)\b", low) and "cron" in low_hist:
+        op = "upsert"
+    else:
+        return None
+
+    def _emit_tool_start(name: str, payload: str) -> None:
+        for cb in (callbacks or []):
+            try:
+                cb.on_tool_start({"name": name}, payload)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
+    def _emit_tool_end(output: str) -> None:
+        for cb in (callbacks or []):
+            try:
+                cb.on_tool_end(output)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
+    if op == "list":
+        _emit_tool_start("list_cron_jobs", "list")
+        jobs = database.get_cron_jobs()
+        if not jobs:
+            out = "No cron jobs configured yet."
+            _emit_tool_end(out)
+            return out
+        lines = []
+        for j in jobs:
+            name = str(j.get("name") or "").strip() or "(unnamed)"
+            expr = str(j.get("cron_expression") or "").strip() or "-"
+            tz = str(j.get("timezone") or "").strip() or "Asia/Seoul"
+            enabled = bool(j.get("enabled"))
+            lines.append(f"- `{name}`: `{expr}` ({tz}) — {'enabled' if enabled else 'disabled'}")
+        out = "Current cron jobs:\n" + "\n".join(lines)
+        _emit_tool_end(out)
+        return out
+
+    source_text = f"{hist}\n{latest}".strip()
+    jobs = database.get_cron_jobs()
+    name = _extract_cron_name(source_text)
+    # Resolve against existing cron jobs, including names with spaces/manual naming.
+    if jobs:
+        text_low = source_text.lower()
+        by_exact = {str(j.get("name") or ""): j for j in jobs}
+        if name:
+            for n in by_exact:
+                if n.lower() == name.lower():
+                    name = n
+                    break
+        if not name:
+            for n in by_exact:
+                if n and n.lower() in text_low:
+                    name = n
+                    break
+        if not name and op in {"delete", "enable", "disable"} and len(jobs) == 1:
+            only = str(jobs[0].get("name") or "").strip()
+            if only:
+                name = only
+    if not name:
+        if op in {"delete", "enable", "disable"} and jobs:
+            names = ", ".join(f"`{str(j.get('name') or '').strip()}`" for j in jobs[:12] if str(j.get("name") or "").strip())
+            return (
+                "I can do that, but I couldn't identify which cron job you meant. "
+                f"Please specify one of: {names}"
+            )
+        return (
+            "I can do that. Please provide the cron job name first "
+            "(e.g. `weekday_4h_probe`)."
+        )
+
+    if op == "delete":
+        _emit_tool_start("delete_cron_job", f"name={name}")
+        try:
+            cron_manager.remove_job(name)
+            out = f"Deleted cron job `{name}`."
+            _emit_tool_end(out)
+            return out
+        except Exception as e:
+            out = f"Could not delete cron job `{name}`: {e}"
+            _emit_tool_end(out)
+            return out
+    if op == "disable":
+        _emit_tool_start("set_cron_job_enabled", f"name={name} enabled=false")
+        try:
+            cron_manager.toggle_job(name, False)
+            out = f"Disabled cron job `{name}`."
+            _emit_tool_end(out)
+            return out
+        except Exception as e:
+            out = f"Could not disable cron job `{name}`: {e}"
+            _emit_tool_end(out)
+            return out
+    if op == "enable":
+        _emit_tool_start("set_cron_job_enabled", f"name={name} enabled=true")
+        try:
+            cron_manager.toggle_job(name, True)
+            out = f"Enabled cron job `{name}`."
+            _emit_tool_end(out)
+            return out
+        except Exception as e:
+            out = f"Could not enable cron job `{name}`: {e}"
+            _emit_tool_end(out)
+            return out
+
+    expr = _extract_cron_expr(source_text)
+    if not expr:
+        return (
+            "I can create/update it, but I still need the schedule. "
+            "Tell me a cadence (e.g. `every 4 hours on weekdays`) or a 5-field cron expression."
+        )
+    tz = "Asia/Seoul"
+    _emit_tool_start("upsert_cron_job", f"name={name} cron_expression={expr} timezone={tz}")
+    try:
+        cron_manager.add_job(name, expr, tz)
+        human = cron_manager.describe_cron_expression(expr)
+        upcoming = cron_manager.preview_next_runs(expr, tz, count=3)
+        if upcoming:
+            nxt = ", ".join(upcoming)
+            out = (
+                f"Saved cron job `{name}`.\n"
+                f"- Schedule: `{expr}` ({tz})\n"
+                f"- Meaning: {human}\n"
+                f"- Next runs: {nxt}"
+            )
+            _emit_tool_end(out)
+            return out
+        out = (
+            f"Saved cron job `{name}`.\n"
+            f"- Schedule: `{expr}` ({tz})\n"
+            f"- Meaning: {human}"
+        )
+        _emit_tool_end(out)
+        return out
+    except Exception as e:
+        out = (
+            f"I understood name `{name}` and schedule `{expr}`, but creation failed: {e}. "
+            "Please provide a 5-field cron expression if you want exact control."
+        )
+        _emit_tool_end(out)
+        return out
+
+
+def is_cron_management_request(
+    input_text: str,
+    *,
+    conversation_messages: list[dict] | None = None,
+) -> bool:
+    t = (input_text or "").strip().lower()
+    hist = _recent_user_text(conversation_messages).lower()
+    if "cron" not in t and "cron" not in hist:
+        return False
+    if re.search(r"\b(list|show|create|add|make|update|adjust|delete|remove|disable|pause|enable|resume)\b", t):
+        return True
+    if re.search(r"\b(yes|ok|sure|please)\b", t) and "cron" in hist:
+        return True
+    return False
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
 
@@ -290,13 +561,73 @@ def search_rc_web(query: str) -> str:
     from src.agent.tools.rc_web_search import search_rc_web as _search
     return _search(query=query)
 
+
+@tool
+def list_cron_jobs() -> str:
+    """List cron jobs (name, expression, timezone, enabled). Use before editing/deleting when job name is uncertain."""
+    jobs = database.get_cron_jobs()
+    if not jobs:
+        return "No cron jobs configured."
+    lines = []
+    for j in jobs:
+        name = str(j.get("name") or "").strip() or "(unnamed)"
+        expr = str(j.get("cron_expression") or "").strip() or "-"
+        tz = str(j.get("timezone") or "").strip() or "Asia/Seoul"
+        enabled = bool(j.get("enabled"))
+        lines.append(f"- {name} | {expr} | {tz} | {'enabled' if enabled else 'disabled'}")
+    return "\n".join(lines)
+
+
+@tool
+def upsert_cron_job(name: str, cron_expression: str, timezone: str = "Asia/Seoul") -> str:
+    """Create or update a cron probe job. cron_expression must be 5 fields: minute hour day month weekday."""
+    nm = (name or "").strip()
+    expr = " ".join((cron_expression or "").split())
+    tz = (timezone or "Asia/Seoul").strip() or "Asia/Seoul"
+    if not nm:
+        return "Error: name is required."
+    parts = expr.split()
+    if len(parts) != 5:
+        return "Error: cron_expression must have 5 fields (minute hour day month weekday)."
+    cron_manager.add_job(nm, expr, tz)
+    return f"Saved cron job '{nm}' with schedule '{expr}' ({tz})."
+
+
+@tool
+def set_cron_job_enabled(name: str, enabled: bool) -> str:
+    """Enable/disable one cron job by exact name."""
+    nm = (name or "").strip()
+    if not nm:
+        return "Error: name is required."
+    cron_manager.toggle_job(nm, bool(enabled))
+    return f"Cron job '{nm}' is now {'enabled' if enabled else 'disabled'}."
+
+
+@tool
+def delete_cron_job(name: str) -> str:
+    """Delete one cron job by exact name."""
+    nm = (name or "").strip()
+    if not nm:
+        return "Error: name is required."
+    cron_manager.remove_job(nm)
+    return f"Deleted cron job '{nm}'."
+
 def create_agent_executor(
     *,
     probe: bool = False,
     system_append: str | None = None,
 ):
     llm = _get_llm()
-    tools = [fetch_inbox_emails, fetch_gmail_thread, search_product_docs, search_rc_web]
+    tools = [
+        fetch_inbox_emails,
+        fetch_gmail_thread,
+        search_product_docs,
+        search_rc_web,
+        list_cron_jobs,
+        upsert_cron_job,
+        set_cron_job_enabled,
+        delete_cron_job,
+    ]
     profile = database.get_agent_profile_settings()
     learning = database.get_runtime_learning_instructions()
     system_prompt = render_email_agent_system(
@@ -327,6 +658,17 @@ def run_agent(
     cancel_check: Callable[[], bool] | None = None,
 ) -> str:
     _ensure_langsmith_env()
+
+    # Deterministic cron-management fast path for Workbench chat.
+    # This keeps create/adjust/delete behavior available even if prompt overrides are stale.
+    if not probe and not thread_is_action_review:
+        cron_reply = _maybe_handle_cron_request(
+            input_text=input_text or "",
+            conversation_messages=conversation_messages,
+            callbacks=callbacks,
+        )
+        if cron_reply is not None:
+            return cron_reply
 
     # Latest user utterance (for routing) when using thread history
     route_text = (input_text or "").strip()
