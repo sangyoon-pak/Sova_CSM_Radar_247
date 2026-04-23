@@ -14,20 +14,12 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 ## Architecture Flow
 
-```mermaid
-flowchart TD
-    inboxThread[InboxThread] --> relevanceGate[RelevanceGate]
-    relevanceGate -->|"CSMRelevant"| retrievalPipeline[RetrievalPipeline]
-    relevanceGate -->|"NotRelevant"| noCard[NoCard]
-    retrievalPipeline --> groundedDraft[GroundedDraft]
-    groundedDraft --> actionCard[ActionCard]
-    actionCard --> dashboard[ActionDashboard]
-    dashboard --> userFeedback[UserFeedback]
-```
+The full **request routing**, **Workbench vs probe**, **API surface**, **Configure map**, and **mermaid** diagrams live in one place so they do not drift from the code:
 
-Key architecture docs:
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture)
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+Related deep dives:
+
 - [docs/SEARCH_AGENT.md](docs/SEARCH_AGENT.md)
 - [docs/AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md)
 - [docs/ACTION_CARD_SPEC.md](docs/ACTION_CARD_SPEC.md)

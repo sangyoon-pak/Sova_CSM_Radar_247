@@ -1640,6 +1640,7 @@
           <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
           <span data-i18n-html="landingDocsGithubAfter"></span>
         </p>
+        <p class="landing-copy landing-docs-line landing-next-steps__docs" data-i18n-html="landingDocsArchitectureLine"></p>
         <div class="landing-cta">
           <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
           <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
@@ -1710,8 +1711,13 @@
               <button type="button" class="ghost" onclick="applyProviderPresetDefaults()" data-i18n="configureApplyPreset">Apply preset defaults</button>
             </div>
             <p class="configure-hint" data-i18n-html="configureOrHint">Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.</p>
-            <div class="configure-field"><label for="cfg_openrouter_base_url" data-i18n="cfgOpenrouterUrl">Base URL</label><input id="cfg_openrouter_base_url" type="text" /><span class="configure-env" id="cfg_env_openrouter_base_url"></span></div>
-            <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
+            <div class="configure-field" id="cfg_base_url_block">
+              <label for="cfg_openrouter_base_url" id="cfg_base_url_label">Base URL</label>
+              <input id="cfg_openrouter_base_url" type="text" />
+              <span class="configure-env" id="cfg_env_openrouter_base_url"></span>
+              <p class="configure-hint" id="cfg_base_url_hint" style="margin:0.25rem 0 0 0;font-size:0.78rem;"></p>
+            </div>
+            <div class="configure-field"><label for="cfg_openrouter_api_key" id="cfg_chat_api_key_label">API key</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /><p class="configure-hint" id="cfg_chat_api_key_hint" style="margin:0.25rem 0 0 0;font-size:0.78rem;"></p></div>
             <p class="configure-hint" style="margin-top:0.55rem;">Use a valid IANA zone (e.g. Asia/Seoul). Thread list, message times, action cards, run traces, and cron summaries all display in this timezone. LangSmith emits traces for new runs only when tracing is on and a key is set.</p>
             <div class="configure-field"><label for="cfg_scheduler_timezone">Scheduler / UI timezone</label><input id="cfg_scheduler_timezone" type="text" placeholder="Asia/Seoul" /><span class="configure-env" id="cfg_env_scheduler_timezone"></span></div>
             <div class="configure-field"><label for="cfg_langsmith_tracing">LangSmith tracing</label>
@@ -1720,7 +1726,7 @@
                 <option value="true">on</option>
               </select>
             </div>
-            <div class="configure-field"><label for="cfg_langsmith_project">LangSmith project</label><input id="cfg_langsmith_project" type="text" placeholder="email_draft_agent" /><span class="configure-env" id="cfg_env_langsmith_project"></span></div>
+            <div class="configure-field"><label for="cfg_langsmith_project">LangSmith project</label><input id="cfg_langsmith_project" type="text" placeholder="email_draft_agent" /></div>
             <div class="configure-field"><label for="cfg_langsmith_api_key">LangSmith API key</label><input id="cfg_langsmith_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
             <p id="cfg_langsmith_key_status" class="configure-hint"></p>
             <p id="cfg_key_status" class="configure-hint"></p>
@@ -2165,6 +2171,7 @@
         landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, optional Gmail): see ',
         landingDocsGithubLinkLabel: 'docs on GitHub',
         landingDocsGithubAfter: ' — or open <code>docs/INSTALLATION.md</code> in your local clone.',
+        landingDocsArchitectureLine: 'Runtime flow, API routes, and the <strong>Configure</strong> map: <code>docs/ARCHITECTURE.md</code> in your clone (same <code>docs/</code> tree on GitHub).',
         landingCtaConfigure: 'Open Configure',
         landingCtaCron: 'Open Cron',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
@@ -2196,7 +2203,8 @@
         configureSavedValueCol: 'Value (masked)',
         configureKeyMissingDb: 'No API key saved — paste above and Save configuration.',
         configureEmbedBlock: 'Embeddings (RAG)',
-        configureOrHint: 'Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.',
+        configureOrHint:
+          'Paste the API key for the selected preset and <strong>Save configuration</strong> to store it in the app database on this machine (OpenAI preset → <code>openai_api_key</code>; OpenRouter / Gemini (OR) → <code>openrouter_api_key</code>).',
         configureGogBlock: 'Gmail (gog)',
         configureGogLead: 'Run one-time OAuth in a terminal (<a href="/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a>). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.',
         configureGogKeyringDb: 'Keyring passphrase is stored in the app database (leave password blank and Save to keep it; enter a new value to replace).',
@@ -2220,6 +2228,16 @@
         configureClearAllDone: 'Database overrides cleared.',
         configureClearAllGogSuffix: 'Removed {n} local gog OAuth file(s).',
         configureKeyDb: 'OpenRouter API key stored in app database',
+        configureKeyDbOpenRouter: 'OpenRouter API key stored in app database',
+        configureKeyDbOpenAI: 'OpenAI API key stored in app database',
+        configureKeyOpenAiLine1:
+          'OpenAI preset: use OPENAI_API_KEY in the environment, or paste your key and Save (stored as openai_api_key).',
+        configureKeyOpenAiLine2: '',
+        configureKeyOpenRouterLine: 'OpenRouter / Gemini-via-OpenRouter: use one OpenRouter API key.',
+        configureBaseUrlLockedOpenAI: '',
+        configureBaseUrlHintOpenAI: '',
+        configureBaseUrlHintOpenRouter:
+          'Set the OpenAI-compatible API base for OpenRouter (or Gemini via OpenRouter). Grey hint shows the usual default; save after you change it.',
         configureProviderSummary: 'Provider & API',
         configurePresetHint: 'Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.',
         configureApplyPreset: 'Apply preset defaults',
@@ -2540,6 +2558,7 @@
         landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, 선택 Gmail): ',
         landingDocsGithubLinkLabel: 'GitHub 문서',
         landingDocsGithubAfter: ' — 또는 로컬 클론의 <code>docs/INSTALLATION.md</code>를 여세요.',
+        landingDocsArchitectureLine: '런타임 흐름·API 경로·<strong>설정</strong> 탭과의 매핑: 클론의 <code>docs/ARCHITECTURE.md</code> (GitHub의 <code>docs/</code> 폴더와 동일 경로).',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'CSM 팀을 위한 운영 화면입니다. 고객 문의를 모니터링하고, 실제 실행이 필요한 작업만 카드로 남기며, 상태와 Run history로 진행을 투명하게 관리합니다.',
         landingCtaWorkbench: 'Workbench 열기',
@@ -3918,12 +3937,52 @@
       }
     }
 
-    function onConfigurePresetChange() {
+    function updateConfigureProviderDependentUi() {
       refreshPresetDatalists();
       const p = document.getElementById('cfg_llm_provider_preset')?.value;
       const meta = _lastRuntimePayload && _lastRuntimePayload.provider_presets && p && _lastRuntimePayload.provider_presets[p];
-      const hint = document.getElementById('cfg_preset_hint');
-      if (hint && meta && meta.hint) hint.textContent = meta.hint;
+      const presetHint = document.getElementById('cfg_preset_hint');
+      if (presetHint && meta && meta.hint) presetHint.textContent = meta.hint;
+
+      const preset = p || 'openrouter';
+      const lab = document.getElementById('cfg_chat_api_key_label');
+      if (lab) {
+        if (preset === 'openai') lab.textContent = 'OpenAI API key';
+        else if (preset === 'gemini_openrouter') lab.textContent = 'OpenRouter API key (Gemini)';
+        else lab.textContent = 'OpenRouter API key';
+      }
+      const kh = document.getElementById('cfg_chat_api_key_hint');
+      if (kh) {
+        kh.textContent =
+          preset === 'openai'
+            ? configureUiText('configureKeyOpenAiLine1')
+            : configureUiText('configureKeyOpenRouterLine');
+      }
+      const bb = document.getElementById('cfg_base_url_block');
+      if (bb) bb.style.display = preset === 'openai' ? 'none' : '';
+      const bu = document.getElementById('cfg_openrouter_base_url');
+      const bl = document.getElementById('cfg_base_url_label');
+      if (bu) {
+        bu.readOnly = false;
+        bu.title = '';
+      }
+      if (bl) {
+        bl.textContent = configureUiText('cfgOpenrouterUrl');
+      }
+      const buHint = document.getElementById('cfg_base_url_hint');
+      if (buHint) {
+        buHint.textContent = configureUiText('configureBaseUrlHintOpenRouter');
+      }
+      if (_lastRuntimePayload) {
+        _setConfigureEnvSpans(
+          _configureRecommendedForUiPreset(_lastRuntimePayload),
+          _lastRuntimePayload.stored_in_database || {},
+        );
+      }
+    }
+
+    function onConfigurePresetChange() {
+      updateConfigureProviderDependentUi();
     }
 
     function applyProviderPresetDefaults() {
@@ -3962,6 +4021,17 @@
     function _mergeRecommendedHints(data) {
       const fromApi = data.recommended_hints || data.recommendedHints || {};
       return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS, ...fromApi };
+    }
+
+    /** Grey "Recommended" hints follow the **dropdown** preset so unsaved switches match OpenRouter vs OpenAI. */
+    function _configureRecommendedForUiPreset(data) {
+      if (!data) return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS };
+      const p = document.getElementById('cfg_llm_provider_preset')?.value || 'openrouter';
+      const by = data.recommended_hints_by_preset || {};
+      const fromPreset = by[p];
+      const fromApi = data.recommended_hints || data.recommendedHints || {};
+      const from = fromPreset != null ? fromPreset : fromApi;
+      return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS, ...from };
     }
 
     function _setConfigureEnvSpans(recommended, stored) {
@@ -4100,22 +4170,28 @@
         if (lsKs) {
           lsKs.textContent = data.langsmith_api_key_set_in_database
             ? 'LangSmith API key stored in app database'
-            : (data.langsmith_api_key_set_in_env ? 'LangSmith API key set in server environment' : 'No LangSmith API key saved');
+            : (data.langsmith_api_key_set_in_env ? 'LangSmith API key set in server environment' : '');
         }
         _configuredTimeZone = String(eff.scheduler_timezone || '').trim() || DEFAULT_DISPLAY_TIMEZONE;
         void loadThreads();
         void loadThreadMessages();
-        _setConfigureEnvSpans(_mergeRecommendedHints(data), stored);
-        refreshPresetDatalists();
-        onConfigurePresetChange();
+        updateConfigureProviderDependentUi();
         renderConfigureEnvTable(data);
         renderGogSetupStatus(data);
         renderPromptEffectiveByMode(data.prompt_effective_by_mode);
         const ks = document.getElementById('cfg_key_status');
         if (ks) {
-          ks.textContent = data.openrouter_api_key_set_in_database
-            ? configureUiText('configureKeyDb')
-            : configureUiText('configureKeyMissingDb');
+          const preset = eff.llm_provider_preset || 'openrouter';
+          if (preset === 'openai') {
+            const parts = [];
+            if (data.openai_api_key_set_in_database) parts.push(configureUiText('configureKeyDbOpenAI'));
+            if (data.openai_api_key_set_in_env) parts.push('OPENAI_API_KEY in server environment');
+            ks.textContent = parts.length ? parts.join(' · ') : '';
+          } else {
+            ks.textContent = data.openrouter_api_key_set_in_database
+              ? configureUiText('configureKeyDbOpenRouter')
+              : '';
+          }
         }
         if (st) st.textContent = '';
       } catch (e) {
@@ -4149,8 +4225,9 @@
     async function saveRuntimeSettings() {
       const st = document.getElementById('configureSaveStatus');
       const gv = (id) => (document.getElementById(id)?.value || '').trim();
+      const preset = gv('cfg_llm_provider_preset') || 'openrouter';
       const payload = {
-        llm_provider_preset: gv('cfg_llm_provider_preset'),
+        llm_provider_preset: preset,
         llm_model: gv('cfg_llm_model'),
         llm_model_main: gv('cfg_llm_model_main'),
         llm_model_search_json: gv('cfg_llm_model_search_json'),
@@ -4158,10 +4235,13 @@
         llm_model_memory: gv('cfg_llm_model_memory'),
         rag_embedding_provider: gv('cfg_rag_embedding_provider'),
         rag_embedding_model: gv('cfg_rag_embedding_model'),
-        openrouter_base_url: gv('cfg_openrouter_base_url'),
       };
+      if (preset !== 'openai') payload.openrouter_base_url = gv('cfg_openrouter_base_url');
       const nkey = gv('cfg_openrouter_api_key');
-      if (nkey) payload.openrouter_api_key = nkey;
+      if (nkey) {
+        if (preset === 'openai') payload.openai_api_key = nkey;
+        else payload.openrouter_api_key = nkey;
+      }
       payload.gog_home = gv('cfg_gog_home');
       payload.gog_account = gv('cfg_gog_account');
       payload.gog_keyring_backend = gv('cfg_gog_keyring_backend');

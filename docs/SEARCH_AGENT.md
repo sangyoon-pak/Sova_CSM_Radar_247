@@ -17,8 +17,8 @@ Related behavior docs:
 - Action cards: [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md)
 - Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
 
-### LLM models (OpenRouter)
-Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. All fall back to **`LLM_MODEL`** when unset. See [docs/LLM_MODELS.md](LLM_MODELS.md).
+### LLM models (OpenRouter / OpenAI-compatible)
+Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). All roles fall back to **`LLM_MODEL`** when unset.
 
 ### Scope routing (config-driven)
 When `RC_SCOPE_ENABLE=true` and `RC_SCOPE_LABELS` is set, the search agent first runs an LLM-based scope inference step to decide whether the inquiry is **exclusive to one scope** or **multi-scope/ambiguous**. If exclusive, cross-scope docs are strongly down-ranked and routed behind in-scope docs. The exclusivity decision is controlled by `RC_SCOPE_EXCLUSIVE_THRESHOLD`.

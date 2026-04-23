@@ -29,6 +29,7 @@ GUARDRAIL_ENCRYPTED_KEYS: frozenset[str] = frozenset(
 _SENSITIVE_CONFIGURE_KEYS: frozenset[str] = frozenset(
     {
         "openrouter_api_key",
+        "openai_api_key",
         "gog_keyring_password",
         "langsmith_api_key",
     }
@@ -55,6 +56,7 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "rag_embedding_provider",
     "rag_embedding_model",
     "openrouter_api_key",
+    "openai_api_key",
     "openrouter_base_url",
     "gog_home",
     "gog_account",
@@ -259,29 +261,32 @@ def effective_llm_provider_preset() -> str:
 
 def effective_chat_api_key() -> str | None:
     """API key for ChatOpenAI-compatible calls (OpenRouter, OpenAI direct, or Gemini-via-OR)."""
+    preset = effective_llm_provider_preset()
+    if preset == "openai":
+        if database.app_setting_is_set("openai_api_key"):
+            v = (database.get_app_setting("openai_api_key") or "").strip()
+            if v:
+                return v
+        oa = getattr(settings, "openai_api_key", None)
+        if oa and str(oa).strip():
+            return str(oa).strip()
+        return None
     if database.app_setting_is_set("openrouter_api_key"):
         v = (database.get_app_setting("openrouter_api_key") or "").strip()
         if v:
             return v
-    preset = effective_llm_provider_preset()
-    if preset == "openai":
-        oa = getattr(settings, "openai_api_key", None)
-        if oa and str(oa).strip():
-            return str(oa).strip()
-        or_k = settings.openrouter_api_key
-        if or_k and str(or_k).strip():
-            return str(or_k).strip()
-        return None
     return settings.openrouter_api_key
 
 
 def effective_chat_base_url() -> str:
+    preset = effective_llm_provider_preset()
+    if preset == "openai":
+        # OpenAI direct always uses the official API root; a saved OpenRouter base URL must
+        # not override it (would break chat/embeddings when switching presets).
+        return _DEFAULT_OPENAI_BASE
     v = _db_str("openrouter_base_url")
     if v is not None and v.strip():
         return v.strip()
-    preset = effective_llm_provider_preset()
-    if preset == "openai":
-        return _DEFAULT_OPENAI_BASE
     return settings.openrouter_base_url.strip()
 
 
@@ -540,14 +545,26 @@ def _mask_env_row(key: str, val: str) -> str:
     return mask_env_display(key, val)
 
 
-def recommended_ui_hints() -> dict[str, str]:
+def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
     """
-    Static recommended defaults for Configure grey hints (same role as a former .env.example).
-    Does not reflect runtime effective values or OS environment.
+    Static recommended defaults for one provider preset (Configure grey hints).
+    Does not reflect per-field DB overrides; base URL / model id shapes follow the preset.
     """
     s = settings
-    base = (s.llm_model or "openai/gpt-4o").strip()
-    role_small = "openai/gpt-4o-mini"
+    p = (preset or "openrouter").strip().lower()
+    if p not in _VALID_PRESETS:
+        p = "openrouter"
+    if p == "openai":
+        base = "gpt-4o"
+        role_small = "gpt-4o-mini"
+        base_url = _DEFAULT_OPENAI_BASE
+        embed_model = "text-embedding-3-large"
+    else:
+        # openrouter + gemini_openrouter: OpenRouter-compatible base and vendor/model ids.
+        base = (s.llm_model or "openai/gpt-4o").strip()
+        role_small = "openai/gpt-4o-mini"
+        base_url = (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip()
+        embed_model = (s.rag_embedding_model or "openai/text-embedding-3-large").strip()
     return {
         "llm_model": base,
         "llm_model_main": base,
@@ -555,8 +572,8 @@ def recommended_ui_hints() -> dict[str, str]:
         "llm_model_search_rerank": role_small,
         "llm_model_memory": role_small,
         "rag_embedding_provider": (s.rag_embedding_provider or "openrouter").strip(),
-        "rag_embedding_model": (s.rag_embedding_model or "openai/text-embedding-3-large").strip(),
-        "openrouter_base_url": (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip(),
+        "rag_embedding_model": embed_model,
+        "openrouter_base_url": base_url,
         "scheduler_timezone": (getattr(s, "scheduler_timezone", None) or "Asia/Seoul").strip(),
         "langsmith_project": (getattr(s, "langsmith_project", None) or "email_draft_agent").strip(),
         "guardrail_strictness": "balanced",
@@ -568,6 +585,11 @@ def recommended_ui_hints() -> dict[str, str]:
             getattr(s, "user_inbox_peek_max_results", 5), default=5, min_v=1, max_v=100
         ),
     }
+
+
+def recommended_ui_hints() -> dict[str, str]:
+    """Hints matching the *effective* saved+env preset (backward compatible for older clients)."""
+    return _recommended_ui_hints_for_preset(effective_llm_provider_preset())
 
 
 def configure_saved_masked() -> dict[str, str]:
@@ -671,6 +693,9 @@ def runtime_settings_snapshot() -> dict:
     or_key_db = database.app_setting_is_set("openrouter_api_key") and bool(
         (database.get_app_setting("openrouter_api_key") or "").strip()
     )
+    oai_key_db = database.app_setting_is_set("openai_api_key") and bool(
+        (database.get_app_setting("openai_api_key") or "").strip()
+    )
     gog_pw_db = database.app_setting_is_set("gog_keyring_password") and bool(
         (database.get_app_setting("gog_keyring_password") or "").strip()
     )
@@ -740,6 +765,7 @@ def runtime_settings_snapshot() -> dict:
         },
         "stored_in_database": {k: stored[k] for k in keys_db},
         "openrouter_api_key_set_in_database": or_key_db,
+        "openai_api_key_set_in_database": oai_key_db,
         "openrouter_api_key_set_in_env": bool((settings.openrouter_api_key or "").strip()),
         "openai_api_key_set_in_env": bool(oai_k.strip()),
         "langsmith_api_key_set_in_database": ls_key_db,
@@ -747,6 +773,9 @@ def runtime_settings_snapshot() -> dict:
         "gog_keyring_password_set_in_database": gog_pw_db,
         "gog_setup": gog_setup_diagnostics(),
         "recommended_hints": recommended_ui_hints(),
+        "recommended_hints_by_preset": {
+            k: _recommended_ui_hints_for_preset(k) for k in sorted(_VALID_PRESETS)
+        },
         "configure_saved_masked": configure_saved_masked(),
         "recommended_models": [
             "openai/gpt-4o",
@@ -773,7 +802,7 @@ def runtime_settings_snapshot() -> dict:
             },
             "openai": {
                 "label": "OpenAI",
-                "hint": "Direct OpenAI API; set OPENAI_API_KEY or paste a key in Configure. RC web search uses OpenAI Responses + web_search (not OpenRouter).",
+                "hint": "Direct OpenAI API. Use OPENAI_API_KEY in the environment or save openai_api_key in Configure. Base URL is fixed to https://api.openai.com/v1. RC web search uses OpenAI Responses + web_search.",
                 "default_base_url": _DEFAULT_OPENAI_BASE,
                 "recommended_models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1-mini"],
                 "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],

@@ -65,13 +65,22 @@ class _CancelPatrolCallback(BaseCallbackHandler):
 def _ensure_langsmith_env():
     """Set LangSmith env vars from runtime config so tracing works in uvicorn workers."""
     if effective_langsmith_tracing() and effective_langsmith_api_key():
+        key = effective_langsmith_api_key()
+        project = effective_langsmith_project()
+        # Support both current and legacy env names across LangChain/LangSmith versions.
         os.environ["LANGSMITH_TRACING"] = "true"
-        os.environ["LANGSMITH_API_KEY"] = effective_langsmith_api_key()
-        os.environ["LANGSMITH_PROJECT"] = effective_langsmith_project()
+        os.environ["LANGSMITH_API_KEY"] = key
+        os.environ["LANGSMITH_PROJECT"] = project
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_API_KEY"] = key
+        os.environ["LANGCHAIN_PROJECT"] = project
     else:
         os.environ.pop("LANGSMITH_TRACING", None)
         os.environ.pop("LANGSMITH_API_KEY", None)
         os.environ.pop("LANGSMITH_PROJECT", None)
+        os.environ.pop("LANGCHAIN_TRACING_V2", None)
+        os.environ.pop("LANGCHAIN_API_KEY", None)
+        os.environ.pop("LANGCHAIN_PROJECT", None)
 
 
 def _get_llm():

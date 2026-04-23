@@ -92,6 +92,11 @@ Actions:
 - Validate next-run preview before save.
 - Keep both manual and NL-assisted creation paths with clear labels.
 
+### 7) Removing many Workbench threads (bulk delete)
+
+- **Workbench** can delete multiple selected threads in one request via **`POST /threads/bulk-delete`** (server removes those threads, their messages, and linked run/interaction rows as implemented in `src/api/routes.py`).
+- If you need a **full** local wipe (SQLite, KB artifacts, uploads), stop the server and use **`scripts/reset_local_data.py`** per [scripts/README.md](../scripts/README.md)—do not rely on bulk delete for that.
+
 ## Recommended debug flow
 
 - Start app: `python run.py`

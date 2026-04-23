@@ -208,7 +208,8 @@ def _cascade_remove_dashboard_action_peers(
     ).fetchall()
     for r in rows:
         rid = int(r["id"])
-        md = _parse_interaction_metadata(r.get("metadata"))
+        # sqlite3.Row does not implement .get(); access by key directly.
+        md = _parse_interaction_metadata(r["metadata"])
         acts = md.get("csm_actions")
         if not isinstance(acts, list):
             continue

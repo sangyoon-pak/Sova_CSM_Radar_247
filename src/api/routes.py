@@ -282,6 +282,7 @@ class RuntimeSettingsPatch(BaseModel):
     rag_embedding_provider: str | None = None
     rag_embedding_model: str | None = None
     openrouter_api_key: str | None = None
+    openai_api_key: str | None = None
     openrouter_base_url: str | None = None
     gog_home: str | None = None
     gog_account: str | None = None
@@ -323,6 +324,14 @@ def patch_runtime_settings(req: RuntimeSettingsPatch):
     from src.agent.prompt_seed import PROMPT_LIBRARY_KEYS, default_prompt_value
 
     raw = req.model_dump(exclude_unset=True)
+    preset_raw = str(raw.get("llm_provider_preset") or "").strip().lower()
+    if preset_raw == "openai":
+        # Keep only the key family used by the active preset.
+        database.delete_app_setting("openrouter_api_key")
+    elif preset_raw in {"openrouter", "gemini_openrouter"}:
+        # Keep only the key family used by the active preset.
+        database.delete_app_setting("openai_api_key")
+
     for key, val in raw.items():
         if val is None:
             continue

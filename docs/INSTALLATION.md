@@ -86,6 +86,12 @@ To clear everything saved in Configure and start over: **Configure → Clear all
 
 Restart the server after changing exported environment variables. Details: [LLM_MODELS.md](LLM_MODELS.md), [LANGSMITH.md](LANGSMITH.md).
 
+### LLM provider without OpenRouter
+
+If you prefer **direct OpenAI** (no OpenRouter account), set **`LLM_PROVIDER_PRESET=openai`**, export **`OPENAI_API_KEY`**, and choose **OpenAI model ids** for `LLM_MODEL` / role overrides (for example `gpt-4o` instead of `openai/gpt-4o`). Embeddings can stay on OpenRouter or follow your chosen embedding provider in **Configure** — see variable notes in [LLM_MODELS.md](LLM_MODELS.md) and `.env.example`.
+
+The **`gemini_openrouter`** preset is another OpenRouter-based path (Gemini model slugs via the same HTTP client); it is **not** “no OpenRouter.”
+
 ### Gmail + `gog` (optional, under Configure)
 
 Inbox tools need **`gog`** and a one-time OAuth in the terminal — follow [GMAIL_SETUP.md](GMAIL_SETUP.md). Then save **`GOG_*`** in **Configure → Gmail** so they persist across restarts (or set them only via process environment for headless servers).
@@ -129,6 +135,7 @@ Inbox tools need **`gog`** and a one-time OAuth in the terminal — follow [GMAI
 | [LLM_MODELS.md](LLM_MODELS.md) | Model roles and presets |
 | [LANGSMITH.md](LANGSMITH.md) | Tracing |
 | [SEARCH_AGENT.md](SEARCH_AGENT.md) | Retrieval architecture |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | End-to-end runtime, API, Configure map |
 
 ---
 
