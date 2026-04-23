@@ -64,8 +64,8 @@ Use this checklist before sharing Sova beyond private/internal development.
 
 ### Repository Hygiene
 
-- [ ] Remove obsolete experiments and irrelevant test artifacts.
-- [ ] Keep only runnable tests/scripts that support maintainability.
+- [ ] Remove obsolete experiments and irrelevant artifacts.
+- [ ] `scripts/` should only contain runtime/install helpers (see `scripts/README.md`).
 - [ ] Confirm `.gitignore` blocks sensitive/generated content.
 
 ## Cross-Platform Expectations

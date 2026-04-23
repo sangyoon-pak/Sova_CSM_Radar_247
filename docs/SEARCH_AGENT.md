@@ -11,7 +11,6 @@
 - Tool entry: `src/agent/email_agent.py` (`search_product_docs` → `search_with_agent`)
 - Orchestrator + LLM loop: `src/agent/tools/search_agent.py` (`search_with_agent`)
 - Retrieval + candidate ranking: `src/agent/tools/doc_search.py` (`search_documents`)
-- Retrieval logging (debug): `scripts/test_full_agent_reply.py --with-retrieval --retrieval-json ...`
 
 Related behavior docs:
 - Guardrails: [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md)
@@ -145,7 +144,8 @@ This keeps retrieval behavior aligned with guardrail policy in [AGENT_GUARDRAILS
 
 ## 4) Debugging: why you see `rag` vs `fts` vs “plain grep”
 
-In `scripts/test_full_agent_reply.py --with-retrieval`, each candidate line shows:
+When inspecting retrieval (logs, traces, or temporary prints in `doc_search.py` / `search_agent.py`), candidate lines are often tagged as:
+
 - `| rag | score=...` → FAISS vector retrieval
 - `| fts` (or similar) → SQLite FTS search (ranked by BM25 internally)
 - no `| rag |` marker → typically grep-based hits (ripgrep exact match)
@@ -156,5 +156,4 @@ In `scripts/test_full_agent_reply.py --with-retrieval`, each candidate line show
 - Retrieval: `src/agent/tools/doc_search.py`
 - Orchestration: `src/agent/tools/search_agent.py`
 - Tool wiring: `src/agent/email_agent.py` (`search_product_docs`)
-- Debug output: `scripts/test_full_agent_reply.py`
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)

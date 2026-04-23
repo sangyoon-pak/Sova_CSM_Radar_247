@@ -16,17 +16,11 @@ LANGSMITH_API_KEY=lsv2_pt_...
 LANGSMITH_PROJECT=email_draft_agent
 ```
 
-For local scripts, export `LANGSMITH_*` in your shell before running Python (scripts do not read Configure DB).
+For ad-hoc Python, export `LANGSMITH_*` in your shell (process env is not read from Configure DB unless the app loads it).
 
 ## Verify Tracing
 
-Run a test invocation and check LangSmith:
-
-```bash
-.venv/bin/python scripts/test_langsmith_trace.py
-```
-
-Then open [smith.langchain.com](https://smith.langchain.com) → **Projects** → `email_draft_agent` (or `default`).
+Start the app (`python run.py`), enable LangSmith in **Configure**, then trigger any agent run (Workbench, **Scan inbox**, or **Run history** / API). Open [smith.langchain.com](https://smith.langchain.com) → **Projects** → `email_draft_agent` (or `default`) after a few seconds.
 
 Each LLM span uses the resolved model id (see [LLM_MODELS.md](LLM_MODELS.md)); filter traces by model or by run name (e.g. `search_agent.split_focus_subqueries`).
 

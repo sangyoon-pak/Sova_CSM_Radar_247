@@ -62,9 +62,8 @@ Likely causes:
 
 Actions:
 
-- Run retrieval debug script:
-  - `python scripts/test_full_agent_reply.py --with-retrieval`
-- Check subqueries and refined term variants.
+- Reproduce with a small Workbench question or **Scan inbox**, then inspect **Run history** / LangSmith traces for `search_product_docs` and subquery steps.
+- Check subqueries and refined term variants in logs or trace payloads.
 - Validate embedding/provider configuration in Configure or environment.
 
 ### 5) Timezone mismatch in workbench thread times
@@ -93,13 +92,11 @@ Actions:
 - Validate next-run preview before save.
 - Keep both manual and NL-assisted creation paths with clear labels.
 
-## Recommended Debug Commands
+## Recommended debug flow
 
 - Start app: `python run.py`
-- Search E2E test: `python scripts/test_search_agent_e2e.py`
-- Full agent retrieval trace: `python scripts/test_full_agent_reply.py --with-retrieval`
-- LangSmith smoke test: `python scripts/test_langsmith_trace.py`
-- Gmail local smoke test: `scripts/test-gmail-local.sh`
+- Use **Workbench** or **Scan inbox** for realistic retrieval + tool traces.
+- Use **Run history** (expand a run) and optional **LangSmith** (see [LANGSMITH.md](LANGSMITH.md)) for LLM/tool spans.
 
 ## Observability Checklist
 
