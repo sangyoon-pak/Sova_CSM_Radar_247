@@ -188,12 +188,13 @@ def _get_embeddings():
     if _EMBEDDINGS is not None and _EMBED_CFG == cfg:
         return _EMBEDDINGS
 
-    if provider == "openrouter":
+    if provider in {"openrouter", "openai"}:
         or_key = effective_chat_api_key()
         if OpenAIEmbeddings is None or not or_key:
             return None
+        default_model = "text-embedding-3-large"
         _EMBEDDINGS = OpenAIEmbeddings(
-            model=model_name or "openai/text-embedding-3-large",
+            model=model_name or default_model,
             api_key=or_key,
             base_url=effective_chat_base_url(),
         )

@@ -279,6 +279,18 @@
     .status-pill { font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); background: transparent; }
     .status-pill.running { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
     .status-pill.error { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); }
+    .configure-inline-tag {
+      display: inline-block;
+      margin-left: 0.45rem;
+      padding: 0.05rem 0.42rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--muted);
+      background: var(--surface2);
+      vertical-align: middle;
+    }
     .bubble-body {
       font-family: var(--mono);
       white-space: pre-wrap;
@@ -1747,9 +1759,10 @@
         <details class="configure-details">
           <summary data-i18n="configureEmbedBlock">Embeddings (RAG)</summary>
           <div class="configure-details__body">
+            <p class="configure-hint" id="cfg_embed_hint"></p>
             <datalist id="datalistEmbedModels"></datalist>
-            <div class="configure-field"><label for="cfg_rag_embedding_provider" data-i18n="cfgEmbedProv">Provider</label><input id="cfg_rag_embedding_provider" type="text" /></div>
-            <div class="configure-field"><label for="cfg_rag_embedding_model" data-i18n="cfgEmbedModel">Embedding model</label><input id="cfg_rag_embedding_model" type="text" list="datalistEmbedModels" /><span class="configure-env" id="cfg_env_rag_embedding_model"></span></div>
+            <div class="configure-field"><label for="cfg_rag_embedding_provider" data-i18n="cfgEmbedProv">Provider</label><select id="cfg_rag_embedding_provider"></select><span class="configure-env" id="cfg_env_rag_embedding_provider"></span></div>
+            <div class="configure-field"><label for="cfg_rag_embedding_model" data-i18n="cfgEmbedModel">Embedding model <span id="cfg_embed_model_tag" class="configure-inline-tag"></span></label><input id="cfg_rag_embedding_model" type="text" list="datalistEmbedModels" /><span class="configure-env" id="cfg_env_rag_embedding_model"></span></div>
           </div>
         </details>
         <details class="configure-details">
@@ -2193,6 +2206,11 @@
         configureTitle: 'Configure',
         configureLead: 'Choose provider preset, models, API keys, and Gmail <strong>gog</strong> fields. <strong>Save configuration</strong> stores values in this app’s database. <strong>Clear all database overrides</strong> removes everything saved from this screen, deletes local <strong>gog</strong> OAuth tokens under <code>GOG_HOME</code> (see Gmail section), and restores built-in defaults.',
         configureEmbedHint: 'After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.',
+        configureEmbedProviderHintOpenAI: 'OpenAI preset: use provider `openai`.',
+        configureEmbedProviderHintOpenRouter: 'OpenRouter/Gemini preset: use provider `openrouter`.',
+        configureEmbedProviderOptOpenAI: 'openai (OpenAI API)',
+        configureEmbedProviderOptOpenRouter: 'openrouter (OpenRouter-compatible API)',
+        configureEmbedModelTagPrefix: 'Recommended now',
         configureLlmBlock: 'LLM models',
         configureLlmHint: 'Gray lines show recommended defaults (starting point only). Pick a suggestion or paste any OpenRouter model id.',
         configureRecommendedLabel: 'Recommended',
@@ -3958,6 +3976,37 @@
             ? configureUiText('configureKeyOpenAiLine1')
             : configureUiText('configureKeyOpenRouterLine');
       }
+      const embProviderSelect = document.getElementById('cfg_rag_embedding_provider');
+      if (embProviderSelect) {
+        const opts = preset === 'openai'
+          ? [
+              { value: 'openai', label: configureUiText('configureEmbedProviderOptOpenAI') },
+            ]
+          : [
+              { value: 'openrouter', label: configureUiText('configureEmbedProviderOptOpenRouter') },
+            ];
+        const cur = String(embProviderSelect.value || '').trim().toLowerCase();
+        embProviderSelect.innerHTML = opts
+          .map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`)
+          .join('');
+        const hasCur = opts.some((o) => o.value === cur);
+        embProviderSelect.value = hasCur ? cur : (meta?.recommended_embedding_provider || opts[0].value);
+      }
+      const embHint = document.getElementById('cfg_embed_hint');
+      if (embHint) {
+        embHint.textContent =
+          preset === 'openai'
+            ? configureUiText('configureEmbedProviderHintOpenAI')
+            : configureUiText('configureEmbedProviderHintOpenRouter');
+      }
+      const embTag = document.getElementById('cfg_embed_model_tag');
+      if (embTag) {
+        const recEmbed = (meta && meta.recommended_embedding_models && meta.recommended_embedding_models[0]) || '';
+        embTag.textContent = recEmbed
+          ? `${configureUiText('configureEmbedModelTagPrefix')}: ${recEmbed}`
+          : '';
+        embTag.style.display = recEmbed ? 'inline-block' : 'none';
+      }
       const bb = document.getElementById('cfg_base_url_block');
       if (bb) bb.style.display = preset === 'openai' ? 'none' : '';
       const bu = document.getElementById('cfg_openrouter_base_url');
@@ -4003,7 +4052,7 @@
         if (el) el.value = em[0];
       }
       const rp = document.getElementById('cfg_rag_embedding_provider');
-      if (rp) rp.value = 'openrouter';
+      if (rp) rp.value = meta.recommended_embedding_provider || (p === 'openai' ? 'openai' : 'openrouter');
       refreshPresetDatalists();
     }
 
@@ -4014,7 +4063,8 @@
       llm_model_search_json: 'openai/gpt-4o-mini',
       llm_model_search_rerank: 'openai/gpt-4o-mini',
       llm_model_memory: 'openai/gpt-4o-mini',
-      rag_embedding_model: 'openai/text-embedding-3-large',
+      rag_embedding_provider: 'openrouter',
+      rag_embedding_model: 'text-embedding-3-large',
       openrouter_base_url: 'https://openrouter.ai/api/v1',
     };
 
@@ -4041,6 +4091,7 @@
         ['cfg_env_llm_model_search_json', 'llm_model_search_json'],
         ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank'],
         ['cfg_env_llm_model_memory', 'llm_model_memory'],
+        ['cfg_env_rag_embedding_provider', 'rag_embedding_provider'],
         ['cfg_env_rag_embedding_model', 'rag_embedding_model'],
         ['cfg_env_openrouter_base_url', 'openrouter_base_url'],
         ['cfg_env_scheduler_timezone', 'scheduler_timezone'],
@@ -4053,7 +4104,7 @@
         const isStored = stored && stored[key];
         const parts = [];
         if (recVal) parts.push(`${configureUiText('configureRecommendedLabel')}: ${recVal}`);
-        if (isStored) parts.push(configureUiText('configureSavedInDbShort'));
+        if (isStored && key !== 'rag_embedding_model') parts.push(configureUiText('configureSavedInDbShort'));
         el.textContent = parts.join(parts.length > 1 ? ' · ' : '');
       });
     }

@@ -2,12 +2,15 @@
 import os
 import re
 import json
+from contextlib import nullcontext
 from collections.abc import Callable, Sequence
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.tools import tool
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.agents import create_agent
+from langsmith import Client as LangSmithClient
+from langsmith.run_helpers import trace, tracing_context
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
@@ -81,6 +84,28 @@ def _ensure_langsmith_env():
         os.environ.pop("LANGCHAIN_TRACING_V2", None)
         os.environ.pop("LANGCHAIN_API_KEY", None)
         os.environ.pop("LANGCHAIN_PROJECT", None)
+
+
+def _langsmith_parent_trace(*, input_text: str, probe: bool):
+    """Create one parent trace run so classifier + agent calls are one trace tree."""
+    try:
+        if not effective_langsmith_tracing():
+            return nullcontext()
+        key = effective_langsmith_api_key().strip()
+        if not key:
+            return nullcontext()
+        project = effective_langsmith_project().strip()
+        client = LangSmithClient(api_key=key)
+        return trace(
+            "email_agent.run_agent",
+            run_type="chain",
+            project_name=project,
+            client=client,
+            inputs={"input_text": (input_text or "")[:500], "probe": bool(probe)},
+            metadata={"component": "email_agent"},
+        )
+    except Exception:
+        return nullcontext()
 
 
 def _get_llm():
@@ -185,15 +210,21 @@ def _classify_full_inbox_probe_intent_llm(text: str) -> bool | None:
         return None
 
 
-def _route_user_request(text: str) -> str:
+def _route_user_request(text: str, *, callbacks: Sequence | None = None) -> str:
     t = (text or "").strip()
     if not t:
         return "agent_run"
     llm = _llm_intent_router()
     prompt = INTENT_ROUTE_PROMPT.format(text=t[:2000])
-    try:
-        resp = llm.invoke([HumanMessage(content=prompt)], config={"run_name": "email_agent.route_intent"})
-        raw = (resp.content or "").strip()
+    base_cfg = {"run_name": "email_agent.route_intent"}
+    cbs = list(callbacks) if callbacks else []
+    if cbs:
+        # Keep UI trace callbacks for local run history, but avoid explicit LangSmith
+        # tracer on classifier side-calls so Workbench appears as one LangGraph trace.
+        base_cfg["callbacks"] = cbs
+
+    def _parse_route(resp_content: str) -> str | None:
+        raw = (resp_content or "").strip()
         if "```" in raw:
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -202,6 +233,13 @@ def _route_user_request(text: str) -> str:
         route = str(data.get("route") or "").strip()
         if route in ("inbox_peek", "agent_run"):
             return route
+        return None
+
+    try:
+        resp = llm.invoke([HumanMessage(content=prompt)], config=base_cfg)
+        parsed = _parse_route(str(resp.content or ""))
+        if parsed:
+            return parsed
     except Exception:
         pass
     return "agent_run"
@@ -491,7 +529,10 @@ def is_inbox_probe_chat_intent(text: str) -> bool:
         return False
     if not _probe_thread_intent_llm_enabled():
         return False
-    return bool(_classify_full_inbox_probe_intent_llm(raw[:2000]))
+    # This pre-run classifier executes before the main Workbench trace exists.
+    # Keep it out of LangSmith to avoid a separate top-level trace thread.
+    with tracing_context(enabled=False):
+        return bool(_classify_full_inbox_probe_intent_llm(raw[:2000]))
 
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
@@ -758,6 +799,28 @@ def run_agent(
     cancel_check: Callable[[], bool] | None = None,
 ) -> str:
     _ensure_langsmith_env()
+    with _langsmith_parent_trace(input_text=input_text, probe=probe):
+        return _run_agent_impl(
+            input_text=input_text,
+            callbacks=callbacks,
+            probe=probe,
+            system_append=system_append,
+            conversation_messages=conversation_messages,
+            thread_is_action_review=thread_is_action_review,
+            cancel_check=cancel_check,
+        )
+
+
+def _run_agent_impl(
+    *,
+    input_text: str,
+    callbacks: Sequence | None,
+    probe: bool,
+    system_append: str | None,
+    conversation_messages: list[dict] | None,
+    thread_is_action_review: bool,
+    cancel_check: Callable[[], bool] | None,
+) -> str:
 
     # Deterministic cron-management fast path for Workbench chat.
     # This keeps create/adjust/delete behavior available even if prompt overrides are stale.
@@ -783,7 +846,7 @@ def run_agent(
     # If the user is just asking to see recent/latest emails, do that directly.
     # This avoids accidental doc retrieval + drafting on short inbox-peek queries (Korean/English/etc).
     # Action-review threads always run the full agent (fetch_gmail_thread, etc.).
-    _peek = _route_user_request(route_text) == "inbox_peek"
+    _peek = (not probe) and (_route_user_request(route_text, callbacks=callbacks) == "inbox_peek")
     _action_review = thread_is_action_review or (input_text or "").lstrip().startswith("[Action review")
     if _peek and not _action_review:
         from src.agent.tools.gmail_tool import fetch_inbox_emails as _fetch

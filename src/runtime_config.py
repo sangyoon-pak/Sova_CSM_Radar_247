@@ -558,20 +558,22 @@ def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
         base = "gpt-4o"
         role_small = "gpt-4o-mini"
         base_url = _DEFAULT_OPENAI_BASE
+        embed_provider = "openai"
         embed_model = "text-embedding-3-large"
     else:
         # openrouter + gemini_openrouter: OpenRouter-compatible base and vendor/model ids.
         base = (s.llm_model or "openai/gpt-4o").strip()
         role_small = "openai/gpt-4o-mini"
         base_url = (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip()
-        embed_model = (s.rag_embedding_model or "openai/text-embedding-3-large").strip()
+        embed_provider = "openrouter"
+        embed_model = (s.rag_embedding_model or "text-embedding-3-large").strip()
     return {
         "llm_model": base,
         "llm_model_main": base,
         "llm_model_search_json": role_small,
         "llm_model_search_rerank": role_small,
         "llm_model_memory": role_small,
-        "rag_embedding_provider": (s.rag_embedding_provider or "openrouter").strip(),
+        "rag_embedding_provider": embed_provider,
         "rag_embedding_model": embed_model,
         "openrouter_base_url": base_url,
         "scheduler_timezone": (getattr(s, "scheduler_timezone", None) or "Asia/Seoul").strip(),
@@ -784,26 +786,28 @@ def runtime_settings_snapshot() -> dict:
             "google/gemini-pro-1.5",
         ],
         "recommended_embedding_models": [
-            "openai/text-embedding-3-large",
-            "openai/text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-3-small",
         ],
         "provider_presets": {
             "openrouter": {
                 "label": "OpenRouter",
                 "hint": "Multi-vendor models via one API; use vendor/model ids.",
                 "default_base_url": "https://openrouter.ai/api/v1",
+                "recommended_embedding_provider": "openrouter",
                 "recommended_models": [
                     "openai/gpt-4o",
                     "openai/gpt-4o-mini",
                     "anthropic/claude-3.5-sonnet",
                     "google/gemini-2.0-flash-001",
                 ],
-                "recommended_embedding_models": ["openai/text-embedding-3-large", "openai/text-embedding-3-small"],
+                "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
             },
             "openai": {
                 "label": "OpenAI",
                 "hint": "Direct OpenAI API. Use OPENAI_API_KEY in the environment or save openai_api_key in Configure. Base URL is fixed to https://api.openai.com/v1. RC web search uses OpenAI Responses + web_search.",
                 "default_base_url": _DEFAULT_OPENAI_BASE,
+                "recommended_embedding_provider": "openai",
                 "recommended_models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1-mini"],
                 "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
             },
@@ -811,11 +815,12 @@ def runtime_settings_snapshot() -> dict:
                 "label": "Gemini (via OpenRouter)",
                 "hint": "Google Gemini models routed through OpenRouter (same client as OpenRouter preset).",
                 "default_base_url": "https://openrouter.ai/api/v1",
+                "recommended_embedding_provider": "openrouter",
                 "recommended_models": [
                     "google/gemini-2.0-flash-001",
                     "google/gemini-pro-1.5",
                 ],
-                "recommended_embedding_models": ["openai/text-embedding-3-large", "openai/text-embedding-3-small"],
+                "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
             },
         },
     }
