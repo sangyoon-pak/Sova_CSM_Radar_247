@@ -15,3 +15,4 @@ chroma_data/
 # Local runtime artifacts (keep deployment-safe)
 data/
 scripts/.local/
+knowledge-base/
