@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     probe_inbox_max_results: int = Field(10, validation_alias="PROBE_INBOX_MAX_RESULTS")
     probe_inbox_gmail_search: str = Field("", validation_alias="PROBE_INBOX_GMAIL_SEARCH")
     user_inbox_peek_max_results: int = Field(5, validation_alias="USER_INBOX_PEEK_MAX_RESULTS")
+    # thread send: llm = JSON classifier (LLM_MODEL_SEARCH_JSON); off|heuristic = no auto-probe from chat.
+    probe_thread_intent_classifier: str = Field("llm", validation_alias="PROBE_THREAD_INTENT_CLASSIFIER")
 
     # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
     configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")

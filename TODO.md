@@ -5,15 +5,14 @@ Last updated: 2026-04-16
 Single checklist: **completed** work from the rebuild + **remaining** tasks (merged from the former `docs/IMPLEMENTATION_TODO_STATUS.md` and this file). For implementation detail, see paths in the completed section.
 
 ### to do Fix 
-- [x] what is the best way to make use of the retrieved data after the initial run generating card ? if user asks an extensive question, agent should know about the data retrieved so that it can answers based on both retrieved information + email thread content. 
-- [x] the thread time and action card time are not matched with the time set on configure. all the time related parts should be based on the single time set via configure. don't know why the time is all over the place on the thread and chatbox on workbench. 
-- [ ] landing page requires instruction for cron jobs as well
-- [ ] agent should be able to do probe mode [true] if user's prompt intent is to actually probe the inbox and make action cards. what is the best way to do that but not to trigger this that could cause unnecessary API cost ?
+
+- [x] landing page requires instruction for cron jobs as well
+- [x] agent should be able to do probe mode [true] if user's prompt intent is to actually probe the inbox and make action cards. what is the best way to do that but not to trigger this that could cause unnecessary API cost ?
 
 
 ### Workbench / threads
 
-- [ ] **Bulk select + bulk delete** for threads
+- [x] **Bulk select + bulk delete** for threads
 
 
 

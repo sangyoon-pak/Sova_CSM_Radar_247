@@ -10,6 +10,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.agents import create_agent
 
 from src.agent.chat_llm import get_chat_llm
+from src.config import settings
 from src.runtime_config import (
     effective_guardrail_team_guidance,
     effective_langsmith_api_key,
@@ -101,6 +102,78 @@ Be language-agnostic. Examples of inbox_peek:
 User message:
 {text}
 """
+
+
+PROBE_THREAD_INTENT_PROMPT = """Classify one user turn (Workbench).
+
+Return STRICT JSON ONLY:
+{{
+  "run_full_inbox_probe": true | false,
+  "reason": "short english"
+}}
+
+true = user wants the full inbox probe pipeline now (Gmail triage → JSON → Action dashboard merge). Same intent as Scan inbox: includes inbox scan/probe/triage and requests to create/update/refresh/regenerate/sync action cards or the dashboard from inbox data (any language).
+
+false = definitions/how-it-works only; single-thread email work; light peek at a few messages only; cron job ops; KB/general chat unrelated to running that pipeline.
+
+User message:
+{text}
+"""
+
+
+def _parse_json_object_from_llm_content(raw: str) -> dict | None:
+    s = (raw or "").strip()
+    if not s:
+        return None
+    if "```" in s:
+        s = s.split("```")[1]
+        if s.lstrip().startswith("json"):
+            s = s[4:].lstrip()
+    try:
+        data = json.loads(s.strip())
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _probe_thread_intent_llm_enabled() -> bool:
+    """When False, chat never auto-promotes to probe (no classifier call)."""
+    ex = (os.environ.get("PROBE_THREAD_INTENT_CLASSIFIER") or "").strip().lower()
+    if ex in ("heuristic", "0", "false", "off", "regex", "disabled"):
+        return False
+    if ex in ("llm", "1", "true", "on"):
+        return True
+    v = (getattr(settings, "probe_thread_intent_classifier", "llm") or "llm").strip().lower()
+    return v not in ("heuristic", "0", "false", "off", "regex", "disabled")
+
+
+def _classify_full_inbox_probe_intent_llm(text: str) -> bool | None:
+    """Returns None on parse / transport failure (caller may fall back)."""
+    t = (text or "").strip()
+    if not t:
+        return None
+    llm = _llm_intent_router()
+    prompt = PROBE_THREAD_INTENT_PROMPT.format(text=t[:2000])
+    try:
+        resp = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={"run_name": "email_agent.probe_thread_intent"},
+        )
+        data = _parse_json_object_from_llm_content(str(resp.content or ""))
+        if not data:
+            return None
+        v = data.get("run_full_inbox_probe")
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            low = v.strip().lower()
+            if low in ("true", "yes", "1", "y"):
+                return True
+            if low in ("false", "no", "0", "n"):
+                return False
+        return None
+    except Exception:
+        return None
 
 
 def _route_user_request(text: str) -> str:
@@ -393,6 +466,24 @@ def is_cron_management_request(
     if re.search(r"\b(yes|ok|sure|please)\b", t) and "cron" in hist:
         return True
     return False
+
+
+def is_inbox_probe_chat_intent(text: str) -> bool:
+    """
+    True when the user wants a full inbox probe (same as probe=True / Scan inbox).
+
+    Decided only by the JSON classifier on LLM_MODEL_SEARCH_JSON. Returns false if that is disabled
+    (PROBE_THREAD_INTENT_CLASSIFIER=off) or the call fails.
+
+    Set PROBE_THREAD_INTENT_CLASSIFIER=off to disable auto-probe from chat (no classifier call).
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return False
+    if not _probe_thread_intent_llm_enabled():
+        return False
+    return bool(_classify_full_inbox_probe_intent_llm(raw[:2000]))
+
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
 

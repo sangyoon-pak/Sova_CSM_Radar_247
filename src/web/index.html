@@ -914,6 +914,25 @@
       border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
       background: color-mix(in srgb, var(--accent) 8%, transparent);
     }
+    .thread-item-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.35rem;
+      margin-bottom: 0.4rem;
+    }
+    .thread-item-row .thread-chk {
+      flex-shrink: 0;
+      margin-top: 0.42rem;
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .thread-item-row .thread-item {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: 0;
+    }
     .thread-title { font-weight: 600; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
     .thread-meta { color: var(--muted); font-size: 0.75rem; margin-top: 0.12rem; font-variant-numeric: tabular-nums; }
     .transcript {
@@ -1610,6 +1629,7 @@
           <li data-i18n-html="landingNextStepsLi2"></li>
           <li data-i18n-html="landingNextStepsLi3"></li>
           <li data-i18n-html="landingNextStepsLi4"></li>
+          <li data-i18n-html="landingNextStepsLi5"></li>
         </ul>
         <div class="landing-disclaimer">
           <div class="landing-disclaimer__title" data-i18n="landingDisclaimerTitle">Email provider note</div>
@@ -1623,6 +1643,7 @@
         <div class="landing-cta">
           <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
           <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
+          <button type="button" class="ghost" onclick="showTab('tab-cron')" data-i18n="landingCtaCron">Open Cron</button>
         </div>
       </details>
       <div class="landing-grid">
@@ -1644,6 +1665,7 @@
             <div class="item" data-i18n-html="landingStep2"><strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.</div>
             <div class="item" data-i18n-html="landingStep3"><strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.</div>
             <div class="item" data-i18n-html="landingStep4"><strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.</div>
+            <div class="item" data-i18n-html="landingStep5"><strong>5) Schedule inbox probes</strong><br/>Use the <strong>Cron</strong> tab for presets and schedules, or describe cadence in Workbench (cron admin mode) when your message is about jobs.</div>
           </div>
         </div>
       </div>
@@ -1854,7 +1876,13 @@
               <button type="button" class="danger btn-compact" onclick="deleteActiveThread()" data-i18n="deleteThread">Delete</button>
             </div>
           </div>
-          <input id="threadSearch" type="text" data-i18n-placeholder="searchThreads" placeholder="Search threads…" style="padding:0.55rem 0.65rem;border-radius:10px;margin-bottom:0.55rem;" oninput="loadThreads()" />
+          <input id="threadSearch" type="text" data-i18n-placeholder="searchThreads" placeholder="Search threads…" style="padding:0.55rem 0.65rem;border-radius:10px;margin-bottom:0.45rem;" oninput="loadThreads()" />
+          <div class="thread-bulk-bar row" style="gap:0.35rem;flex-wrap:wrap;margin-bottom:0.45rem;align-items:center;">
+            <button type="button" class="ghost btn-compact" onclick="threadsSelectAllVisible()" data-i18n="threadsSelectAll">Select all</button>
+            <button type="button" class="ghost btn-compact" onclick="threadsClearSelection()" data-i18n="threadsSelectNone">Clear</button>
+            <button type="button" class="danger btn-compact" onclick="deleteSelectedThreads()" data-i18n="threadsDeleteSelected">Delete selected</button>
+            <span id="threadBulkHint" class="action-board-hint" style="flex:1;min-width:0;text-align:right;"></span>
+          </div>
           <div id="threadList"><div class="empty" style="padding:1rem 0;" data-i18n="loading">Loading…</div></div>
         </div>
 
@@ -2133,10 +2161,12 @@
         landingNextStepsLi2: '<strong>Workbench</strong> — Set vendor, role, and product scope (agent profile) before probes and chat.',
         landingNextStepsLi3: '<strong>Knowledge</strong> — Upload <code>.md</code> / <code>.txt</code> and <strong>Reindex</strong> for RAG; add RC URLs if you use web search.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Review probes, action cards, and traces after runs.',
+        landingNextStepsLi5: '<strong>Cron</strong> — Schedule automated inbox probes from the Cron tab (presets + cron expression), or manage jobs in natural language from Workbench when the thread is about cron.',
         landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, optional Gmail): see ',
         landingDocsGithubLinkLabel: 'docs on GitHub',
         landingDocsGithubAfter: ' — or open <code>docs/INSTALLATION.md</code> in your local clone.',
         landingCtaConfigure: 'Open Configure',
+        landingCtaCron: 'Open Cron',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.',
         landingCtaWorkbench: 'Open Workbench',
@@ -2146,6 +2176,7 @@
         landingStep2: '<strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.',
         landingStep3: '<strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.',
         landingStep4: '<strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.',
+        landingStep5: '<strong>5) Schedule inbox probes</strong><br/>Use the <strong>Cron</strong> tab for presets and schedules, or describe cadence in Workbench (cron admin mode) when your message is about jobs.',
         landingFeedbackTitle: 'Feedback & self-evolution',
         landingFeedbackBody: 'Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.',
         landingKnowledgeTitle: 'Product docs & RC URLs',
@@ -2358,6 +2389,13 @@
         deleteKbConfirm: 'Delete this document?',
         removeUrlConfirm: 'Remove this URL?',
         deleteThreadConfirm: 'Delete thread {id}? All messages and linked run-history rows for this chat will be removed.',
+        threadsSelectAll: 'Select all',
+        threadsSelectNone: 'Clear',
+        threadsDeleteSelected: 'Delete selected',
+        threadsSelectedCount: '{n} selected',
+        threadsBulkDeleteConfirm: 'Delete {n} thread(s)? All messages and linked run-history rows for those chats will be removed.',
+        threadsNoneSelected: 'Select one or more threads first.',
+        threadSelectCheckbox: 'Select for bulk delete',
         langHelp: 'UI language controls labels only. Chat follows your message language; probe card text follows each customer thread, not UI.',
         optimizeConfirm: 'Run database cleanup now? This may delete older rows and report files.',
         clearHistoryConfirm: 'Delete all run history?',
@@ -2498,18 +2536,21 @@
         landingNextStepsLi2: '<strong>Workbench</strong> — Probe·채팅 전 Vendor·Role·Product scope(에이전트 프로필) 설정.',
         landingNextStepsLi3: '<strong>Knowledge</strong> — RAG용 <code>.md</code>/<code>.txt</code> 업로드 후 <strong>Reindex</strong>; 웹 검색 시 RC URL.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Probe·액션 카드·트레이스 확인.',
+        landingNextStepsLi5: '<strong>Cron</strong> — Cron 탭에서 자동 인박스 Probe 예약(프리셋·크론식), Workbench에서는 스레드가 크론 관리일 때 자연어로 잡 생성/수정.',
         landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, 선택 Gmail): ',
         landingDocsGithubLinkLabel: 'GitHub 문서',
         landingDocsGithubAfter: ' — 또는 로컬 클론의 <code>docs/INSTALLATION.md</code>를 여세요.',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'CSM 팀을 위한 운영 화면입니다. 고객 문의를 모니터링하고, 실제 실행이 필요한 작업만 카드로 남기며, 상태와 Run history로 진행을 투명하게 관리합니다.',
         landingCtaWorkbench: 'Workbench 열기',
+        landingCtaCron: 'Cron 열기',
         landingCtaDashboard: 'Action dashboard 열기',
         landingQuickStartTitle: '빠른 시작',
         landingStep1: '<strong>1) 모델·Gmail 설정(선택)</strong><br/><strong>설정</strong> 탭에서 OpenRouter 모델·API 키·임베딩·gog 경로를 지정한 뒤, Workbench에서 Vendor/Role/Product scope를 맞추세요.',
         landingStep2: '<strong>2) Inbox 스캔</strong><br/>Workbench에서 Probe를 실행하면 대시보드에 구조화 액션 카드가 생성됩니다.',
         landingStep3: '<strong>3) 상태로 운영</strong><br/>시작 전 / 진행 중 / 완료 상태로 실행 우선순위와 정렬을 관리하세요.',
         landingStep4: '<strong>4) 액션 단위 심화 대화</strong><br/>“이 작업만 논의”로 스코프된 스레드를 열고 필요 시 정확한 이메일 thread를 다시 불러오세요.',
+        landingStep5: '<strong>5) 인박스 Probe 예약</strong><br/><strong>Cron</strong> 탭에서 프리셋·스케줄을 지정하거나, Workbench에서 메시지가 크론 잡일 때 캐던스를 자연어로 말해 관리하세요.',
         landingFeedbackTitle: '피드백과 자기 진화',
         landingFeedbackBody: '<strong>Run history</strong>에서 Run을 펼친 뒤 <strong>OK</strong> / <strong>NG</strong> / <strong>Good</strong> / <strong>Noise</strong> 중 하나를 눌러 피드백을 남기세요. 피드백은 <strong>learning memory</strong>에 저장되고 이후 Run에 반영되는 운영 규칙으로 정리됩니다.',
         landingKnowledgeTitle: '제품 문서·RC URL',
@@ -2671,6 +2712,13 @@
         deleteKbConfirm: '이 문서 삭제할까요?',
         removeUrlConfirm: '이 URL 제거할까요?',
         deleteThreadConfirm: 'Thread {id} 삭제? 이 채팅 메시지와 연결된 실행 이력도 함께 삭제됩니다.',
+        threadsSelectAll: '전체 선택',
+        threadsSelectNone: '선택 해제',
+        threadsDeleteSelected: '선택 삭제',
+        threadsSelectedCount: '{n}개 선택',
+        threadsBulkDeleteConfirm: '스레드 {n}개를 삭제할까요? 해당 채팅 메시지와 연결된 실행 이력도 함께 삭제됩니다.',
+        threadsNoneSelected: '삭제할 스레드를 하나 이상 선택하세요.',
+        threadSelectCheckbox: '일괄 삭제용 선택',
         langHelp: 'UI는 꼭지·라벨만 한/영. 채팅은 메시지 언어. Probe 카드 본문은 고객 스레드 기준(UI와 무관).',
         optimizeConfirm: 'DB cleanup 실행? 오래된 row·report 파일 삭제될 수 있음',
         clearHistoryConfirm: 'Run history 전부 삭제?',
@@ -2924,6 +2972,8 @@
     }
 
     let _activeThreadId = null;
+    let _threadsListCache = [];
+    const _selectedThreadIds = new Set();
     let _dashboardOffset = 0;
     let _dashboardProbeRows = [];
     let _dashboardDomainFilterTimer = null;
@@ -3008,24 +3058,95 @@
     function _threadTitle(t) {
       return (t && t.title) ? String(t.title) : `Thread #${t.id}`;
     }
+    function _threadListItemHtml(t) {
+      const tid = Number(t.id);
+      const active = (_activeThreadId === tid) ? 'active' : '';
+      const checked = _selectedThreadIds.has(tid) ? 'checked' : '';
+      const alab = escapeHtml(uiText('threadSelectCheckbox'));
+      return `<div class="thread-item-row">
+          <input type="checkbox" class="thread-chk" ${checked} aria-label="${alab}"
+            onclick="event.stopPropagation(); toggleThreadSelection(${tid}, this)" />
+          <div class="thread-item ${active}" role="button" tabindex="0" onclick="selectThread(${tid})"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectThread(${tid});}">
+            <div class="thread-title">${escapeHtml(_threadTitle(t))}</div>
+            <div class="thread-meta">${escapeHtml(_fmtTime(t.updated_at || t.created_at || ''))}</div>
+          </div>
+        </div>`;
+    }
+    function updateThreadBulkToolbar() {
+      const hint = document.getElementById('threadBulkHint');
+      if (!hint) return;
+      const n = _selectedThreadIds.size;
+      hint.textContent = n ? uiFmt('threadsSelectedCount', { n: String(n) }) : '';
+    }
+    function rerenderThreadListFromCache() {
+      const el = document.getElementById('threadList');
+      if (!el || !_threadsListCache.length) return;
+      el.innerHTML = _threadsListCache.map(t => _threadListItemHtml(t)).join('');
+      updateThreadBulkToolbar();
+    }
+    function toggleThreadSelection(threadId, el) {
+      const tid = Number(threadId);
+      if (el && el.checked) _selectedThreadIds.add(tid);
+      else _selectedThreadIds.delete(tid);
+      updateThreadBulkToolbar();
+    }
+    function threadsSelectAllVisible() {
+      for (const t of _threadsListCache) {
+        _selectedThreadIds.add(Number(t.id));
+      }
+      rerenderThreadListFromCache();
+    }
+    function threadsClearSelection() {
+      _selectedThreadIds.clear();
+      rerenderThreadListFromCache();
+    }
+    async function deleteSelectedThreads() {
+      if (!_selectedThreadIds.size) {
+        alert(uiText('threadsNoneSelected'));
+        return;
+      }
+      const ids = Array.from(_selectedThreadIds, Number);
+      const n = ids.length;
+      if (!confirm(uiFmt('threadsBulkDeleteConfirm', { n: String(n) }))) return;
+      try {
+        await fetchJson('/threads/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_ids: ids }),
+        });
+        _selectedThreadIds.clear();
+        if (_activeThreadId != null && ids.includes(Number(_activeThreadId))) {
+          _activeThreadId = null;
+        }
+        await loadThreads();
+        await loadThreadMessages();
+      } catch (e) {
+        alert(uiText('deleteFail') + ': ' + e.message);
+      }
+    }
     async function loadThreads() {
       const q = (document.getElementById('threadSearch')?.value || '').trim();
       const data = await fetchJson('/threads?limit=50' + (q ? `&q=${encodeURIComponent(q)}` : ''));
+      _threadsListCache = Array.isArray(data) ? data : [];
       const el = document.getElementById('threadList');
-      if (!data.length) {
+      const idsInView = new Set(_threadsListCache.map(t => Number(t.id)));
+      for (const sid of Array.from(_selectedThreadIds)) {
+        if (!idsInView.has(sid)) _selectedThreadIds.delete(sid);
+      }
+      if (!_threadsListCache.length) {
         el.innerHTML = `<div class="empty" style="padding:1rem 0;">${escapeHtml(uiText('noThreads'))}</div>`;
         _activeThreadId = null;
+        updateThreadBulkToolbar();
         return;
       }
-      el.innerHTML = data.map(t => {
-        const active = (_activeThreadId === t.id) ? 'active' : '';
-        return `<div class="thread-item ${active}" onclick="selectThread(${t.id})">
-          <div class="thread-title">${escapeHtml(_threadTitle(t))}</div>
-          <div class="thread-meta">${escapeHtml(_fmtTime(t.updated_at || t.created_at || ''))}</div>
-        </div>`;
-      }).join('');
-      if (!_activeThreadId) {
-        await selectThread(data[0].id);
+      el.innerHTML = _threadsListCache.map(t => _threadListItemHtml(t)).join('');
+      updateThreadBulkToolbar();
+      if (
+        !_activeThreadId
+        || !_threadsListCache.some(t => Number(t.id) === Number(_activeThreadId))
+      ) {
+        await selectThread(_threadsListCache[0].id);
       }
     }
     async function createThread() {

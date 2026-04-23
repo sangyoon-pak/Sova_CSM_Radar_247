@@ -4,12 +4,17 @@ from threading import Thread
 
 from fastapi import HTTPException, File, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
 
-from src.agent.email_agent import AgentRunCancelled, is_cron_management_request, run_agent
+from src.agent.email_agent import (
+    AgentRunCancelled,
+    is_cron_management_request,
+    is_inbox_probe_chat_intent,
+    run_agent,
+)
 from src.agent.memory import compact_memory, refresh_learning_instructions
 from src.agent.probe_actions import (
     build_action_review_runtime_hydration,
@@ -677,6 +682,17 @@ class ThreadCreateRequest(BaseModel):
     metadata: dict | None = None
 
 
+class ThreadsBulkDeleteRequest(BaseModel):
+    thread_ids: list[int] = Field(..., min_length=1)
+
+    @field_validator("thread_ids")
+    @classmethod
+    def _cap_bulk_delete(cls, v: list[int]) -> list[int]:
+        if len(v) > 200:
+            raise ValueError("At most 200 thread ids per request.")
+        return v
+
+
 class ActionReviewThreadRequest(BaseModel):
     """Open or create a Workbench thread scoped to one Action dashboard card (probe interaction + action index)."""
     source_interaction_id: int
@@ -824,6 +840,16 @@ def delete_thread(thread_id: int):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/threads/bulk-delete")
+def bulk_delete_threads(req: ThreadsBulkDeleteRequest):
+    try:
+        return database.delete_threads(req.thread_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/threads/send", response_model=RunAgentAsyncResponse)
 def send_thread_message(req: ThreadSendRequest):
     text = (req.text or "").strip()
@@ -832,28 +858,46 @@ def send_thread_message(req: ThreadSendRequest):
 
     probe_ui_loc = _probe_ui_locale(req.ui_locale)
 
+    th0 = database.get_thread_by_id(req.thread_id)
+    md0 = (th0 or {}).get("metadata") or {}
+    is_action_review = isinstance(md0, dict) and md0.get("kind") == "action_review"
+    auto_probe = (
+        (not req.probe)
+        and (not is_action_review)
+        and is_inbox_probe_chat_intent(text)
+    )
+    effective_probe = bool(req.probe or auto_probe)
+
+    um_meta: dict = {"kind": "probe" if effective_probe else "message"}
+    if auto_probe:
+        um_meta["auto_probe_from_chat"] = True
+
     # Persist the user message immediately.
     user_msg = database.add_message(
         thread_id=req.thread_id,
         role="user",
         content=text if text else "(probe inbox)",
-        metadata={"kind": "probe" if req.probe else "message"},
+        metadata=um_meta,
     )
 
-    hist_for_route = None if req.probe else database.list_messages(req.thread_id, limit=30)
-    cron_admin = (not req.probe) and is_cron_management_request(
+    hist_for_route = None if effective_probe else database.list_messages(req.thread_id, limit=30)
+    cron_admin = (not effective_probe) and is_cron_management_request(
         text,
         conversation_messages=hist_for_route,
     )
-    trigger_type = "thread_probe" if req.probe else ("thread_cron_admin" if cron_admin else "thread_message")
-    log_input = get_probe_trigger_message() if req.probe else (text[:500] if text else "")
+    trigger_type = (
+        "thread_probe"
+        if effective_probe
+        else ("thread_cron_admin" if cron_admin else "thread_message")
+    )
+    log_input = (
+        get_probe_trigger_message()
+        if effective_probe
+        else (text[:500] if text else "")
+    )
     run_id = run_state.create_run(trigger_type=trigger_type, input_text=log_input[:500])
-
-    th0 = database.get_thread_by_id(req.thread_id)
-    md0 = (th0 or {}).get("metadata") or {}
-    is_action_review = isinstance(md0, dict) and md0.get("kind") == "action_review"
     system_append = None
-    if (not req.probe) and is_action_review:
+    if (not effective_probe) and is_action_review:
         base = (get_action_review_append() or "").strip()
         hydration: str | None = None
         try:
@@ -882,10 +926,10 @@ def send_thread_message(req: ThreadSendRequest):
             system_append = (base + "\n\n" + hydration).strip() if base else hydration
         else:
             system_append = base or None
-    thread_history = None if req.probe else database.list_messages(req.thread_id, limit=200)
+    thread_history = None if effective_probe else database.list_messages(req.thread_id, limit=200)
 
     agent_input = (text or "").strip()
-    if req.probe and not agent_input:
+    if effective_probe and (auto_probe or (req.probe and not agent_input)):
         agent_input = get_probe_trigger_message()
 
     def _worker():
@@ -895,10 +939,10 @@ def send_thread_message(req: ThreadSendRequest):
             output = run_agent(
                 agent_input,
                 callbacks=[cb],
-                probe=req.probe,
+                probe=effective_probe,
                 system_append=system_append,
                 conversation_messages=thread_history,
-                thread_is_action_review=is_action_review if not req.probe else False,
+                thread_is_action_review=is_action_review if not effective_probe else False,
                 cancel_check=lambda: run_state.is_cancel_requested(run_id),
             )
             run_state.complete_run(run_id, output)
@@ -911,7 +955,7 @@ def send_thread_message(req: ThreadSendRequest):
                 "thread_id": req.thread_id,
                 "user_message_id": user_msg.get("id"),
             }
-            if req.probe:
+            if effective_probe:
                 # Effective Configure guardrails must be on this dict so merge_csm_actions_metadata
                 # applies exclude/include keywords (pick() only sees keys present on the dict).
                 metadata.update(

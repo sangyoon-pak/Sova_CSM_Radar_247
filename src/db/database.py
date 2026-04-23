@@ -1206,6 +1206,40 @@ def list_messages(thread_id: int, limit: int = 200, offset: int = 0) -> list[dic
     return [dict(r) for r in rows]
 
 
+def _delete_one_thread_unlocked(conn: sqlite3.Connection, thread_id: int) -> dict | None:
+    """
+    Delete one thread using an open connection (caller holds _WRITE_LOCK and commits).
+    Returns None if the thread did not exist; otherwise the same shape as delete_thread.
+    """
+    conn.row_factory = sqlite3.Row
+    tid = int(thread_id)
+    row = conn.execute(
+        "SELECT id, title, created_at, updated_at FROM conversation_threads WHERE id = ?",
+        (tid,),
+    ).fetchone()
+    if not row:
+        return None
+    c0 = conn.execute(
+        """
+        DELETE FROM agent_interactions
+        WHERE json_extract(metadata, '$.thread_id') IS NOT NULL
+          AND (
+            CAST(json_extract(metadata, '$.thread_id') AS INTEGER) = ?
+            OR CAST(json_extract(metadata, '$.thread_id') AS TEXT) = ?
+          )
+        """,
+        (tid, str(tid)),
+    )
+    c1 = conn.execute("DELETE FROM conversation_messages WHERE thread_id = ?", (tid,))
+    c2 = conn.execute("DELETE FROM conversation_threads WHERE id = ?", (tid,))
+    return {
+        "deleted": int(c2.rowcount or 0),
+        "deleted_messages": int(c1.rowcount or 0),
+        "deleted_interactions": int(c0.rowcount or 0),
+        "thread": dict(row),
+    }
+
+
 def delete_thread(thread_id: int) -> dict:
     """
     Delete a conversation thread, its messages, and agent_interactions rows
@@ -1214,34 +1248,71 @@ def delete_thread(thread_id: int) -> dict:
     """
     with _WRITE_LOCK:
         conn = _conn()
-        conn.row_factory = sqlite3.Row
-        tid = int(thread_id)
-        row = conn.execute(
-            "SELECT id, title, created_at, updated_at FROM conversation_threads WHERE id = ?",
-            (tid,),
-        ).fetchone()
-        if not row:
+        try:
+            out = _delete_one_thread_unlocked(conn, thread_id)
+            conn.commit()
+            if out is None:
+                return {"deleted": 0, "deleted_messages": 0, "deleted_interactions": 0}
+            return out
+        finally:
             conn.close()
-            return {"deleted": 0, "deleted_messages": 0, "deleted_interactions": 0}
-        # Run history rows tied to this Workbench thread (thread_message / thread_probe sends).
-        c0 = conn.execute(
-            """
-            DELETE FROM agent_interactions
-            WHERE json_extract(metadata, '$.thread_id') IS NOT NULL
-              AND (
-                CAST(json_extract(metadata, '$.thread_id') AS INTEGER) = ?
-                OR CAST(json_extract(metadata, '$.thread_id') AS TEXT) = ?
-              )
-            """,
-            (tid, str(tid)),
-        )
-        c1 = conn.execute("DELETE FROM conversation_messages WHERE thread_id = ?", (tid,))
-        c2 = conn.execute("DELETE FROM conversation_threads WHERE id = ?", (tid,))
-        conn.commit()
-        conn.close()
-        return {
-            "deleted": int(c2.rowcount or 0),
-            "deleted_messages": int(c1.rowcount or 0),
-            "deleted_interactions": int(c0.rowcount or 0),
-            "thread": dict(row),
-        }
+
+
+def delete_threads(thread_ids: list) -> dict:
+    """
+    Delete many threads in one transaction. Unknown ids are skipped (per-id deleted: 0).
+    At most 200 ids per call.
+    """
+    seen: set[int] = set()
+    clean: list[int] = []
+    for x in thread_ids or []:
+        try:
+            tid = int(x)
+        except (TypeError, ValueError):
+            continue
+        if tid <= 0 or tid in seen:
+            continue
+        seen.add(tid)
+        clean.append(tid)
+    if len(clean) > 200:
+        raise ValueError("At most 200 thread ids per bulk delete.")
+    results: list[dict] = []
+    deleted_threads = 0
+    total_messages = 0
+    total_interactions = 0
+    with _WRITE_LOCK:
+        conn = _conn()
+        try:
+            for tid in clean:
+                out = _delete_one_thread_unlocked(conn, tid)
+                if out is None:
+                    results.append(
+                        {
+                            "thread_id": tid,
+                            "deleted": 0,
+                            "deleted_messages": 0,
+                            "deleted_interactions": 0,
+                        }
+                    )
+                else:
+                    deleted_threads += 1
+                    total_messages += int(out.get("deleted_messages") or 0)
+                    total_interactions += int(out.get("deleted_interactions") or 0)
+                    results.append(
+                        {
+                            "thread_id": tid,
+                            "deleted": int(out.get("deleted") or 0),
+                            "deleted_messages": int(out.get("deleted_messages") or 0),
+                            "deleted_interactions": int(out.get("deleted_interactions") or 0),
+                            "title": (out.get("thread") or {}).get("title"),
+                        }
+                    )
+            conn.commit()
+        finally:
+            conn.close()
+    return {
+        "deleted_threads": deleted_threads,
+        "deleted_messages": total_messages,
+        "deleted_interactions": total_interactions,
+        "results": results,
+    }
