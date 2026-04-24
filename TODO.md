@@ -11,7 +11,7 @@
 ### Agent utility / RAG
 
 - [x] **Less-refined uploads** (PDF, noisy docs): expected behavior, limits, and UX messaging
-- [ ] what is the best way to improve web search ? now currently once you upload a RC url, agent will trigger LLM to come up with 9 more sub url to search if I am right. I wonder how web search feature works differently for difference cases 1) when users decided to use openAI with the openAI API, and 2) when users decided to use openrouter for this case. 
+- [ ] verify how action cards changed to completed works when the next probe comes. is it updated or agent only uppend it when it considers it updated thread by thread id and fingerprint ?  
 - [ ] verify and test the agent feedback memory part and do fine tuning ? Since this will be also part of the system prompt for agents, we are now collecting user's feedback from each of the action cards and run history for each agent run. We should be able to curate all the feedbacks for agent to understand by LLM first and let users also see the curated feedback on the UI, ideally on configure ? 
 - [ ] how do we change the current agent prompt finetune feature for users to understand from multi-agentic perspective ? currently it only shows what are the prompts for what but users can hardly understand which is for what agent or subagent. 
 ## docs
