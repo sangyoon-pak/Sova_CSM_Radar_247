@@ -426,15 +426,16 @@ def _refine_search_terms(query: str, reason: str) -> list[list[str]]:
         return []
 
 
-def search_with_agent(
+def search_with_agent_structured(
     query: str,
     max_iterations: int = 2,
     rerank_threshold: int = 3,
     max_context_chars: int = 20000,
-) -> str:
+) -> tuple[str, list[dict]]:
     """
-    Orchestrated search: grep → re-rank → sufficiency check → optional refined search.
-    Returns formatted context for the main agent.
+    Same pipeline as ``search_with_agent`` but returns ``(formatted_context, final_matches)``
+    after diversify, for RC / KB→web gate callers. ``search_product_docs`` keeps using
+    ``search_with_agent`` (string-only).
     """
     all_matches: list[dict] = []
     fallback_candidates: list[dict] = []
@@ -546,4 +547,23 @@ def search_with_agent(
                 "context_passed_to_llm": formatted,
             }
         )
+    return formatted, all_matches
+
+
+def search_with_agent(
+    query: str,
+    max_iterations: int = 2,
+    rerank_threshold: int = 3,
+    max_context_chars: int = 20000,
+) -> str:
+    """
+    Orchestrated search: grep → re-rank → sufficiency check → optional refined search.
+    Returns formatted context for the main agent.
+    """
+    formatted, _matches = search_with_agent_structured(
+        query=query,
+        max_iterations=max_iterations,
+        rerank_threshold=rerank_threshold,
+        max_context_chars=max_context_chars,
+    )
     return formatted

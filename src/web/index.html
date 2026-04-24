@@ -1752,6 +1752,7 @@
             <div class="configure-field"><label for="cfg_llm_model" data-i18n="cfgLlmModel">Default model (LLM_MODEL)</label><input id="cfg_llm_model" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_main" data-i18n="cfgLlmMain">Main agent</label><input id="cfg_llm_model_main" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_main"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_search_json" data-i18n="cfgLlmSearchJson">Search / JSON steps</label><input id="cfg_llm_model_search_json" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_search_json"></span></div>
+            <div class="configure-field"><label for="cfg_llm_model_kb_web_gate" data-i18n="cfgLlmKbWebGate" data-i18n-title="cfgLlmKbWebGateHelp">KB → web gate (RC)</label><input id="cfg_llm_model_kb_web_gate" type="text" autocomplete="off" list="datalistChatModels" title="" /><span class="configure-env" id="cfg_env_llm_model_kb_web_gate"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_search_rerank" data-i18n="cfgLlmRerank">Rerank</label><input id="cfg_llm_model_search_rerank" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_search_rerank"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_memory" data-i18n="cfgLlmMemory">Memory / learning</label><input id="cfg_llm_model_memory" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_memory"></span></div>
           </div>
@@ -2098,6 +2099,18 @@
         </div>
         <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
         <div id="rcUrlList" style="margin-top:0.75rem;"></div>
+        <div style="margin-top:1rem;padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
+          <label for="rcWebRetrievalMode" style="display:block;font-size:0.88rem;margin-bottom:0.35rem;font-weight:600;" data-i18n="rcWebModeLabel">RC web retrieval mode</label>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+              <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
+              <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
+            </select>
+            <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
+            <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+          </div>
+          <p style="margin:0.5rem 0 0 0;font-size:0.78rem;color:var(--muted);line-height:1.4;" data-i18n-html="rcWebModeWarnHtml"></p>
+        </div>
         <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcHintHtml">
           When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.
         </p>
@@ -2264,6 +2277,9 @@
         cfgLlmModel: 'Default model (LLM_MODEL)',
         cfgLlmMain: 'Main agent',
         cfgLlmSearchJson: 'Search / JSON steps',
+        cfgLlmKbWebGate: 'KB → web gate (RC)',
+        cfgLlmKbWebGateHelp:
+          'Only for search_rc_web: JSON gate before hosted web. Not for intent/subquery JSON (use Search / JSON steps). Empty → LLM_MODEL.',
         cfgLlmRerank: 'Rerank',
         cfgLlmMemory: 'Memory / learning',
         cfgEmbedProv: 'Provider',
@@ -2278,6 +2294,8 @@
         landingEnvDdLlmModel: 'Default model id (OpenRouter format, e.g. <code>openai/gpt-4o</code>) used for every role when the overrides below are unset.',
         landingEnvDdMain: 'Main CSM agent: tool calls, inbox probe, Workbench replies. Falls back to <code>LLM_MODEL</code>.',
         landingEnvDdSearchJson: 'Document retrieval helpers: subquery split, term extraction, JSON-heavy steps. Falls back to <code>LLM_MODEL</code>.',
+        landingEnvDdKbWebGate:
+          'RC path only: decides whether to run hosted web after KB. Separate from <code>LLM_MODEL_SEARCH_JSON</code>. Unset → <code>LLM_MODEL</code>.',
         landingEnvDdSearchRerank: 'Snippet reranking for KB hits. Falls back to <code>LLM_MODEL</code>.',
         landingEnvDdMemory: 'Learning from user feedback and memory compaction. Falls back to <code>LLM_MODEL</code>.',
         landingSetupHeadingEmbed: 'Embeddings (RAG index)',
@@ -2373,6 +2391,15 @@
         rcAdd: 'Add',
         rcDiscover: 'Discover subpages (≤10)',
         rcHintHtml: 'When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.',
+        rcWebModeLabel: 'RC web retrieval mode',
+        rcWebModeKbFirst: 'KB first (LLM gate may skip web)',
+        rcWebModeAugment: 'Always augment with web',
+        rcWebModeSave: 'Save',
+        rcWebModeWarnHtml:
+          '<strong>Always augment</strong> runs hosted web after KB on every call → <strong>higher token and inference cost</strong> (provider billing). <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
+        rcWebModeSaving: 'Saving…',
+        rcWebModeSaved: 'Saved.',
+        rcWebModeSaveFail: 'Save failed',
         noRcUrls: 'No RC URLs saved.',
         rcSelectAll: 'Select all',
         rcSelectRowAria: 'Select URL for bulk delete',
@@ -2607,6 +2634,8 @@
         landingEnvDdLlmModel: '기본 모델 id(OpenRouter 형식, 예: <code>openai/gpt-4o</code>). 아래 역할별 변수가 비어 있을 때 사용됩니다.',
         landingEnvDdMain: '메인 CSM 에이전트: 도구 호출·Inbox probe·Workbench 답변. 미설정 시 <code>LLM_MODEL</code>.',
         landingEnvDdSearchJson: '문서 검색 보조: 서브쿼리 분리·용어 추출·JSON 위주 단계. 미설정 시 <code>LLM_MODEL</code>.',
+        landingEnvDdKbWebGate:
+          'RC 전용: KB 후 hosted web 실행 여부. <code>LLM_MODEL_SEARCH_JSON</code>과 별도. 비우면 <code>LLM_MODEL</code>.',
         landingEnvDdSearchRerank: 'KB 스니펫 재순위. 미설정 시 <code>LLM_MODEL</code>.',
         landingEnvDdMemory: '사용자 피드백 학습·메모리 정리. 미설정 시 <code>LLM_MODEL</code>.',
         landingSetupHeadingEmbed: '임베딩 (RAG 인덱스)',
@@ -2702,6 +2731,18 @@
         rcAdd: 'Add',
         rcDiscover: 'Discover subpages (≤10)',
         rcHintHtml: 'RC URL이 <strong>enabled</strong>면 Run 중 해당 도메인 web search를 쓸 수 있어요.',
+        rcWebModeLabel: 'RC 웹 검색 모드',
+        rcWebModeKbFirst: 'KB 우선 (게이트가 web 생략 가능)',
+        rcWebModeAugment: '항상 web으로 보강',
+        rcWebModeSave: '저장',
+        rcWebModeWarnHtml:
+          '<strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 <strong>토큰·추론 비용이 커집니다</strong>(과금). <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
+        rcWebModeSaving: '저장 중…',
+        rcWebModeSaved: '저장됨.',
+        rcWebModeSaveFail: '저장 실패',
+        cfgLlmKbWebGate: 'KB→웹 게이트 (RC)',
+        cfgLlmKbWebGateHelp:
+          'search_rc_web 전용: hosted web 전 JSON 게이트. 인텐트/서브쿼리 JSON과 무관(「Search / JSON steps」). 비우면 LLM_MODEL.',
         noRcUrls: '저장된 RC URL 없음',
         rcSelectAll: '전체 선택',
         rcSelectRowAria: '일괄 삭제용 선택',
@@ -3917,6 +3958,7 @@
       llm_model: 'LLM_MODEL',
       llm_model_main: 'LLM_MODEL_MAIN',
       llm_model_search_json: 'LLM_MODEL_SEARCH_JSON',
+      llm_model_kb_web_gate: 'LLM_MODEL_KB_WEB_GATE',
       llm_model_search_rerank: 'LLM_MODEL_SEARCH_RERANK',
       llm_model_memory: 'LLM_MODEL_MEMORY',
       rag_embedding_provider: 'RAG_EMBEDDING_PROVIDER',
@@ -3943,6 +3985,7 @@
       probe_inbox_max_results: 'PROBE_INBOX_MAX_RESULTS',
       probe_inbox_gmail_search: 'PROBE_INBOX_GMAIL_SEARCH',
       user_inbox_peek_max_results: 'USER_INBOX_PEEK_MAX_RESULTS',
+      rc_web_retrieval_mode: 'RC_WEB_RETRIEVAL_MODE',
     };
     function _canonicalEnvKey(k) {
       if (!k) return k;
@@ -4168,6 +4211,7 @@
       llm_model: 'openai/gpt-4o',
       llm_model_main: 'openai/gpt-4o',
       llm_model_search_json: 'openai/gpt-4o-mini',
+      llm_model_kb_web_gate: 'openai/gpt-4o-mini',
       llm_model_search_rerank: 'openai/gpt-4o-mini',
       llm_model_memory: 'openai/gpt-4o-mini',
       rag_embedding_provider: 'openrouter',
@@ -4196,6 +4240,7 @@
         ['cfg_env_llm_model', 'llm_model'],
         ['cfg_env_llm_model_main', 'llm_model_main'],
         ['cfg_env_llm_model_search_json', 'llm_model_search_json'],
+        ['cfg_env_llm_model_kb_web_gate', 'llm_model_kb_web_gate'],
         ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank'],
         ['cfg_env_llm_model_memory', 'llm_model_memory'],
         ['cfg_env_rag_embedding_provider', 'rag_embedding_provider'],
@@ -4245,6 +4290,7 @@
         setv('cfg_llm_model', stored.llm_model ? eff.llm_model : (eff.llm_model || ''));
         setv('cfg_llm_model_main', stored.llm_model_main ? eff.llm_model_main : '');
         setv('cfg_llm_model_search_json', stored.llm_model_search_json ? eff.llm_model_search_json : '');
+        setv('cfg_llm_model_kb_web_gate', stored.llm_model_kb_web_gate ? eff.llm_model_kb_web_gate : '');
         setv('cfg_llm_model_search_rerank', stored.llm_model_search_rerank ? eff.llm_model_search_rerank : '');
         setv('cfg_llm_model_memory', stored.llm_model_memory ? eff.llm_model_memory : '');
         setv(
@@ -4301,6 +4347,8 @@
           'cfg_user_inbox_peek_max_results',
           eff.user_inbox_peek_max_results != null ? String(eff.user_inbox_peek_max_results) : '5'
         );
+        const rcModeEl = document.getElementById('rcWebRetrievalMode');
+        if (rcModeEl) rcModeEl.value = eff.rc_web_retrieval_mode === 'always_augment' ? 'always_augment' : 'kb_first';
         setv('cfg_prompt_email_agent_system_template', String(eff.prompt_email_agent_system_template || ''));
         setv('cfg_prompt_probe_user_message', String(eff.prompt_probe_user_message || ''));
         setv('cfg_prompt_probe_mode_append', String(eff.prompt_probe_mode_append || ''));
@@ -4389,6 +4437,7 @@
         llm_model: gv('cfg_llm_model'),
         llm_model_main: gv('cfg_llm_model_main'),
         llm_model_search_json: gv('cfg_llm_model_search_json'),
+        llm_model_kb_web_gate: gv('cfg_llm_model_kb_web_gate'),
         llm_model_search_rerank: gv('cfg_llm_model_search_rerank'),
         llm_model_memory: gv('cfg_llm_model_memory'),
         rag_embedding_provider: gv('cfg_rag_embedding_provider'),
@@ -4458,6 +4507,24 @@
         await loadRuntimeSettings();
       } catch (e) {
         if (st) st.textContent = `Save failed: ${e.message}`;
+      }
+    }
+
+    async function saveRcWebRetrievalSettings() {
+      const st = document.getElementById('rcWebModeSaveStatus');
+      const sel = document.getElementById('rcWebRetrievalMode');
+      const mode = (sel?.value || 'kb_first').trim();
+      try {
+        if (st) st.textContent = uiText('rcWebModeSaving');
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rc_web_retrieval_mode: mode }),
+        });
+        if (st) st.textContent = uiText('rcWebModeSaved');
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = `${uiText('rcWebModeSaveFail')}: ${e.message}`;
       }
     }
 

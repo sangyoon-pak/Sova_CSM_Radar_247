@@ -9,7 +9,7 @@
 
 ## File Map
 - Tool entry: `src/agent/email_agent.py` (`search_product_docs` → `search_with_agent`)
-- Orchestrator + LLM loop: `src/agent/tools/search_agent.py` (`search_with_agent`)
+- Orchestrator + LLM loop: `src/agent/tools/search_agent.py` (`search_with_agent` / `search_with_agent_structured` for RC callers)
 - Retrieval + candidate ranking: `src/agent/tools/doc_search.py` (`search_documents`)
 
 Related behavior docs:
@@ -18,7 +18,7 @@ Related behavior docs:
 - Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
 
 ### LLM models (OpenRouter / OpenAI-compatible)
-Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). All roles fall back to **`LLM_MODEL`** when unset.
+Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). The **RC KB→web gate** uses **`LLM_MODEL_KB_WEB_GATE`** (`kb_web_gate.py`) — intentionally **separate** from `LLM_MODEL_SEARCH_JSON`. All roles fall back to **`LLM_MODEL`** when unset (gate: see `effective_llm_model_kb_web_gate()`).
 
 ### Scope routing (config-driven)
 When `RC_SCOPE_ENABLE=true` and `RC_SCOPE_LABELS` is set, the search agent first runs an LLM-based scope inference step to decide whether the inquiry is **exclusive to one scope** or **multi-scope/ambiguous**. If exclusive, cross-scope docs are strongly down-ranked and routed behind in-scope docs. The exclusivity decision is controlled by `RC_SCOPE_EXCLUSIVE_THRESHOLD`.
@@ -53,9 +53,18 @@ When `RC_SCOPE_ENABLE=true` and `RC_SCOPE_LABELS` is set, the search agent first
 
 ### Step D. Local re-ranking / sorting (no LLM)
 Candidates are sorted with a heuristic key that considers:
-- `source` priority (rag preferred over grep preferred over fts)
-- “actionable” signals (API/SDK/event/trigger/identifier/appId)
-- hard token hits (endpoint paths, event names, parameter names from the query)
+- `source` priority (rag preferred over grep preferred over fts):
+  - RAG hits are ranked first because semantic retrieval often captures relevant passages even when exact wording differs from the user prompt.
+  - Grep hits come next because exact/phrase matches are strong lexical evidence (especially for field names, endpoints, and event strings).
+  - FTS is treated as a broad backfill stage and therefore lower priority when stronger semantic or exact signals already exist.
+- “actionable” signals (API/SDK/event/trigger/identifier/appId):
+  - Snippets containing implementation-relevant terms are boosted, because they are more likely to answer "how to configure/integrate/fix" questions.
+  - Typical boosted patterns include API method/endpoint references, SDK usage cues, webhook/event names, trigger conditions, and identity fields such as `identifier` / `appId`.
+  - In practice this pushes "do this / call this / set this field" passages above conceptual or marketing-only text.
+- hard token hits (endpoint paths, event names, parameter names from the query):
+  - Terms extracted from the query that should match nearly verbatim (for example `/v1/...`, `user_id`, `identifier_value`, `device`, or specific event tokens) are scored aggressively.
+  - This favors snippets that preserve exact strings the user asked about, which helps reduce false positives from semantically similar but operationally different docs.
+  - Hard-token weighting is especially important for debugging and migration prompts where one wrong field/path can invalidate the recommendation.
 - scope alignment/mismatch using:
   - KB frontmatter field (default `product:`, configurable via `RC_SCOPE_FIELD`)
   - optional filename fallback via `RC_SCOPE_FILENAME_REGEX`
@@ -107,6 +116,7 @@ For each term variant and each focus sub-query:
 ### Step 6. Return context for the main email agent
 - `format_matches_for_context()` truncates to `max_context_chars` and returns a string like:
   `[From <file> line <line_num>] ...`
+- **`search_with_agent_structured`** returns `(that_string, final_matches)` for RC tooling (`search_rc_web` + gate); **`search_product_docs`** keeps calling **`search_with_agent`** (string only).
 
 ### Step 7. Contract with action-card creation
 
@@ -118,7 +128,20 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 
 ---
 
-## 3) Scope Rules (Scope citations)
+## 3) RC web tool (`search_rc_web`)
+
+`search_rc_web` is **not** another orchestrator: it calls **`search_with_agent_structured`** to reuse the full KB pipeline, then applies RC-only policy:
+
+1. **Structured KB result** — `(formatted_context, final_matches)` after the same diversify step as `search_with_agent` (see `search_agent.py`).
+2. **`rc_web_retrieval_mode`** — `kb_first` (default): run **`evaluate_kb_web_gate`** on `(query, final_matches)` when KB text is non-empty and not the “no relevant documents” sentinel; if `proceed_web` is false, return KB only. `always_augment`: skip the gate and always invoke hosted web after KB (merge sections; higher cost). Persisted via **Knowledge → RC URLs** and `effective_rc_web_retrieval_mode()`.
+3. **Hosted web** — `run_web_search` per enabled RC URL host; merged with KB using clear `## Local KB` / web headings (when web runs after a weak KB signal, the KB block is labeled as below-confidence — see `rc_web_search.py`).
+4. **Gate JSON failure** — treated as **`proceed_web: true`** so web is not silently skipped.
+
+Details and operator controls: [ARCHITECTURE.md](ARCHITECTURE.md) (retrieval section), [LLM_MODELS.md](LLM_MODELS.md) (`LLM_MODEL_KB_WEB_GATE`).
+
+---
+
+## 4) Scope Rules (Scope citations)
 
 Search/ranking tries to infer the user’s primary scope/category from:
 - the query text (`RC_SCOPE_LABELS`), and
@@ -142,7 +165,7 @@ This keeps retrieval behavior aligned with guardrail policy in [AGENT_GUARDRAILS
 
 ---
 
-## 4) Debugging: why you see `rag` vs `fts` vs “plain grep”
+## 5) Debugging: why you see `rag` vs `fts` vs “plain grep”
 
 When inspecting retrieval (logs, traces, or temporary prints in `doc_search.py` / `search_agent.py`), candidate lines are often tagged as:
 
@@ -155,5 +178,5 @@ When inspecting retrieval (logs, traces, or temporary prints in `doc_search.py` 
 ## References
 - Retrieval: `src/agent/tools/doc_search.py`
 - Orchestration: `src/agent/tools/search_agent.py`
-- Tool wiring: `src/agent/email_agent.py` (`search_product_docs`)
+- Tool wiring: `src/agent/email_agent.py` (`search_product_docs`, `search_rc_web`)
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)

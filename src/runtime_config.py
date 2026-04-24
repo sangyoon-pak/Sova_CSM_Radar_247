@@ -51,8 +51,10 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "llm_model",
     "llm_model_main",
     "llm_model_search_json",
+    "llm_model_kb_web_gate",
     "llm_model_search_rerank",
     "llm_model_memory",
+    "rc_web_retrieval_mode",
     "rag_embedding_provider",
     "rag_embedding_model",
     "openrouter_api_key",
@@ -215,6 +217,32 @@ def effective_llm_model_search_json() -> str:
     if v is not None and v.strip():
         return v.strip()
     return settings.llm_model_for_search_json
+
+
+def effective_llm_model_kb_web_gate() -> str:
+    """Model for RC KB→web gate JSON only; not used for intent / sufficiency JSON routers."""
+    v = _db_str("llm_model_kb_web_gate")
+    if v is not None and v.strip():
+        return v.strip()
+    gate_env = (getattr(settings, "llm_model_kb_web_gate", None) or "").strip()
+    if gate_env:
+        return gate_env
+    return effective_llm_model()
+
+
+_VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset({"kb_first", "always_augment"})
+
+
+def effective_rc_web_retrieval_mode() -> str:
+    v = _db_str("rc_web_retrieval_mode")
+    if v is not None and v.strip():
+        s = v.strip().lower()
+        if s in _VALID_RC_WEB_RETRIEVAL_MODES:
+            return s
+    raw = (getattr(settings, "rc_web_retrieval_mode", None) or "kb_first").strip().lower()
+    if raw in _VALID_RC_WEB_RETRIEVAL_MODES:
+        return raw
+    return "kb_first"
 
 
 def effective_llm_model_search_rerank() -> str:
@@ -571,8 +599,10 @@ def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
         "llm_model": base,
         "llm_model_main": base,
         "llm_model_search_json": role_small,
+        "llm_model_kb_web_gate": role_small,
         "llm_model_search_rerank": role_small,
         "llm_model_memory": role_small,
+        "rc_web_retrieval_mode": "kb_first",
         "rag_embedding_provider": embed_provider,
         "rag_embedding_model": embed_model,
         "openrouter_base_url": base_url,
@@ -738,8 +768,10 @@ def runtime_settings_snapshot() -> dict:
             "llm_model": effective_llm_model(),
             "llm_model_main": effective_llm_model_main(),
             "llm_model_search_json": effective_llm_model_search_json(),
+            "llm_model_kb_web_gate": effective_llm_model_kb_web_gate(),
             "llm_model_search_rerank": effective_llm_model_search_rerank(),
             "llm_model_memory": effective_llm_model_memory(),
+            "rc_web_retrieval_mode": effective_rc_web_retrieval_mode(),
             "rag_embedding_provider": effective_rag_embedding_provider(),
             "rag_embedding_model": effective_rag_embedding_model(),
             "openrouter_base_url": effective_chat_base_url(),

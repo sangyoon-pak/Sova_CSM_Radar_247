@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     # Optional per-role overrides (OpenRouter model ids). All fall back to LLM_MODEL when unset.
     llm_model_main: str | None = Field(None, validation_alias="LLM_MODEL_MAIN")
     llm_model_search_json: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_JSON")
+    # KB→web gate (RC path) JSON classifier; separate from SEARCH_JSON. Unset → LLM_MODEL via runtime effective.
+    llm_model_kb_web_gate: str | None = Field(None, validation_alias="LLM_MODEL_KB_WEB_GATE")
     llm_model_search_rerank: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_RERANK")
     llm_model_memory: str | None = Field(None, validation_alias="LLM_MODEL_MEMORY")
     rag_embedding_provider: str = Field("openrouter", validation_alias="RAG_EMBEDDING_PROVIDER")
@@ -77,6 +79,8 @@ class Settings(BaseSettings):
     user_inbox_peek_max_results: int = Field(5, validation_alias="USER_INBOX_PEEK_MAX_RESULTS")
     # thread send: llm = JSON classifier (LLM_MODEL_SEARCH_JSON); off|heuristic = no auto-probe from chat.
     probe_thread_intent_classifier: str = Field("llm", validation_alias="PROBE_THREAD_INTENT_CLASSIFIER")
+    # RC web: kb_first = LLM gate may skip hosted web; always_augment = always run web after KB (higher cost).
+    rc_web_retrieval_mode: str = Field("kb_first", validation_alias="RC_WEB_RETRIEVAL_MODE")
 
     # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
     configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")

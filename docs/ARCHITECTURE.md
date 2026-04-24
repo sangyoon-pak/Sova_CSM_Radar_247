@@ -12,7 +12,7 @@ End-to-end view of **Sova - CSM Radar Agent 24/7**: how the UI, API, agent, retr
 | Search orchestration | `src/agent/tools/search_agent.py` |
 | Retrieval engines | `src/agent/tools/doc_search.py`, `src/agent/search_terms_extractor.py` |
 | Gmail | `src/agent/tools/gmail_tool.py` → subprocess `scripts/gmail-get-decoded.py` + local `gog` |
-| RC web | `src/agent/tools/rc_web_search.py` (KB-first, then enabled RC URLs) |
+| RC web | `src/agent/tools/rc_web_search.py` (KB + optional LLM gate -> hosted web on enabled RC URLs) |
 | Cron | `src/scheduler/`, `src/api/cron_routes.py` |
 | DB + settings | `src/db/database.py`, `src/runtime_config.py`, `src/config.py` |
 | Learning / memory | `src/agent/memory.py` + `/memory/*` routes |
@@ -24,6 +24,7 @@ There are **no separate long-running “subagent” processes**. “Subagents”
 High-level path from operator action to stored action cards:
 
 ```mermaid
+%%{init: {"themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
 flowchart TD
   user[UserInBrowser] --> ui[SovaUI]
   ui --> api[FastAPI_routes]
@@ -82,11 +83,41 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 
 ## Tools vs retrieval orchestration
 
-- **`search_product_docs`** → `search_with_agent` in `search_agent.py` (subquery split, rerank, sufficiency, optional refine).
-- **`search_rc_web`** → KB attempt first (`search_with_agent`); if thin, web over **enabled** RC URL domains (`database.list_rc_urls(enabled_only=True)`).
+- **`search_product_docs`** -> `search_with_agent` in `search_agent.py` (subquery split, rerank, sufficiency, optional refine). Returns string context only.
+- **`search_rc_web`** -> `search_with_agent_structured` (same pipeline, returns formatted text + final `all_matches`) -> optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) when retrieval mode is `kb_first` -> hosted web per enabled RC URL host.
+- **`always_augment`** retrieval mode skips the gate and always runs hosted web after KB (higher cost).
 - **Gmail** reads via **`gmail-get-decoded.py`**; never sends mail.
 
 Details: [SEARCH_AGENT.md](SEARCH_AGENT.md).
+
+## Retrieval and evidence (KB, gate, RC web)
+
+Retrieval stays inside one LangChain agent process; "subagents" here are staged logic inside `search_agent.py` plus tool calls.
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "24px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 70, "padding": 16, "curve": "linear"}, "themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
+flowchart TB
+  Q[User query]
+  SD[search_documents<br/>RAG + grep + FTS]
+  SA[search_with_agent_structured<br/>rerank + sufficiency + diversify]
+  MODE{rc_web_retrieval_mode}
+  GATE[kb_web_gate JSON]
+  KBONLY[Return KB only]
+  WEB[run_web_search<br/>enabled RC domains]
+  OUT[Return merged<br/>KB + web + citations]
+
+  Q --> SD --> SA --> MODE
+  SA -->|No docs / empty KB| WEB
+  MODE -->|always_augment| WEB
+  MODE -->|kb_first| GATE
+  GATE -->|proceed_web false| KBONLY
+  GATE -->|proceed_web true or parse-fail default| WEB
+  WEB --> OUT
+```
+
+- **Gate model separation:** `effective_llm_model_kb_web_gate()` / `LLM_MODEL_KB_WEB_GATE` is dedicated to KB->web gating, separate from `LLM_MODEL_SEARCH_JSON`.
+- **Safe default:** on malformed gate JSON, proceed with web to avoid silently suppressing fallback evidence.
+- **Operator controls:** Configure sets gate model; Knowledge -> RC URLs sets `rc_web_retrieval_mode` (`kb_first` default, `always_augment` higher token/inference cost).
 
 ## Why retrieval is foundational
 
@@ -109,9 +140,9 @@ Operators tune behavior primarily from the **Configure** tab (values persist in 
 
 | UI area | What it controls (examples) |
 |---------|-----------------------------|
-| **Configure** | Provider preset, `LLM_MODEL` / role overrides (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, …), API keys, embedding provider/model, Gmail / `gog` paths, guardrail lists, **probe inbox** Gmail query + max results, **LangSmith**, `PROBE_THREAD_INTENT_CLASSIFIER` |
+| **Configure** | Provider preset, `LLM_MODEL` / role overrides (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, `LLM_MODEL_KB_WEB_GATE`, …), API keys, embedding provider/model, Gmail / `gog` paths, guardrail lists, **probe inbox** Gmail query + max results, **LangSmith**, `PROBE_THREAD_INTENT_CLASSIFIER` |
 | **Workbench** | Agent profile (vendor / product / role) stored for prompts; threads; **Scan inbox** button (`probe: true`); NL cron when message matches cron admin intent |
-| **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) |
+| **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment`) |
 | **Cron** | Scheduled probe jobs (presets + expressions) |
 | **Action dashboard** | Card status, filters, bulk dismiss; “Discuss this action” spawns scoped threads |
 | **Run history** | Traces, feedback, learning loop inputs |
@@ -137,6 +168,7 @@ Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md). Release hygiene
 The following diagram emphasizes the **logical** split between triage/relevance and retrieval-heavy response construction (same spirit as the older README figure):
 
 ```mermaid
+%%{init: {"themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
 flowchart TD
   inboxThread[InboxOrThreadContext] --> relevanceGate[RelevanceAndGuardrails]
   relevanceGate -->|"CSM_relevant"| retrievalPipeline[RetrievalPipeline]
