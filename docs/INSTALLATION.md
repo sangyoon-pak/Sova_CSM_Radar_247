@@ -78,7 +78,7 @@ Runtime values are resolved in this order:
 
 **`.env.example`** is a **checklist of variable names only** — the app does **not** load a `.env` file. Use Configure + Save, or export real env vars before `python run.py`.
 
-**Minimum for chat + RAG:** open **Configure** and set provider preset, API keys, models, and embedding settings (or export the same variable names before starting the process and restart after changing them).
+**Minimum for chat + RAG:** open **Configure** and set provider preset, API keys, models, embedding settings, and (optionally) `RETRIEVAL_RANKING_POLICY` JSON for vendor-specific retrieval tuning without code changes (or export the same variable names before starting the process and restart after changing them).
 
 Grey hints under fields show **recommended defaults**; the **Saved in Configure** section lists values you have stored in the database (masked).
 

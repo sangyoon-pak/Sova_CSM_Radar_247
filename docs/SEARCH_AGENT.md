@@ -18,7 +18,7 @@ Related behavior docs:
 - Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
 
 ### LLM models (OpenRouter / OpenAI-compatible)
-Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). The **RC KB→web gate** uses **`LLM_MODEL_KB_WEB_GATE`** (`kb_web_gate.py`) — intentionally **separate** from `LLM_MODEL_SEARCH_JSON`. All roles fall back to **`LLM_MODEL`** when unset (gate: see `effective_llm_model_kb_web_gate()`).
+Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (policy-aware reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). The **RC KB→web gate** uses **`LLM_MODEL_KB_WEB_GATE`** (`kb_web_gate.py`) — intentionally **separate** from `LLM_MODEL_SEARCH_JSON`. Rerank policy itself is configured via **`RETRIEVAL_RANKING_POLICY`** (Configure/runtime JSON). All roles fall back to **`LLM_MODEL`** when unset (gate: see `effective_llm_model_kb_web_gate()`).
 
 ### Scope routing (config-driven)
 When `RC_SCOPE_ENABLE=true` and `RC_SCOPE_LABELS` is set, the search agent first runs an LLM-based scope inference step to decide whether the inquiry is **exclusive to one scope** or **multi-scope/ambiguous**. If exclusive, cross-scope docs are strongly down-ranked and routed behind in-scope docs. The exclusivity decision is controlled by `RC_SCOPE_EXCLUSIVE_THRESHOLD`.
@@ -51,27 +51,15 @@ When `RC_SCOPE_ENABLE=true` and `RC_SCOPE_LABELS` is set, the search agent first
 - Matches from this step are annotated:
   - `source: "fts"` (and `line/snip` around an approximate match line)
 
-### Step D. Local re-ranking / sorting (no LLM)
-Candidates are sorted with a heuristic key that considers:
-- `source` priority (rag preferred over grep preferred over fts):
-  - RAG hits are ranked first because semantic retrieval often captures relevant passages even when exact wording differs from the user prompt.
-  - Grep hits come next because exact/phrase matches are strong lexical evidence (especially for field names, endpoints, and event strings).
-  - FTS is treated as a broad backfill stage and therefore lower priority when stronger semantic or exact signals already exist.
-- “actionable” signals (API/SDK/event/trigger/identifier/appId):
-  - Snippets containing implementation-relevant terms are boosted, because they are more likely to answer "how to configure/integrate/fix" questions.
-  - Typical boosted patterns include API method/endpoint references, SDK usage cues, webhook/event names, trigger conditions, and identity fields such as `identifier` / `appId`.
-  - In practice this pushes "do this / call this / set this field" passages above conceptual or marketing-only text.
-- hard token hits (endpoint paths, event names, parameter names from the query):
-  - Terms extracted from the query that should match nearly verbatim (for example `/v1/...`, `user_id`, `identifier_value`, `device`, or specific event tokens) are scored aggressively.
-  - This favors snippets that preserve exact strings the user asked about, which helps reduce false positives from semantically similar but operationally different docs.
-  - Hard-token weighting is especially important for debugging and migration prompts where one wrong field/path can invalidate the recommendation.
-- scope alignment/mismatch using:
-  - KB frontmatter field (default `product:`, configurable via `RC_SCOPE_FIELD`)
-  - optional filename fallback via `RC_SCOPE_FILENAME_REGEX`
-- If the user question is scoped (inferred from `RC_SCOPE_LABELS`),
-  cross-scope hubs are pushed down (penalized even when they contain overlapping terms).
+### Step D. Deterministic candidate ordering (no hardcoded boosts)
+Before LLM rerank, candidates are ordered deterministically using:
+- optional policy-defined `source_order` from `RETRIEVAL_RANKING_POLICY` (for example `["rag","grep","fts"]`)
+- stable tie-breakers (`file`, `line_num`)
+- optional config-driven cross-scope penalty when an exclusive scope is inferred (`RC_SCOPE_*`)
 
-Final return: top candidates (currently capped at `[:50]`) with `snippet/line_num/path`.
+There are no hardcoded vendor-specific keyword boosts in this stage.
+
+Final return from `search_documents`: top candidates (currently capped at `[:50]`) with `snippet/line_num/path`.
 
 ### Uploaded documents behavior
 
@@ -102,10 +90,15 @@ For each term variant and each focus sub-query:
 - `search_documents(query=sq, search_terms=terms + _extract_hard_terms(sq))`
 - candidates are merged + deduped by `(file, line_num)`.
 
-### Step 4. LLM rerank + threshold filter
-- `_rerank_matches(query, matches, threshold=3)`
-- LLM scores each candidate snippet (1–5) for relevance/actionability.
-- The prompt also injects **scope guidance** (scoped category → down-rank other categories).
+### Step 4. Policy-aware LLM rerank + threshold filter
+- `_rerank_matches(query, matches, threshold=3)` calls the rerank model with:
+  - user query
+  - candidate snippets
+  - runtime `RETRIEVAL_RANKING_POLICY` JSON
+  - optional scope guidance note (when exclusive scope is inferred)
+- Output contract is strict JSON with `ranked_indices` + `scores`.
+- Tracing metadata includes policy name/version (`search_agent.policy_rerank`).
+- **Neutral fallback:** if rerank fails (timeout/error/invalid JSON/invalid permutation), the system uses deterministic policy-order sorting (no hardcoded vendor heuristics).
 
 ### Step 5. Sufficiency check + optional refinement
 - `_check_sufficient(query, all_matches)`

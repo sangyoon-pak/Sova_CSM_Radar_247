@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     probe_thread_intent_classifier: str = Field("llm", validation_alias="PROBE_THREAD_INTENT_CLASSIFIER")
     # RC web: kb_first = LLM gate may skip hosted web; always_augment = always run web after KB (higher cost).
     rc_web_retrieval_mode: str = Field("kb_first", validation_alias="RC_WEB_RETRIEVAL_MODE")
+    # JSON policy object for vendor-agnostic retrieval/rerank behavior.
+    retrieval_ranking_policy: str = Field("", validation_alias="RETRIEVAL_RANKING_POLICY")
 
     # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
     configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")

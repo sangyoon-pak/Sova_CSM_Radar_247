@@ -1758,6 +1758,17 @@
           </div>
         </details>
         <details class="configure-details">
+          <summary data-i18n="configureRetrievalPolicyBlock">Retrieval ranking policy</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n="configureRetrievalPolicyHint">Vendor-agnostic retrieval policy for LLM reranking. This controls ranking behavior (not hardcoded boosts).</p>
+            <div class="configure-field">
+              <label for="cfg_retrieval_ranking_policy" data-i18n="cfgRetrievalRankingPolicy">RETRIEVAL_RANKING_POLICY (JSON)</label>
+              <textarea id="cfg_retrieval_ranking_policy" rows="8" style="width:100%;max-width:52rem;" spellcheck="false"></textarea>
+              <span class="configure-env" id="cfg_env_retrieval_ranking_policy"></span>
+            </div>
+          </div>
+        </details>
+        <details class="configure-details">
           <summary data-i18n="configureEmbedBlock">Embeddings (RAG)</summary>
           <div class="configure-details__body">
             <p class="configure-hint" id="cfg_embed_hint"></p>
@@ -2270,6 +2281,9 @@
         configureBaseUrlHintOpenRouter:
           'Set the OpenAI-compatible API base for OpenRouter (or Gemini via OpenRouter). Grey hint shows the usual default; save after you change it.',
         configureProviderSummary: 'Provider & API',
+        configureRetrievalPolicyBlock: 'Retrieval ranking policy',
+        configureRetrievalPolicyHint:
+          'Vendor-agnostic policy JSON used by retrieval reranker. Keep valid JSON. This replaces hardcoded vendor boosts.',
         configurePresetHint: 'Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.',
         configureApplyPreset: 'Apply preset defaults',
         configureEnvColKey: 'Variable',
@@ -2282,6 +2296,7 @@
           'Only for search_rc_web: JSON gate before hosted web. Not for intent/subquery JSON (use Search / JSON steps). Empty → LLM_MODEL.',
         cfgLlmRerank: 'Rerank',
         cfgLlmMemory: 'Memory / learning',
+        cfgRetrievalRankingPolicy: 'RETRIEVAL_RANKING_POLICY (JSON)',
         cfgEmbedProv: 'Provider',
         cfgEmbedModel: 'Embedding model',
         cfgOpenrouterUrl: 'Base URL',
@@ -2724,6 +2739,10 @@
         reindexHelpHtml: '<strong>Reindex</strong>로 업로드 파일 전체의 search index를 다시 만듭니다. 색인 실패·출처 누락 시.',
         persistedDocs: '저장된 문서',
         noDocsYet: '문서 없음',
+        configureRetrievalPolicyBlock: '검색 랭킹 정책',
+        configureRetrievalPolicyHint:
+          '벤더-중립 정책 JSON을 LLM rerank에 사용합니다. 하드코딩된 벤더 가중치를 대체합니다.',
+        cfgRetrievalRankingPolicy: 'RETRIEVAL_RANKING_POLICY (JSON)',
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web)',
@@ -3961,6 +3980,7 @@
       llm_model_kb_web_gate: 'LLM_MODEL_KB_WEB_GATE',
       llm_model_search_rerank: 'LLM_MODEL_SEARCH_RERANK',
       llm_model_memory: 'LLM_MODEL_MEMORY',
+      retrieval_ranking_policy: 'RETRIEVAL_RANKING_POLICY',
       rag_embedding_provider: 'RAG_EMBEDDING_PROVIDER',
       rag_embedding_model: 'RAG_EMBEDDING_MODEL',
       openrouter_base_url: 'OPENROUTER_BASE_URL',
@@ -4214,6 +4234,7 @@
       llm_model_kb_web_gate: 'openai/gpt-4o-mini',
       llm_model_search_rerank: 'openai/gpt-4o-mini',
       llm_model_memory: 'openai/gpt-4o-mini',
+      retrieval_ranking_policy: '{"version":"v1","policy_name":"default","source_order":["rag","grep","fts"],"actionable_definition":"Prioritize snippets that provide concrete troubleshooting, integration, or configuration instructions for the user\\'s query.","vendor_glossary":[],"must_include_terms":[],"must_avoid_terms":[]}',
       rag_embedding_provider: 'openrouter',
       rag_embedding_model: 'text-embedding-3-large',
       openrouter_base_url: 'https://openrouter.ai/api/v1',
@@ -4243,6 +4264,7 @@
         ['cfg_env_llm_model_kb_web_gate', 'llm_model_kb_web_gate'],
         ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank'],
         ['cfg_env_llm_model_memory', 'llm_model_memory'],
+        ['cfg_env_retrieval_ranking_policy', 'retrieval_ranking_policy'],
         ['cfg_env_rag_embedding_provider', 'rag_embedding_provider'],
         ['cfg_env_rag_embedding_model', 'rag_embedding_model'],
         ['cfg_env_openrouter_base_url', 'openrouter_base_url'],
@@ -4293,6 +4315,17 @@
         setv('cfg_llm_model_kb_web_gate', stored.llm_model_kb_web_gate ? eff.llm_model_kb_web_gate : '');
         setv('cfg_llm_model_search_rerank', stored.llm_model_search_rerank ? eff.llm_model_search_rerank : '');
         setv('cfg_llm_model_memory', stored.llm_model_memory ? eff.llm_model_memory : '');
+        const policyEl = document.getElementById('cfg_retrieval_ranking_policy');
+        if (policyEl) {
+          const p = eff.retrieval_ranking_policy;
+          if (p && typeof p === 'object') {
+            policyEl.value = JSON.stringify(p, null, 2);
+          } else if (stored.retrieval_ranking_policy && p != null) {
+            policyEl.value = String(p);
+          } else {
+            policyEl.value = '';
+          }
+        }
         setv(
           'cfg_rag_embedding_provider',
           stored.rag_embedding_provider ? eff.rag_embedding_provider : (eff.rag_embedding_provider || ''),
@@ -4440,6 +4473,7 @@
         llm_model_kb_web_gate: gv('cfg_llm_model_kb_web_gate'),
         llm_model_search_rerank: gv('cfg_llm_model_search_rerank'),
         llm_model_memory: gv('cfg_llm_model_memory'),
+        retrieval_ranking_policy: gv('cfg_retrieval_ranking_policy'),
         rag_embedding_provider: gv('cfg_rag_embedding_provider'),
         rag_embedding_model: gv('cfg_rag_embedding_model'),
       };

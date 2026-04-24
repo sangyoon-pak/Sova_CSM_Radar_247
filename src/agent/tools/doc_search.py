@@ -808,6 +808,7 @@ def search_documents(
     max_results_per_term: int = 10,
     scope_hints: set[str] | None = None,
     exclusive_scope: str | None = None,
+    retrieval_policy: dict[str, Any] | None = None,
 ) -> list[dict]:
     kb = settings.kb_path_resolved
     if not kb.exists():
@@ -857,43 +858,28 @@ def search_documents(
                 all_matches.append(m)
 
     product_hints = set(scope_hints or _extract_product_hints(query + " " + " ".join(search_terms)))
-    hard_tokens = _hard_tokens_from_inputs(query, search_terms)
     is_exclusive = bool(exclusive_scope) if settings.rc_scope_enable else False
     if not exclusive_scope:
         is_exclusive = _single_scope_exclusive_query(product_hints)
         exclusive_scope = next(iter(product_hints)) if is_exclusive and product_hints else None
 
-    # Prefer semantic + actionable snippets with soft product alignment and hard-token matches.
-    def _score(m: dict) -> tuple[int, int, int, int, int]:
-        src = str(m.get("source", "grep"))
-        src_score = 3 if src == "rag" else (2 if src == "grep" else 1)
-        file_name = str(m.get("file", "")).lower()
-        text = (m.get("snippet") or m.get("line") or "").lower()
-        actionable = 1 if any(w in text for w in ["api", "sdk", "event", "trigger", "identifier", "appid"]) else 0
-        product_align = 0
-        product_mismatch = 0
-        if product_hints:
-            doc_products = _detect_doc_products(file_name, text)
-            product_align = len(product_hints & doc_products)
-            # Soft penalty: query has clear products, doc has other product labels only.
-            if doc_products and product_align == 0:
-                product_mismatch = 1
-        hard_hit = 0
-        if hard_tokens:
-            hard_hit = 1 if any(tok in text for tok in hard_tokens) else 0
-        return (product_mismatch, product_align, hard_hit, src_score, actionable)
+    policy_order: list[str] = []
+    if isinstance(retrieval_policy, dict):
+        raw_order = retrieval_policy.get("source_order")
+        if isinstance(raw_order, list):
+            policy_order = [str(x).strip().lower() for x in raw_order if str(x).strip()]
+    if not policy_order:
+        policy_order = ["rag", "grep", "fts"]
+    rank_map = {v: i for i, v in enumerate(policy_order)}
 
     def _sort_key(m: dict) -> tuple:
-        s = _score(m)
+        src = str(m.get("source", "grep")).strip().lower()
+        src_rank = rank_map.get(src, len(rank_map) + 1)
         cross = _cross_product_penalty_weight(exclusive_scope, _match_primary_product(m))
-        # Ascending: lower cross-penalty first, fewer mismatches, stronger align / hard hits first.
+        # Deterministic + policy-driven sorting (no hardcoded domain heuristics).
         return (
             cross,
-            s[0],
-            -s[1],
-            -s[2],
-            -s[3],
-            -s[4],
+            src_rank,
             str(m.get("file", "")),
             int(m.get("line_num", 0)),
         )

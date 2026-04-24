@@ -281,6 +281,7 @@ class RuntimeSettingsPatch(BaseModel):
     llm_model_search_rerank: str | None = None
     llm_model_memory: str | None = None
     rc_web_retrieval_mode: str | None = None
+    retrieval_ranking_policy: str | None = None
     rag_embedding_provider: str | None = None
     rag_embedding_model: str | None = None
     openrouter_api_key: str | None = None

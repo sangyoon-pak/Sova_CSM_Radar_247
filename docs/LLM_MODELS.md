@@ -19,6 +19,7 @@ Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not
 | `LLM_MODEL_SEARCH_RERANK` | Search: snippet rerank (1–5 scores) | `LLM_MODEL` |
 | `LLM_MODEL_MEMORY` | Memory compaction (summarize old interactions) | `LLM_MODEL` |
 | `RC_WEB_RETRIEVAL_MODE` | `kb_first` (default) or `always_augment` — controls whether `search_rc_web` always runs hosted web after KB; **not** an LLM model (stored like other runtime keys / Knowledge UI). | `kb_first` |
+| `RETRIEVAL_RANKING_POLICY` | Vendor-agnostic retrieval policy JSON consumed by policy-aware reranker (source order, glossary, constraints, actionable definition). | Built-in default policy JSON |
 
 Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDING_MODEL` (Configure, env, or defaults — see `src/agent/tools/doc_search.py`).
 
@@ -50,6 +51,7 @@ If you point `LLM_MODEL_SEARCH_JSON` at a model that is **cheap but sloppy on JS
 - Use a **stronger** model for `LLM_MODEL_MAIN` (multi-step tool use, drafting).
 - Use a **cheaper** model for `LLM_MODEL_SEARCH_JSON` if it reliably returns strict JSON **including** the intent-router prompts above.
 - Use a **mid-tier** model for `LLM_MODEL_SEARCH_RERANK` if the cheap model mis-scores snippets.
+- Use **`RETRIEVAL_RANKING_POLICY`** to tune ranking behavior per tenant/vendor vocabulary without code changes.
 
 ## Code map
 
@@ -58,6 +60,7 @@ If you point `LLM_MODEL_SEARCH_JSON` at a model that is **cheap but sloppy on JS
 | Main agent | `src/agent/email_agent.py` |
 | Subquery split, sufficiency, refine | `src/agent/tools/search_agent.py` |
 | KB→web gate (RC) | `src/agent/tools/kb_web_gate.py` |
+| Retrieval policy resolution | `src/runtime_config.py` (`effective_retrieval_ranking_policy`) |
 | Term extraction | `src/agent/search_terms_extractor.py` |
 | Rerank | `src/agent/tools/search_agent.py` |
 | Memory compaction | `src/agent/memory.py` |

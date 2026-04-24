@@ -22,7 +22,7 @@ For ad-hoc Python, export `LANGSMITH_*` in your shell (process env is not read f
 
 Start the app (`python run.py`), enable LangSmith in **Configure**, then trigger any agent run (Workbench, **Scan inbox**, or **Run history** / API). Open [smith.langchain.com](https://smith.langchain.com) → **Projects** → `email_draft_agent` (or `default`) after a few seconds.
 
-Each LLM span uses the resolved model id (see [LLM_MODELS.md](LLM_MODELS.md)); filter traces by model or by run name (e.g. `search_agent.split_focus_subqueries`).
+Each LLM span uses the resolved model id (see [LLM_MODELS.md](LLM_MODELS.md)); filter traces by model or by run name (e.g. `search_agent.split_focus_subqueries`, `search_agent.policy_rerank`, `retrieval.kb_web_gate`).
 
 ## No Traces Appearing?
 

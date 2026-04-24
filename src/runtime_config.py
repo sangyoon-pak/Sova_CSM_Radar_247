@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import shutil
+import json
 from pathlib import Path
 from typing import Any
 
@@ -55,6 +56,7 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "llm_model_search_rerank",
     "llm_model_memory",
     "rc_web_retrieval_mode",
+    "retrieval_ranking_policy",
     "rag_embedding_provider",
     "rag_embedding_model",
     "openrouter_api_key",
@@ -232,6 +234,19 @@ def effective_llm_model_kb_web_gate() -> str:
 
 _VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset({"kb_first", "always_augment"})
 
+_DEFAULT_RETRIEVAL_RANKING_POLICY: dict[str, Any] = {
+    "version": "v1",
+    "policy_name": "default",
+    "source_order": ["rag", "grep", "fts"],
+    "actionable_definition": (
+        "Prioritize snippets that provide concrete troubleshooting, integration, or configuration "
+        "instructions for the user's query."
+    ),
+    "vendor_glossary": [],
+    "must_include_terms": [],
+    "must_avoid_terms": [],
+}
+
 
 def effective_rc_web_retrieval_mode() -> str:
     v = _db_str("rc_web_retrieval_mode")
@@ -243,6 +258,52 @@ def effective_rc_web_retrieval_mode() -> str:
     if raw in _VALID_RC_WEB_RETRIEVAL_MODES:
         return raw
     return "kb_first"
+
+
+def _normalize_retrieval_policy(raw: dict[str, Any]) -> dict[str, Any]:
+    out = dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+    if not isinstance(raw, dict):
+        return out
+    if isinstance(raw.get("version"), str) and raw.get("version", "").strip():
+        out["version"] = raw["version"].strip()
+    if isinstance(raw.get("policy_name"), str) and raw.get("policy_name", "").strip():
+        out["policy_name"] = raw["policy_name"].strip()
+    if isinstance(raw.get("actionable_definition"), str) and raw.get("actionable_definition", "").strip():
+        out["actionable_definition"] = raw["actionable_definition"].strip()
+    if isinstance(raw.get("source_order"), list):
+        vals = [str(x).strip().lower() for x in raw["source_order"] if str(x).strip()]
+        dedup: list[str] = []
+        for v in vals:
+            if v not in dedup:
+                dedup.append(v)
+        if dedup:
+            out["source_order"] = dedup[:6]
+    for k in ("vendor_glossary", "must_include_terms", "must_avoid_terms"):
+        val = raw.get(k)
+        if isinstance(val, list):
+            cleaned = [str(x).strip() for x in val if str(x).strip()]
+            out[k] = cleaned[:80]
+    return out
+
+
+def effective_retrieval_ranking_policy() -> dict[str, Any]:
+    raw = _db_str("retrieval_ranking_policy")
+    if raw and raw.strip():
+        try:
+            return _normalize_retrieval_policy(json.loads(raw))
+        except Exception:
+            return dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+    env_raw = (getattr(settings, "retrieval_ranking_policy", None) or "").strip()
+    if env_raw:
+        try:
+            return _normalize_retrieval_policy(json.loads(env_raw))
+        except Exception:
+            return dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+    return dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+
+
+def effective_retrieval_ranking_policy_json() -> str:
+    return json.dumps(effective_retrieval_ranking_policy(), ensure_ascii=True)
 
 
 def effective_llm_model_search_rerank() -> str:
@@ -603,6 +664,7 @@ def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
         "llm_model_search_rerank": role_small,
         "llm_model_memory": role_small,
         "rc_web_retrieval_mode": "kb_first",
+        "retrieval_ranking_policy": json.dumps(_DEFAULT_RETRIEVAL_RANKING_POLICY, ensure_ascii=True),
         "rag_embedding_provider": embed_provider,
         "rag_embedding_model": embed_model,
         "openrouter_base_url": base_url,
@@ -772,6 +834,7 @@ def runtime_settings_snapshot() -> dict:
             "llm_model_search_rerank": effective_llm_model_search_rerank(),
             "llm_model_memory": effective_llm_model_memory(),
             "rc_web_retrieval_mode": effective_rc_web_retrieval_mode(),
+            "retrieval_ranking_policy": effective_retrieval_ranking_policy(),
             "rag_embedding_provider": effective_rag_embedding_provider(),
             "rag_embedding_model": effective_rag_embedding_model(),
             "openrouter_base_url": effective_chat_base_url(),

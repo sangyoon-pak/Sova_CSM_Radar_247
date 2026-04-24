@@ -83,10 +83,11 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 
 ## Tools vs retrieval orchestration
 
-- **`search_product_docs`** -> `search_with_agent` in `search_agent.py` (subquery split, rerank, sufficiency, optional refine). Returns string context only.
+- **`search_product_docs`** -> `search_with_agent` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns string context only.
 - **`search_rc_web`** -> `search_with_agent_structured` (same pipeline, returns formatted text + final `all_matches`) -> optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) when retrieval mode is `kb_first` -> hosted web per enabled RC URL host.
 - **`always_augment`** retrieval mode skips the gate and always runs hosted web after KB (higher cost).
 - **Gmail** reads via **`gmail-get-decoded.py`**; never sends mail.
+- Retrieval ranking policy is operator-configurable via `RETRIEVAL_RANKING_POLICY` (Configure), not hardcoded vendor boosts.
 
 Details: [SEARCH_AGENT.md](SEARCH_AGENT.md).
 
@@ -95,11 +96,11 @@ Details: [SEARCH_AGENT.md](SEARCH_AGENT.md).
 Retrieval stays inside one LangChain agent process; "subagents" here are staged logic inside `search_agent.py` plus tool calls.
 
 ```mermaid
-%%{init: {"themeVariables": {"fontSize": "24px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 70, "padding": 16, "curve": "linear"}, "themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
+%%{init: {"themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
 flowchart TB
   Q[User query]
   SD[search_documents<br/>RAG + grep + FTS]
-  SA[search_with_agent_structured<br/>rerank + sufficiency + diversify]
+  SA[search_with_agent_structured<br/>policy-aware rerank + sufficiency + diversify]
   MODE{rc_web_retrieval_mode}
   GATE[kb_web_gate JSON]
   KBONLY[Return KB only]
@@ -140,7 +141,7 @@ Operators tune behavior primarily from the **Configure** tab (values persist in 
 
 | UI area | What it controls (examples) |
 |---------|-----------------------------|
-| **Configure** | Provider preset, `LLM_MODEL` / role overrides (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, `LLM_MODEL_KB_WEB_GATE`, …), API keys, embedding provider/model, Gmail / `gog` paths, guardrail lists, **probe inbox** Gmail query + max results, **LangSmith**, `PROBE_THREAD_INTENT_CLASSIFIER` |
+| **Configure** | Provider preset, `LLM_MODEL` / role overrides (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, `LLM_MODEL_KB_WEB_GATE`, …), `RETRIEVAL_RANKING_POLICY` (JSON), API keys, embedding provider/model, Gmail / `gog` paths, guardrail lists, **probe inbox** Gmail query + max results, **LangSmith**, `PROBE_THREAD_INTENT_CLASSIFIER` |
 | **Workbench** | Agent profile (vendor / product / role) stored for prompts; threads; **Scan inbox** button (`probe: true`); NL cron when message matches cron admin intent |
 | **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment`) |
 | **Cron** | Scheduled probe jobs (presets + expressions) |
