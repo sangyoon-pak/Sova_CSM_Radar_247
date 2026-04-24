@@ -2374,6 +2374,11 @@
         rcDiscover: 'Discover subpages (≤10)',
         rcHintHtml: 'When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.',
         noRcUrls: 'No RC URLs saved.',
+        rcSelectAll: 'Select all',
+        rcSelectRowAria: 'Select URL for bulk delete',
+        rcDeleteSelected: 'Delete selected',
+        rcBulkDeleteConfirm: 'Remove {n} selected URL(s) from the list?',
+        rcNoneSelected: 'Select one or more URLs first.',
         enabled: 'enabled',
         remove: 'Remove',
         delete: 'Delete',
@@ -2698,6 +2703,11 @@
         rcDiscover: 'Discover subpages (≤10)',
         rcHintHtml: 'RC URL이 <strong>enabled</strong>면 Run 중 해당 도메인 web search를 쓸 수 있어요.',
         noRcUrls: '저장된 RC URL 없음',
+        rcSelectAll: '전체 선택',
+        rcSelectRowAria: '일괄 삭제용 선택',
+        rcDeleteSelected: '선택 삭제',
+        rcBulkDeleteConfirm: '선택한 URL {n}개를 목록에서 제거할까요?',
+        rcNoneSelected: '삭제할 URL을 하나 이상 선택하세요.',
         enabled: 'On',
         remove: 'Remove',
         delete: 'Delete',
@@ -3378,6 +3388,81 @@
     }
     // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
     let _selectedKbDocIds = new Set();
+    /** RC URL strings (decoded) selected for bulk delete only — not the same as "enabled" toggles. */
+    let _selectedRcUrls = new Set();
+
+    function rcUrlUpdateBulkDeleteBtn() {
+      const bulkBtn = document.getElementById('rcBulkDeleteBtn');
+      if (!bulkBtn) return;
+      const n = _selectedRcUrls.size;
+      bulkBtn.disabled = n === 0;
+      bulkBtn.textContent = n > 0 ? `${uiText('rcDeleteSelected')} (${n})` : uiText('rcDeleteSelected');
+    }
+
+    function syncRcSelectAllMaster() {
+      const root = document.getElementById('rcUrlList');
+      const master = document.getElementById('rcSelectAllMaster');
+      if (!root || !master) return;
+      const boxes = root.querySelectorAll('.rc-url-select');
+      const n = boxes.length;
+      const c = Array.from(boxes).filter((b) => b.checked).length;
+      master.checked = n > 0 && c === n;
+      master.indeterminate = c > 0 && c < n;
+    }
+
+    function onRcUrlSelectChange(cb) {
+      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
+      if (!url) return;
+      if (cb.checked) _selectedRcUrls.add(url);
+      else _selectedRcUrls.delete(url);
+      rcUrlUpdateBulkDeleteBtn();
+      syncRcSelectAllMaster();
+    }
+
+    function rcUrlToggleSelectAll(checked) {
+      const root = document.getElementById('rcUrlList');
+      if (!root) return;
+      const boxes = root.querySelectorAll('.rc-url-select');
+      _selectedRcUrls = new Set();
+      boxes.forEach((el) => {
+        el.checked = !!checked;
+        const u = decodeURIComponent(el.getAttribute('data-rc') || '');
+        if (checked && u) _selectedRcUrls.add(u);
+      });
+      rcUrlUpdateBulkDeleteBtn();
+      syncRcSelectAllMaster();
+    }
+
+    async function onRcUrlEnabledToggle(cb) {
+      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
+      if (!url) return;
+      const enabled = cb.checked;
+      try {
+        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
+      } catch (e) {
+        alert('Error: ' + e.message);
+        cb.checked = !enabled;
+      }
+    }
+
+    async function deleteSelectedRcUrls() {
+      const urls = Array.from(_selectedRcUrls);
+      if (!urls.length) {
+        alert(uiText('rcNoneSelected'));
+        return;
+      }
+      if (!confirm(uiFmt('rcBulkDeleteConfirm', { n: String(urls.length) }))) return;
+      try {
+        for (const url of urls) {
+          await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
+        }
+        _selectedRcUrls = new Set();
+        await loadRcUrls();
+      } catch (e) {
+        alert('Error: ' + e.message);
+        await loadRcUrls();
+      }
+    }
 
     function toggleKbDocSelected(docId, checked) {
       const id = Number(docId);
@@ -3469,17 +3554,45 @@
     async function loadRcUrls() {
       const data = await fetchJson('/rc/urls?limit=200');
       const el = document.getElementById('rcUrlList');
-      if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRcUrls'))}</div>`; return; }
-      el.innerHTML = data.map(r => {
-        const checked = r.enabled ? 'checked' : '';
-        return `<div class="cron-item" style="gap:0.75rem;">
-          <label style="display:flex;align-items:center;gap:0.35rem;">
-            <input type="checkbox" ${checked} onchange="toggleRcUrl('${escapeHtml(r.url)}', this.checked)"> ${escapeHtml(uiText('enabled'))}
+      if (!data.length) {
+        _selectedRcUrls = new Set();
+        el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRcUrls'))}</div>`;
+        rcUrlUpdateBulkDeleteBtn();
+        return;
+      }
+      const valid = new Set(data.map((r) => String(r.url || '').trim()).filter(Boolean));
+      _selectedRcUrls = new Set(Array.from(_selectedRcUrls).filter((u) => valid.has(u)));
+      const selAria = escapeHtml(uiText('rcSelectRowAria'));
+      const rows = data.map((r) => {
+        const url = String(r.url || '').trim();
+        const enc = encodeURIComponent(url);
+        const enChecked = r.enabled ? 'checked' : '';
+        const rowSel = _selectedRcUrls.has(url) ? 'checked' : '';
+        return `<div class="cron-item rc-url-row" style="display:grid;grid-template-columns:auto auto 1fr auto;gap:0.55rem;align-items:center;">
+          <input type="checkbox" class="rc-url-select" data-rc="${enc}" aria-label="${selAria}" ${rowSel}
+            onclick="event.stopPropagation()" onchange="onRcUrlSelectChange(this)" />
+          <label style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;margin:0;font-size:0.8rem;color:var(--muted);cursor:pointer;">
+            <input type="checkbox" class="rc-url-enabled" data-rc="${enc}" ${enChecked}
+              onclick="event.stopPropagation()" onchange="onRcUrlEnabledToggle(this)" />
+            <span>${escapeHtml(uiText('enabled'))}</span>
           </label>
-          <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.url)}</code>
-          <button type="button" class="danger" onclick="deleteRcUrl('${escapeHtml(r.url)}')">${escapeHtml(uiText('remove'))}</button>
+          <code style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(url)}</code>
+          <button type="button" class="danger btn-compact" style="padding:0.2rem 0.42rem;border-radius:7px;line-height:1;"
+            onclick="deleteRcUrlEncoded('${enc}')">${escapeHtml(uiText('remove'))}</button>
         </div>`;
       }).join('');
+      const controls = `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.35rem;margin:0 0 0.45rem 0;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--muted);cursor:pointer;">
+          <input type="checkbox" id="rcSelectAllMaster" onchange="rcUrlToggleSelectAll(this.checked)" />
+          ${escapeHtml(uiText('rcSelectAll'))}
+        </label>
+        <button id="rcBulkDeleteBtn" type="button" class="danger btn-compact" style="padding:0.25rem 0.5rem;border-radius:7px;" onclick="deleteSelectedRcUrls()" ${_selectedRcUrls.size ? '' : 'disabled'}>
+          ${_selectedRcUrls.size ? `${escapeHtml(uiText('rcDeleteSelected'))} (${_selectedRcUrls.size})` : escapeHtml(uiText('rcDeleteSelected'))}
+        </button>
+      </div>`;
+      el.innerHTML = controls + rows;
+      syncRcSelectAllMaster();
+      rcUrlUpdateBulkDeleteBtn();
     }
     async function addRcUrl() {
       const url = document.getElementById('rcUrlInput').value.trim();
@@ -3496,18 +3609,12 @@
         el.textContent = 'Error: ' + e.message;
       }
     }
-    async function toggleRcUrl(url, enabled) {
-      try {
-        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
-      } catch (e) {
-        alert('Error: ' + e.message);
-      }
-      loadRcUrls();
-    }
-    async function deleteRcUrl(url) {
+    async function deleteRcUrlEncoded(enc) {
+      const url = decodeURIComponent(enc);
       if (!confirm(uiText('removeUrlConfirm'))) return;
       try {
         await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
+        _selectedRcUrls.delete(url);
       } catch (e) {
         alert('Error: ' + e.message);
       }

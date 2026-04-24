@@ -3,14 +3,14 @@
 This tool is only used when the user has enabled RC URLs in the UI.
 Hosted web retrieval follows **Configure → provider preset**:
 OpenRouter presets use OpenRouter's Responses + web plugin; **openai** uses
-OpenAI's Responses API + ``web_search`` tool (same entrypoint: ``run_web_search``).
+OpenAI's Responses API + ``web_search`` tool (same entrypoint: ``run_web_search`` in ``hosted_web_search``).
 """
 
 from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from src.agent.tools.openrouter_web import run_web_search
+from src.agent.tools.hosted_web_search import run_web_search
 from src.agent.tools.search_agent import search_with_agent
 from src.runtime_config import effective_llm_model_main
 from src.db import database

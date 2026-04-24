@@ -25,7 +25,7 @@ from src.agent.probe_actions import (
 from src.agent.prompts import get_action_review_append, get_probe_trigger_message
 from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
-from src.agent.tools.openrouter_web import run_web_search
+from src.agent.tools.hosted_web_search import run_web_search
 from src.config import settings
 from src.runtime_config import (
     clear_gog_local_oauth_files,

@@ -835,7 +835,7 @@ def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False) 
             SELECT id, created_at, updated_at, url, title, tags, scope, enabled
             FROM rc_urls
             WHERE enabled = 1
-            ORDER BY updated_at DESC, id DESC
+            ORDER BY id ASC
             LIMIT ? OFFSET ?
             """,
             (limit, offset),
@@ -845,7 +845,7 @@ def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False) 
             """
             SELECT id, created_at, updated_at, url, title, tags, scope, enabled
             FROM rc_urls
-            ORDER BY updated_at DESC, id DESC
+            ORDER BY id ASC
             LIMIT ? OFFSET ?
             """,
             (limit, offset),
