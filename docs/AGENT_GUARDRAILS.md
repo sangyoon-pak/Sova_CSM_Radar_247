@@ -57,6 +57,7 @@ For threads classified as potentially CSM-relevant:
 - Retrieval must run before final card drafting unless explicitly disabled.
 - Search must include uploaded documents and `knowledge-base/` sources.
 - If retrieval has low confidence, surface this as a gap instead of guessing.
+- Retrieval ranking behavior should be configured through runtime policy (`RETRIEVAL_RANKING_POLICY`) rather than hardcoded vendor-specific boosts.
 
 Detailed retrieval mechanics: [SEARCH_AGENT.md](SEARCH_AGENT.md).
 

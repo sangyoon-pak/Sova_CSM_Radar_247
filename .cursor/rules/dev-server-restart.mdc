@@ -1,0 +1,13 @@
+---
+description: Restart the local dev server after code changes in this repo
+alwaysApply: true
+---
+
+# Dev server restart
+
+After **any code fix or meaningful change** in this project, **restart the app** so the running process picks up edits (Uvicorn runs with `reload=False`).
+
+1. Stop whatever is bound to the app port (default **8000**): `lsof -ti:8000 | xargs kill -9 2>/dev/null` (or match `PORT` from `.env` if different).
+2. From the repo root: `.venv/bin/python run.py` (run in the background when assisting).
+
+Do this automatically at the end of the turn when code was modified; do not only tell the user to restart.

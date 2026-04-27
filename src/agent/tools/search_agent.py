@@ -10,7 +10,11 @@ from langchain_core.messages import HumanMessage
 
 from src.agent.chat_llm import get_chat_llm
 from src.config import settings
-from src.runtime_config import effective_llm_model_search_json, effective_llm_model_search_rerank
+from src.runtime_config import (
+    effective_llm_model_search_json,
+    effective_llm_model_search_rerank,
+    effective_retrieval_ranking_policy,
+)
 from src.agent.tools.doc_search import (
     _single_scope_exclusive_query,
     _extract_product_hints,
@@ -109,10 +113,6 @@ def _extract_hard_terms(query: str) -> list[str]:
     hard.extend(re.findall(r"/[A-Za-z0-9_./\\-]+/?", query))
     # snake_case tokens (event names, params)
     hard.extend(re.findall(r"\\b[a-z]+(?:_[a-z0-9]+){1,}\\b", query))
-    # Common auth/fields
-    for token in ["appId", "appSecret", "identifier", "identifier_value", "user_id", "device"]:
-        if token in query:
-            hard.append(token)
     # Dedup preserve order
     seen: set[str] = set()
     out: list[str] = []
@@ -271,26 +271,38 @@ def _infer_scope(query: str) -> tuple[set[str], str | None]:
         return set(), None
 
 
-RERANK_PROMPT = """You score how relevant and actionable each document snippet is to the user's question.
+RERANK_PROMPT = """You are a retrieval reranker. Rank snippets for relevance and actionability.
+
+Retrieval policy JSON:
+{retrieval_policy_json}
 
 {product_scope}
 Question: {query}
 
-For each snippet, output a relevance score 1-5:
-- 5: Directly answers the question
-- 4: Highly relevant, strong overlap
-- 3: Somewhat relevant
-- 2: Tangentially related
-- 1: Not relevant
+For each snippet, assign a relevance score 1-5:
+- 5: directly answers the query with actionable detail
+- 4: highly relevant, strong evidence
+- 3: partially relevant
+- 2: weakly relevant
+- 1: irrelevant
 
 Scoring guidance:
-- Prefer snippets containing concrete implementation steps (e.g. "go to", "click", "configure", "SDK", "web", "JavaScript", "API").
-- Penalize metadata-only snippets (keywords/frontmatter) even if product names match.
-- If the question is clearly scoped to a specific category/scope (see Product scope above), strongly penalize snippets from other categories/scopes unless the snippet alone directly answers the same behavior the user asked about.
-- Prefer snippets that contain exact technical entities from the question (endpoint paths, event names, parameter names).
+- Follow the policy JSON definitions for domain terms/actionability.
+- Prefer evidence-rich snippets over vague snippets.
+- Keep ranking vendor-agnostic unless the policy glossary explicitly defines org terms.
+- If product scope note is present, apply it.
 
-Output a JSON object: {{ "scores": [5, 3, 1, ...] }} with one score per snippet, in the same order.
-Snippets are numbered 1 to N. Output ONLY the JSON object."""
+Output STRICT JSON only:
+{{
+  "ranked_indices": [3, 1, 2],
+  "scores": [5, 4, 2],
+  "reason": "short reason"
+}}
+
+Rules:
+- `ranked_indices` and `scores` must have same length as snippet count.
+- Indices are 1-based and must be a permutation of all snippet indices.
+- No markdown fences, no extra keys."""
 
 SUFFICIENCY_PROMPT = """Given the user's question and the retrieved document snippets, is there enough relevant information to answer the question?
 
@@ -349,10 +361,11 @@ def _rerank_matches(
     threshold: int = 3,
     exclusive_scope: str | None = None,
 ) -> list[dict]:
-    """Score each match 1-5, filter by threshold."""
+    """Policy-driven LLM rerank with deterministic neutral fallback."""
     if not matches:
         return []
     llm = _llm_search_rerank()
+    retrieval_policy = effective_retrieval_ranking_policy()
     # Build snippet list for prompt (truncate long lines)
     snippets = []
     for m in matches:
@@ -360,8 +373,39 @@ def _rerank_matches(
         snippets.append(f"[{m['file']} L{m['line_num']}] {text}")
     snippet_text = "\n".join(f"{i+1}. {s}" for i, s in enumerate(snippets))
     scope = _rerank_product_scope_note(query, exclusive_scope=exclusive_scope)
-    prompt = RERANK_PROMPT.format(query=query, product_scope=scope) + "\n\nSnippets:\n" + snippet_text
-    response = llm.invoke([HumanMessage(content=prompt)])
+    prompt = RERANK_PROMPT.format(
+        query=query,
+        product_scope=scope,
+        retrieval_policy_json=json.dumps(retrieval_policy, ensure_ascii=True),
+    ) + "\n\nSnippets:\n" + snippet_text
+
+    def _neutral_sorted(items: list[dict]) -> list[dict]:
+        order = retrieval_policy.get("source_order") if isinstance(retrieval_policy, dict) else None
+        src_order = [str(x).strip().lower() for x in (order or []) if str(x).strip()]
+        if not src_order:
+            src_order = ["rag", "grep", "fts"]
+        src_rank = {v: i for i, v in enumerate(src_order)}
+        return sorted(
+            items,
+            key=lambda m: (
+                src_rank.get(str(m.get("source", "grep")).strip().lower(), len(src_rank) + 1),
+                str(m.get("file", "")),
+                int(m.get("line_num", 0)),
+            ),
+        )
+
+    response = llm.invoke(
+        [HumanMessage(content=prompt)],
+        config={
+            "run_name": "search_agent.policy_rerank",
+            "tags": ["search_agent", "policy_rerank"],
+            "metadata": {
+                "policy_name": str(retrieval_policy.get("policy_name", "default")),
+                "policy_version": str(retrieval_policy.get("version", "v1")),
+                "candidate_count": len(matches),
+            },
+        },
+    )
     text = response.content.strip()
     if "```" in text:
         text = text.split("```")[1]
@@ -371,11 +415,19 @@ def _rerank_matches(
     try:
         data = json.loads(text)
         scores = data.get("scores", [])
+        ranked_indices = data.get("ranked_indices", [])
     except json.JSONDecodeError:
-        return matches[:15]  # Fallback: keep first 15
-    if len(scores) != len(matches):
-        return matches[:15]
-    scored = [(m, scores[i] if i < len(scores) else 1) for i, m in enumerate(matches)]
+        return _neutral_sorted(matches)[:15]
+    if len(scores) != len(matches) or len(ranked_indices) != len(matches):
+        return _neutral_sorted(matches)[:15]
+    try:
+        ranked_zero = [int(i) - 1 for i in ranked_indices]
+    except Exception:
+        return _neutral_sorted(matches)[:15]
+    if sorted(ranked_zero) != list(range(len(matches))):
+        return _neutral_sorted(matches)[:15]
+    reordered = [matches[i] for i in ranked_zero]
+    scored = [(m, int(scores[idx]) if idx < len(scores) else 1) for idx, m in enumerate(reordered)]
     filtered = [(m, s) for m, s in scored if s >= threshold]
     filtered.sort(key=lambda x: (-x[1], x[0]["file"], x[0]["line_num"]))
     result = [m for m, s in filtered]
@@ -426,15 +478,16 @@ def _refine_search_terms(query: str, reason: str) -> list[list[str]]:
         return []
 
 
-def search_with_agent(
+def search_with_agent_structured(
     query: str,
     max_iterations: int = 2,
     rerank_threshold: int = 3,
     max_context_chars: int = 20000,
-) -> str:
+) -> tuple[str, list[dict]]:
     """
-    Orchestrated search: grep → re-rank → sufficiency check → optional refined search.
-    Returns formatted context for the main agent.
+    Same pipeline as ``search_with_agent`` but returns ``(formatted_context, final_matches)``
+    after diversify, for RC / KB→web gate callers. ``search_product_docs`` keeps using
+    ``search_with_agent`` (string-only).
     """
     all_matches: list[dict] = []
     fallback_candidates: list[dict] = []
@@ -472,6 +525,7 @@ def search_with_agent(
                     max_results_per_term=10,
                     scope_hints=scope_hints if scope_hints else None,
                     exclusive_scope=exclusive_scope,
+                    retrieval_policy=effective_retrieval_ranking_policy(),
                 )
                 matches.extend(found)
 
@@ -546,4 +600,23 @@ def search_with_agent(
                 "context_passed_to_llm": formatted,
             }
         )
+    return formatted, all_matches
+
+
+def search_with_agent(
+    query: str,
+    max_iterations: int = 2,
+    rerank_threshold: int = 3,
+    max_context_chars: int = 20000,
+) -> str:
+    """
+    Orchestrated search: grep → re-rank → sufficiency check → optional refined search.
+    Returns formatted context for the main agent.
+    """
+    formatted, _matches = search_with_agent_structured(
+        query=query,
+        max_iterations=max_iterations,
+        rerank_threshold=rerank_threshold,
+        max_context_chars=max_context_chars,
+    )
     return formatted

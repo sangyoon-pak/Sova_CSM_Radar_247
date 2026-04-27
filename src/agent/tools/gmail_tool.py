@@ -11,104 +11,75 @@ from src.runtime_config import (
     effective_gog_account,
     effective_gog_keyring_backend,
     effective_gog_keyring_password,
+    effective_probe_inbox_gmail_search,
     effective_xdg_config_home,
     gog_credentials_path_resolved,
     gog_home_resolved,
 )
 
+# Minimal thread signal: Korean in decoded `subject\t` lines (same source as JSON `email_subject`).
 _HANGUL_RE = re.compile(r"[\uac00-\ud7a3]")
-_LATIN_RE = re.compile(r"[A-Za-z]")
-# Stop scoring at typical reply/forward delimiters (English chain below drowns out Korean lead).
-_QUOTE_OR_FORWARD_SPLIT = re.compile(
-    r"(?is)"
-    r"(?:\n-{3,}\s*Original Message\s*-{3,}\s*\n|"
-    r"\n-{3,}\s*Forwarded message\s*-{3,}\s*\n|"
-    r"\n={20,}\s*\n|"
-    r"\n_{10,}\s*\n|"
-    r"\n\*{5,}\s*\n|"
-    r"\n보낸 사람\s*:|"
-    r"\n보낸 날짜\s*:|"
-    r"\n발신자\s*:|"
-    r"\n-----Original Message-----\s*\n|"
-    r"\nOn .{1,200} wrote:\s*\n|"
-    r"\nFrom:\s*.+\nSent:\s*.+\n|"
-    r"\nGet Outlook for\s|"
-    r"\nSent from my iPhone)"
-)
-_META_PREFIXES = (
-    "id\t",
-    "thread_id\t",
-    "label_ids\t",
-    "from\t",
-    "to\t",
-    "subject\t",
-    "date\t",
-    "attachment\t",
-    "csm_output_language\t",
-)
+# Few false positives; real Korean client subjects almost always exceed this.
+_KO_SUBJECT_HANGUL_MIN = 3
 
 
-def _body_text_for_lang_detection(block: str) -> str:
-    """Strip Gmail header lines so English headers do not drown out Korean body."""
-    lines_out: list[str] = []
-    for line in block.splitlines():
+def _subject_tails_concat(block: str) -> str:
+    parts: list[str] = []
+    for line in (block or "").splitlines():
         low = line.lower()
-        if any(low.startswith(p) for p in _META_PREFIXES):
-            continue
-        lines_out.append(line)
-    return "\n".join(lines_out)
+        if low.startswith("subject\t"):
+            tail = line.split("\t", 1)[-1].strip()
+            if tail:
+                parts.append(tail)
+    return " ".join(parts)
 
 
-def _lead_body_for_lang(block: str) -> str:
+def _hangul_count(text: str) -> int:
+    return len(_HANGUL_RE.findall(text or ""))
+
+
+def _probe_language_footer_parts(block: str) -> tuple[str, str]:
     """
-    Only the customer's top message (before quoted thread / forward blocks).
-    Full bodies often have huge English chains that wrongly force `en`.
+    Tag each decoded thread/email block for probes.
+
+    - **ko**: only when `subject\\t` lines contain enough Hangul — strong signal the client-visible
+      thread title is Korean (models still often default to English without this nudge).
+    - **inferred**: otherwise the model picks language from the substantive customer body per the note.
     """
-    body = _body_text_for_lang_detection(block)
-    m = _QUOTE_OR_FORWARD_SPLIT.search(body)
-    if m:
-        body = body[: m.start()]
-    return body[:5000].strip()
+    subjects = _subject_tails_concat(block)
+    if _hangul_count(subjects) >= _KO_SUBJECT_HANGUL_MIN:
+        note = (
+            "MANDATORY: Korean (Hangul) appears in this block's decoded subject line(s). Write **every** JSON string field "
+            "for this thread's action in **Korean (한국어)** — title, brief, thread_title, curated_answer, every "
+            "subquery/answer, technical_rationale, escalation_guidance, next_steps, thread_summary, skipped_note. "
+            "Paraphrase English KB or internal replies into Korean for those fields; keep standard product names in Latin if needed."
+        )
+        return "ko", note
+    note = (
+        "You decide the language for this thread's dashboard JSON string fields from the **customer's "
+        "primary question or request**. Prefer the **main body** of the earliest substantive **external client** "
+        "message (and its subject), not a later internal line in another language (e.g. 'Thanks, looping in…'). "
+        "Apply that language consistently to title, brief, curated_answer, subquery_answers, technical_rationale, "
+        "escalation_guidance, next_steps, and thread_summary. If the substantive ask mixes languages, follow the "
+        "language of the core ask. KB snippets may be English — still write dashboard prose in the client's language."
+    )
+    return "inferred", note
 
 
-def _detect_csm_output_language(block: str) -> str:
-    """
-    Infer language the CSM dashboard strings should use for this thread.
-    Returns 'ko', 'en', or 'mixed'.
-    """
-    lead = _lead_body_for_lang(block)
-    h = len(_HANGUL_RE.findall(lead))
-    ell = len(_LATIN_RE.findall(lead))
-    # Bias Korean: short Korean asks are common; product terms add Latin without meaning "English email".
-    if h >= 10:
-        return "ko"
-    if h >= 6 and (ell < 200 or h >= ell * 0.07):
-        return "ko"
-    if h >= 4 and ell < 90:
-        return "ko"
-    if h <= 2 and ell >= 50:
-        return "en"
-    if h >= 5 and ell >= 120:
-        return "mixed"
-    if h >= 6:
-        return "ko"
-    if ell > max(80, h * 12):
-        return "en"
-    return "mixed"
-
-
-def _csm_lang_note(lang: str) -> str:
-    if lang == "ko":
-        return "MANDATORY: write every JSON string field in Korean (한국어). Do not use English for title/brief/answers."
-    if lang == "en":
-        return "MANDATORY: write every JSON string field in English."
-    return "Match the customer's language mix; prefer Korean for Korean sentences and English for English quotes."
+def _append_csm_language_footer(block: str) -> str:
+    """Append csm_output_language (ko | inferred) and note to one decoded email/thread blob."""
+    b = (block or "").strip()
+    if not b:
+        return b
+    lang, note = _probe_language_footer_parts(b)
+    note_one = note.replace("\n", " ")
+    return b + f"\n\ncsm_output_language\t{lang}\ncsm_output_language_note\t{note_one}\n"
 
 
 def _annotate_blocks_with_csm_lang(blob: str) -> str:
     """
-    Append `csm_output_language\tko|en|mixed` after each inbox thread block (split on 60 '=').
-    The probe model must follow this for dashboard JSON strings.
+    Append `csm_output_language` after each inbox thread block (split on 60 '=').
+    Uses **ko** when subject lines show enough Hangul; otherwise **inferred** + LLM-chosen language from body.
     """
     blob = (blob or "").strip()
     if not blob:
@@ -120,9 +91,7 @@ def _annotate_blocks_with_csm_lang(blob: str) -> str:
         p = p.strip()
         if not p:
             continue
-        lang = _detect_csm_output_language(p)
-        note = _csm_lang_note(lang).replace("\n", " ")
-        out.append(p + f"\n\ncsm_output_language\t{lang}\ncsm_output_language_note\t{note}\n")
+        out.append(_append_csm_language_footer(p))
     return sep.join(out) if len(out) > 1 else (out[0] if out else blob)
 
 
@@ -220,7 +189,8 @@ def _gog_env() -> dict[str, str]:
     return env
 
 
-def fetch_inbox_emails(search: str = "in:inbox category:primary newer_than:2d", max_results: int = 10) -> str:
+def fetch_inbox_emails(search: str | None = None, max_results: int = 10) -> str:
+    q = (search or "").strip() or effective_probe_inbox_gmail_search()
     # Project root: src/agent/tools/ -> 3 levels up
     project_root = Path(__file__).parent.parent.parent.parent
     script_path = project_root / "scripts" / "gmail-get-decoded.py"
@@ -233,7 +203,7 @@ def fetch_inbox_emails(search: str = "in:inbox category:primary newer_than:2d", 
         return f"Error fetching Gmail: {bootstrap_err}\n\nRun OAuth locally: see docs/GMAIL_SETUP.md"
     try:
         result = subprocess.run(
-            ["python3", str(script_path), "--search", search, "--max", str(max_results)],
+            ["python3", str(script_path), "--search", q, "--max", str(max_results)],
             capture_output=True, text=True, timeout=90, env=env,
         )
     except subprocess.TimeoutExpired:
@@ -292,7 +262,5 @@ def fetch_gmail_thread(thread_id: str) -> str:
         return f"Error fetching Gmail thread: {err}"
     raw = (result.stdout or "").strip()
     if raw and not re.search(r"(?m)^csm_output_language\t", raw):
-        _lang = _detect_csm_output_language(raw)
-        _note = _csm_lang_note(_lang).replace("\n", " ")
-        raw = raw + f"\n\ncsm_output_language\t{_lang}\ncsm_output_language_note\t{_note}\n"
+        raw = _append_csm_language_footer(raw)
     return raw or "No messages in thread."

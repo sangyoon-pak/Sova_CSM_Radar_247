@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     # Optional per-role overrides (OpenRouter model ids). All fall back to LLM_MODEL when unset.
     llm_model_main: str | None = Field(None, validation_alias="LLM_MODEL_MAIN")
     llm_model_search_json: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_JSON")
+    # KB→web gate (RC path) JSON classifier; separate from SEARCH_JSON. Unset → LLM_MODEL via runtime effective.
+    llm_model_kb_web_gate: str | None = Field(None, validation_alias="LLM_MODEL_KB_WEB_GATE")
     llm_model_search_rerank: str | None = Field(None, validation_alias="LLM_MODEL_SEARCH_RERANK")
     llm_model_memory: str | None = Field(None, validation_alias="LLM_MODEL_MEMORY")
     rag_embedding_provider: str = Field("openrouter", validation_alias="RAG_EMBEDDING_PROVIDER")
@@ -72,29 +74,34 @@ class Settings(BaseSettings):
 
     # Scheduler
     scheduler_timezone: str = Field("Asia/Seoul", validation_alias="SCHEDULER_TIMEZONE")
+    probe_inbox_max_results: int = Field(10, validation_alias="PROBE_INBOX_MAX_RESULTS")
+    probe_inbox_gmail_search: str = Field("", validation_alias="PROBE_INBOX_GMAIL_SEARCH")
+    user_inbox_peek_max_results: int = Field(5, validation_alias="USER_INBOX_PEEK_MAX_RESULTS")
+    # thread send: llm = JSON classifier (LLM_MODEL_SEARCH_JSON); off|heuristic = no auto-probe from chat.
+    probe_thread_intent_classifier: str = Field("llm", validation_alias="PROBE_THREAD_INTENT_CLASSIFIER")
+    # RC web: kb_first = LLM gate may skip hosted web; always_augment = always run web after KB (higher cost).
+    rc_web_retrieval_mode: str = Field("kb_first", validation_alias="RC_WEB_RETRIEVAL_MODE")
+    # JSON policy object for vendor-agnostic retrieval/rerank behavior.
+    retrieval_ranking_policy: str = Field("", validation_alias="RETRIEVAL_RANKING_POLICY")
 
-    # Guardrails (optional; can be overridden in Configure)
-    guardrail_include_sender_domains: str = Field(
-        "",
-        validation_alias="GUARDRAIL_INCLUDE_SENDER_DOMAINS",
-    )
-    guardrail_exclude_sender_domains: str = Field(
-        "",
-        validation_alias="GUARDRAIL_EXCLUDE_SENDER_DOMAINS",
-    )
-    guardrail_exclude_subject_keywords: str = Field(
-        "",
-        validation_alias="GUARDRAIL_EXCLUDE_SUBJECT_KEYWORDS",
-    )
-    guardrail_strictness: str = Field(
-        "balanced",
-        validation_alias="GUARDRAIL_STRICTNESS",
-    )
+    # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
+    configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")
+    # Cosine similarity threshold for NL phrase vs thread text (when embeddings available).
+    guardrail_nl_similarity_threshold: float = Field(0.66, validation_alias="GUARDRAIL_NL_SIMILARITY_THRESHOLD")
+
+    # Guardrails
+    guardrail_include_sender_domains: str = Field("", validation_alias="GUARDRAIL_INCLUDE_SENDER_DOMAINS")
+    guardrail_exclude_sender_domains: str = Field("", validation_alias="GUARDRAIL_EXCLUDE_SENDER_DOMAINS")
+    guardrail_include_intent_keywords: str = Field("", validation_alias="GUARDRAIL_INCLUDE_INTENT_KEYWORDS")
+    guardrail_exclude_intent_keywords: str = Field("", validation_alias="GUARDRAIL_EXCLUDE_INTENT_KEYWORDS")
+    guardrail_team_guidance: str = Field("", validation_alias="GUARDRAIL_TEAM_GUIDANCE")
+    guardrail_strictness: str = Field("balanced", validation_alias="GUARDRAIL_STRICTNESS")
 
     # Database
     database_path: str = Field("./data/agent.db", validation_alias="DATABASE_PATH")
 
-    # LangSmith (process environment only if you export these vars before starting the server)
+    # LangSmith
+    langsmith_tracing: bool = Field(False, validation_alias="LANGSMITH_TRACING")
     langsmith_api_key: str | None = Field(None, validation_alias="LANGSMITH_API_KEY")
     langsmith_project: str = Field("email_draft_agent", validation_alias="LANGSMITH_PROJECT")
 

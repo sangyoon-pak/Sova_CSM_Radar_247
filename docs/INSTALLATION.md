@@ -78,13 +78,19 @@ Runtime values are resolved in this order:
 
 **`.env.example`** is a **checklist of variable names only** — the app does **not** load a `.env` file. Use Configure + Save, or export real env vars before `python run.py`.
 
-**Minimum for chat + RAG:** open **Configure** and set provider preset, API keys, models, and embedding settings (or export the same variable names before starting the process and restart after changing them).
+**Minimum for chat + RAG:** open **Configure** and set provider preset, API keys, models, embedding settings, and (optionally) `RETRIEVAL_RANKING_POLICY` JSON for vendor-specific retrieval tuning without code changes (or export the same variable names before starting the process and restart after changing them).
 
 Grey hints under fields show **recommended defaults**; the **Saved in Configure** section lists values you have stored in the database (masked).
 
 To clear everything saved in Configure and start over: **Configure → Clear all database overrides**, or run **`scripts/reset_configure_overrides.py`**. Both also remove **local gog OAuth token files** under the effective **`GOG_HOME`** (see [GMAIL_SETUP.md](GMAIL_SETUP.md)); the **`gog` binary is not removed**.
 
 Restart the server after changing exported environment variables. Details: [LLM_MODELS.md](LLM_MODELS.md), [LANGSMITH.md](LANGSMITH.md).
+
+### LLM provider without OpenRouter
+
+If you prefer **direct OpenAI** (no OpenRouter account), set **`LLM_PROVIDER_PRESET=openai`**, export **`OPENAI_API_KEY`**, and choose **OpenAI model ids** for `LLM_MODEL` / role overrides (for example `gpt-4o` instead of `openai/gpt-4o`). Embeddings can stay on OpenRouter or follow your chosen embedding provider in **Configure** — see variable notes in [LLM_MODELS.md](LLM_MODELS.md) and `.env.example`.
+
+The **`gemini_openrouter`** preset is another OpenRouter-based path (Gemini model slugs via the same HTTP client); it is **not** “no OpenRouter.”
 
 ### Gmail + `gog` (optional, under Configure)
 
@@ -129,6 +135,7 @@ Inbox tools need **`gog`** and a one-time OAuth in the terminal — follow [GMAI
 | [LLM_MODELS.md](LLM_MODELS.md) | Model roles and presets |
 | [LANGSMITH.md](LANGSMITH.md) | Tracing |
 | [SEARCH_AGENT.md](SEARCH_AGENT.md) | Retrieval architecture |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | End-to-end runtime, API, Configure map |
 
 ---
 

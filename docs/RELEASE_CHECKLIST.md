@@ -61,11 +61,12 @@ Use this checklist before sharing Sova beyond private/internal development.
 - [ ] Internal/private knowledge-base content is excluded from public distribution.
 - [ ] Appier or other restricted client docs are removed or redacted.
 - [ ] Runtime data directories do not include private user/customer data in release artifacts.
+- [ ] On a machine that held trial runs, optionally run **`python scripts/reset_local_data.py --yes`** (stop the server first) to wipe local SQLite, KB FTS, RAG artifacts, and uploaded KB files under `data/` before publishing or sharing a clean tree. See [scripts/README.md](../scripts/README.md).
 
 ### Repository Hygiene
 
-- [ ] Remove obsolete experiments and irrelevant test artifacts.
-- [ ] Keep only runnable tests/scripts that support maintainability.
+- [ ] Remove obsolete experiments and irrelevant artifacts.
+- [ ] `scripts/` matches [scripts/README.md](../scripts/README.md) (runtime, install, and optional local data reset).
 - [ ] Confirm `.gitignore` blocks sensitive/generated content.
 
 ## Cross-Platform Expectations

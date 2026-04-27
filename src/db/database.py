@@ -1,7 +1,7 @@
 """SQLite database for interactions and cron jobs."""
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from typing import Optional
@@ -9,6 +9,12 @@ from typing import Optional
 from src.config import settings
 
 _WRITE_LOCK = Lock()
+
+
+def _utc_now_iso() -> str:
+    """UTC instant for persisted timestamps; offset-aware so UIs parse as UTC."""
+    return datetime.now(timezone.utc).isoformat()
+
 
 def _db_path() -> Path:
     p = Path(settings.database_path)
@@ -30,6 +36,9 @@ def init_db():
     conn.executescript(schema)
     conn.commit()
     conn.close()
+    from src.agent.prompt_seed import seed_prompt_library_if_needed
+
+    seed_prompt_library_if_needed()
 
 
 def _conn():
@@ -53,10 +62,12 @@ def _conn():
 def log_interaction(trigger_type: str, input_text: str, output_text: str, status: str = "completed", error_message: str | None = None, metadata: dict | None = None):
     with _WRITE_LOCK:
         conn = _conn()
+        now = _utc_now_iso()
         conn.execute(
-            """INSERT INTO agent_interactions (trigger_type, input_text, output_text, status, error_message, metadata)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO agent_interactions (created_at, trigger_type, input_text, output_text, status, error_message, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
+                now,
                 trigger_type,
                 input_text,
                 output_text,
@@ -155,6 +166,69 @@ def dismiss_probe_from_dashboard(interaction_id: int) -> bool:
         return True
 
 
+def _dashboard_actions_same_item(removed: dict, other: dict) -> bool:
+    """
+    True when two csm_actions entries refer to the same dashboard dedupe identity
+    (Gmail thread id, or from+subject when thread id is absent). Used when removing
+    a card so older probe runs do not keep a ghost row that blocks re-emission on the next probe.
+    """
+    if not isinstance(removed, dict) or not isinstance(other, dict):
+        return False
+    rg = str(removed.get("gmail_thread_id") or "").strip()
+    og = str(other.get("gmail_thread_id") or "").strip()
+    if rg and og:
+        return rg == og
+    if rg or og:
+        return False
+    efa = str(removed.get("email_from") or "").strip().lower()
+    efb = str(other.get("email_from") or "").strip().lower()
+    esa = str(removed.get("email_subject") or "").strip().lower()
+    esb = str(other.get("email_subject") or "").strip().lower()
+    return bool(efa and efb and esa and esb and efa == efb and esa == esb)
+
+
+def _cascade_remove_dashboard_action_peers(
+    conn: sqlite3.Connection,
+    *,
+    exclude_interaction_id: int,
+    removed_action: dict,
+) -> None:
+    """Strip matching actions from other visible inbox-review interactions (same open connection)."""
+    if not isinstance(removed_action, dict) or not removed_action:
+        return
+    where_probe = (
+        "(trigger_type LIKE 'cron:%' OR trigger_type = 'thread_probe' "
+        "OR trigger_type LIKE 'manual_probe%')"
+    )
+    rows = conn.execute(
+        f"""SELECT id, metadata FROM agent_interactions
+            WHERE id != ? AND {where_probe}
+            AND NOT (COALESCE(json_extract(metadata, '$.csm_dashboard_removed'), 0) = 1)""",
+        (exclude_interaction_id,),
+    ).fetchall()
+    for r in rows:
+        rid = int(r["id"])
+        # sqlite3.Row does not implement .get(); access by key directly.
+        md = _parse_interaction_metadata(r["metadata"])
+        acts = md.get("csm_actions")
+        if not isinstance(acts, list):
+            continue
+        kept: list = []
+        for a in acts:
+            if isinstance(a, dict) and _dashboard_actions_same_item(removed_action, a):
+                continue
+            kept.append(a)
+        if len(kept) == len(acts):
+            continue
+        md["csm_actions"] = kept
+        if len(kept) == 0:
+            md["csm_dashboard_removed"] = True
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), rid),
+        )
+
+
 def remove_csm_dashboard_action(interaction_id: int, action_index: int) -> bool:
     """Remove one item from metadata.csm_actions; hide run from dashboard if none left."""
     with _WRITE_LOCK:
@@ -176,6 +250,8 @@ def remove_csm_dashboard_action(interaction_id: int, action_index: int) -> bool:
         if not isinstance(actions, list) or action_index < 0 or action_index >= len(actions):
             conn.close()
             return False
+        raw = actions[action_index]
+        removed_action = dict(raw) if isinstance(raw, dict) else {}
         actions = list(actions)
         actions.pop(action_index)
         md["csm_actions"] = actions
@@ -184,6 +260,11 @@ def remove_csm_dashboard_action(interaction_id: int, action_index: int) -> bool:
         conn.execute(
             "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
             (json.dumps(md), interaction_id),
+        )
+        _cascade_remove_dashboard_action_peers(
+            conn,
+            exclude_interaction_id=interaction_id,
+            removed_action=removed_action,
         )
         conn.commit()
         conn.close()
@@ -253,10 +334,15 @@ def latest_dashboard_actions_by_gmail_thread(limit: int = 800) -> dict[str, dict
                 keys.append(f"fs:{ef}||{es}")
             if not keys:
                 continue
+            enriched = dict(a)
+            try:
+                enriched["_probe_merge_interaction_id"] = int(r.get("id") or 0)
+            except (TypeError, ValueError):
+                enriched["_probe_merge_interaction_id"] = 0
             for k in keys:
                 if k in out:
                     continue
-                out[k] = dict(a)
+                out[k] = enriched
     return out
 
 
@@ -465,7 +551,7 @@ def upsert_kb_document(
     with _WRITE_LOCK:
         conn = _conn()
         conn.row_factory = sqlite3.Row
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         tags_json = json.dumps(tags or []) if tags is not None else None
         meta_json = json.dumps(metadata) if metadata else None
 
@@ -580,7 +666,7 @@ def update_kb_document_metadata(doc_id: int, patch: dict) -> dict:
             current = {}
         merged = dict(current or {})
         merged.update(patch or {})
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         conn.execute(
             "UPDATE kb_documents SET metadata = ?, updated_at = ? WHERE id = ?",
             (json.dumps(merged), now, int(doc_id)),
@@ -603,7 +689,7 @@ def get_app_setting(key: str, default: str | None = None) -> str | None:
 def set_app_setting(key: str, value: str) -> None:
     with _WRITE_LOCK:
         conn = _conn()
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         conn.execute(
             """
             INSERT INTO app_settings (key, value, updated_at)
@@ -713,7 +799,7 @@ def upsert_rc_url(
     with _WRITE_LOCK:
         conn = _conn()
         conn.row_factory = sqlite3.Row
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         conn.execute(
         """
         INSERT INTO rc_urls (url, title, tags, scope, enabled, updated_at)
@@ -749,7 +835,7 @@ def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False) 
             SELECT id, created_at, updated_at, url, title, tags, scope, enabled
             FROM rc_urls
             WHERE enabled = 1
-            ORDER BY updated_at DESC, id DESC
+            ORDER BY id ASC
             LIMIT ? OFFSET ?
             """,
             (limit, offset),
@@ -759,7 +845,7 @@ def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False) 
             """
             SELECT id, created_at, updated_at, url, title, tags, scope, enabled
             FROM rc_urls
-            ORDER BY updated_at DESC, id DESC
+            ORDER BY id ASC
             LIMIT ? OFFSET ?
             """,
             (limit, offset),
@@ -774,7 +860,7 @@ def set_rc_url_enabled(url: str, enabled: bool) -> None:
         raise ValueError("url is required")
     with _WRITE_LOCK:
         conn = _conn()
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         conn.execute(
             "UPDATE rc_urls SET enabled = ?, updated_at = ? WHERE url = ?",
             (1 if enabled else 0, now, u),
@@ -1024,7 +1110,7 @@ def create_thread(*, title: str | None = None, pinned: bool = False, metadata: d
     with _WRITE_LOCK:
         conn = _conn()
         conn.row_factory = sqlite3.Row
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         conn.execute(
             """
             INSERT INTO conversation_threads (title, pinned, metadata, created_at, updated_at)
@@ -1080,7 +1166,7 @@ def add_message(*, thread_id: int, role: str, content: str, metadata: dict | Non
     with _WRITE_LOCK:
         conn = _conn()
         conn.row_factory = sqlite3.Row
-        now = datetime.utcnow().isoformat()
+        now = _utc_now_iso()
         conn.execute(
             """
             INSERT INTO conversation_messages (thread_id, role, content, metadata, created_at)
@@ -1121,6 +1207,40 @@ def list_messages(thread_id: int, limit: int = 200, offset: int = 0) -> list[dic
     return [dict(r) for r in rows]
 
 
+def _delete_one_thread_unlocked(conn: sqlite3.Connection, thread_id: int) -> dict | None:
+    """
+    Delete one thread using an open connection (caller holds _WRITE_LOCK and commits).
+    Returns None if the thread did not exist; otherwise the same shape as delete_thread.
+    """
+    conn.row_factory = sqlite3.Row
+    tid = int(thread_id)
+    row = conn.execute(
+        "SELECT id, title, created_at, updated_at FROM conversation_threads WHERE id = ?",
+        (tid,),
+    ).fetchone()
+    if not row:
+        return None
+    c0 = conn.execute(
+        """
+        DELETE FROM agent_interactions
+        WHERE json_extract(metadata, '$.thread_id') IS NOT NULL
+          AND (
+            CAST(json_extract(metadata, '$.thread_id') AS INTEGER) = ?
+            OR CAST(json_extract(metadata, '$.thread_id') AS TEXT) = ?
+          )
+        """,
+        (tid, str(tid)),
+    )
+    c1 = conn.execute("DELETE FROM conversation_messages WHERE thread_id = ?", (tid,))
+    c2 = conn.execute("DELETE FROM conversation_threads WHERE id = ?", (tid,))
+    return {
+        "deleted": int(c2.rowcount or 0),
+        "deleted_messages": int(c1.rowcount or 0),
+        "deleted_interactions": int(c0.rowcount or 0),
+        "thread": dict(row),
+    }
+
+
 def delete_thread(thread_id: int) -> dict:
     """
     Delete a conversation thread, its messages, and agent_interactions rows
@@ -1129,34 +1249,71 @@ def delete_thread(thread_id: int) -> dict:
     """
     with _WRITE_LOCK:
         conn = _conn()
-        conn.row_factory = sqlite3.Row
-        tid = int(thread_id)
-        row = conn.execute(
-            "SELECT id, title, created_at, updated_at FROM conversation_threads WHERE id = ?",
-            (tid,),
-        ).fetchone()
-        if not row:
+        try:
+            out = _delete_one_thread_unlocked(conn, thread_id)
+            conn.commit()
+            if out is None:
+                return {"deleted": 0, "deleted_messages": 0, "deleted_interactions": 0}
+            return out
+        finally:
             conn.close()
-            return {"deleted": 0, "deleted_messages": 0, "deleted_interactions": 0}
-        # Run history rows tied to this Workbench thread (thread_message / thread_probe sends).
-        c0 = conn.execute(
-            """
-            DELETE FROM agent_interactions
-            WHERE json_extract(metadata, '$.thread_id') IS NOT NULL
-              AND (
-                CAST(json_extract(metadata, '$.thread_id') AS INTEGER) = ?
-                OR CAST(json_extract(metadata, '$.thread_id') AS TEXT) = ?
-              )
-            """,
-            (tid, str(tid)),
-        )
-        c1 = conn.execute("DELETE FROM conversation_messages WHERE thread_id = ?", (tid,))
-        c2 = conn.execute("DELETE FROM conversation_threads WHERE id = ?", (tid,))
-        conn.commit()
-        conn.close()
-        return {
-            "deleted": int(c2.rowcount or 0),
-            "deleted_messages": int(c1.rowcount or 0),
-            "deleted_interactions": int(c0.rowcount or 0),
-            "thread": dict(row),
-        }
+
+
+def delete_threads(thread_ids: list) -> dict:
+    """
+    Delete many threads in one transaction. Unknown ids are skipped (per-id deleted: 0).
+    At most 200 ids per call.
+    """
+    seen: set[int] = set()
+    clean: list[int] = []
+    for x in thread_ids or []:
+        try:
+            tid = int(x)
+        except (TypeError, ValueError):
+            continue
+        if tid <= 0 or tid in seen:
+            continue
+        seen.add(tid)
+        clean.append(tid)
+    if len(clean) > 200:
+        raise ValueError("At most 200 thread ids per bulk delete.")
+    results: list[dict] = []
+    deleted_threads = 0
+    total_messages = 0
+    total_interactions = 0
+    with _WRITE_LOCK:
+        conn = _conn()
+        try:
+            for tid in clean:
+                out = _delete_one_thread_unlocked(conn, tid)
+                if out is None:
+                    results.append(
+                        {
+                            "thread_id": tid,
+                            "deleted": 0,
+                            "deleted_messages": 0,
+                            "deleted_interactions": 0,
+                        }
+                    )
+                else:
+                    deleted_threads += 1
+                    total_messages += int(out.get("deleted_messages") or 0)
+                    total_interactions += int(out.get("deleted_interactions") or 0)
+                    results.append(
+                        {
+                            "thread_id": tid,
+                            "deleted": int(out.get("deleted") or 0),
+                            "deleted_messages": int(out.get("deleted_messages") or 0),
+                            "deleted_interactions": int(out.get("deleted_interactions") or 0),
+                            "title": (out.get("thread") or {}).get("title"),
+                        }
+                    )
+            conn.commit()
+        finally:
+            conn.close()
+    return {
+        "deleted_threads": deleted_threads,
+        "deleted_messages": total_messages,
+        "deleted_interactions": total_interactions,
+        "results": results,
+    }

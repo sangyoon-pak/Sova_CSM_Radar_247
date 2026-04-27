@@ -6,7 +6,7 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 ## What Sova Does
 
-- Probes inbox threads (optional Gmail via local `gog` + OAuth)
+- Probes inbox threads (Gmail via local `gog` + OAuth)
 - Classifies whether a thread requires CSM action
 - Runs retrieval (RAG + lexical search) for evidence-backed responses
 - Builds action-card candidates and tracks status progression
@@ -14,20 +14,12 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 ## Architecture Flow
 
-```mermaid
-flowchart TD
-    inboxThread[InboxThread] --> relevanceGate[RelevanceGate]
-    relevanceGate -->|"CSMRelevant"| retrievalPipeline[RetrievalPipeline]
-    relevanceGate -->|"NotRelevant"| noCard[NoCard]
-    retrievalPipeline --> groundedDraft[GroundedDraft]
-    groundedDraft --> actionCard[ActionCard]
-    actionCard --> dashboard[ActionDashboard]
-    dashboard --> userFeedback[UserFeedback]
-```
+The full **request routing**, **Workbench vs probe**, **API surface**, **Configure map**, and **mermaid** diagrams live in one place so they do not drift from the code:
 
-Key architecture docs:
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture)
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+Related deep dives:
+
 - [docs/SEARCH_AGENT.md](docs/SEARCH_AGENT.md)
 - [docs/AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md)
 - [docs/ACTION_CARD_SPEC.md](docs/ACTION_CARD_SPEC.md)

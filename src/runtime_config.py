@@ -8,21 +8,39 @@ from __future__ import annotations
 
 import re
 import shutil
-from datetime import datetime
+import json
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from src.config import settings
 from src.db import database
 
-_SENSITIVE_KEY = re.compile(r"(?i)(key|secret|password|token|credential)")
+# Stored ciphertext in DB when CONFIGURE_ENCRYPTION_KEY is set; decrypted for API + policy.
+GUARDRAIL_ENCRYPTED_KEYS: frozenset[str] = frozenset(
+    {
+        "guardrail_include_intent_keywords",
+        "guardrail_exclude_intent_keywords",
+        "guardrail_team_guidance",
+    }
+)
+
+# Only true secrets (API keys / passwords). Avoid matching substrings like "key" in
+# "keywords" or "credential" in "credentials_path" — those would hide real updates
+# in the Configure "Saved" table.
+_SENSITIVE_CONFIGURE_KEYS: frozenset[str] = frozenset(
+    {
+        "openrouter_api_key",
+        "openai_api_key",
+        "gog_keyring_password",
+        "langsmith_api_key",
+    }
+)
 
 
 def mask_env_display(key: str, value: str) -> str:
     if not value:
         return ""
-    if _SENSITIVE_KEY.search(key):
+    if key in _SENSITIVE_CONFIGURE_KEYS:
         return "••••••••" if len(value) > 6 else "••••"
     if len(value) > 120:
         return value[:117] + "…"
@@ -34,11 +52,15 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "llm_model",
     "llm_model_main",
     "llm_model_search_json",
+    "llm_model_kb_web_gate",
     "llm_model_search_rerank",
     "llm_model_memory",
+    "rc_web_retrieval_mode",
+    "retrieval_ranking_policy",
     "rag_embedding_provider",
     "rag_embedding_model",
     "openrouter_api_key",
+    "openai_api_key",
     "openrouter_base_url",
     "gog_home",
     "gog_account",
@@ -47,10 +69,22 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "xdg_config_home",
     "gog_credentials_path",
     "scheduler_timezone",
+    "langsmith_tracing",
+    "langsmith_api_key",
+    "langsmith_project",
     "guardrail_include_sender_domains",
     "guardrail_exclude_sender_domains",
-    "guardrail_exclude_subject_keywords",
+    "guardrail_include_intent_keywords",
+    "guardrail_exclude_intent_keywords",
+    "guardrail_team_guidance",
     "guardrail_strictness",
+    "probe_inbox_max_results",
+    "probe_inbox_gmail_search",
+    "user_inbox_peek_max_results",
+    "prompt_email_agent_system_template",
+    "prompt_probe_user_message",
+    "prompt_probe_mode_append",
+    "prompt_action_review_append",
 )
 
 
@@ -129,6 +163,11 @@ def clear_runtime_configure_overrides() -> None:
     """Remove all Configure-saved values from app_settings (effective config falls back to env + defaults)."""
     for key in RUNTIME_CONFIGURE_KEYS:
         database.delete_app_setting(key)
+    from src.agent.prompt_seed import LEGACY_PROMPT_KEYS, seed_prompt_library_if_needed
+
+    for key in LEGACY_PROMPT_KEYS:
+        database.delete_app_setting(key)
+    seed_prompt_library_if_needed()
 
 
 def _db_str(key: str) -> str | None:
@@ -138,6 +177,27 @@ def _db_str(key: str) -> str | None:
     if v is None:
         return None
     return str(v)
+
+
+def _db_str_decrypted(key: str) -> str | None:
+    raw = _db_str(key)
+    if raw is None:
+        return None
+    if key in GUARDRAIL_ENCRYPTED_KEYS:
+        from src.configure_crypto import decrypt_configure_value
+
+        return decrypt_configure_value(raw)
+    return raw
+
+
+def persist_app_setting(key: str, value: str) -> None:
+    """Persist a Configure value; encrypts guardrail text fields when encryption is enabled."""
+    v = value
+    if key in GUARDRAIL_ENCRYPTED_KEYS:
+        from src.configure_crypto import encrypt_configure_value
+
+        v = encrypt_configure_value(value)
+    database.set_app_setting(key, v)
 
 
 def effective_llm_model() -> str:
@@ -159,6 +219,91 @@ def effective_llm_model_search_json() -> str:
     if v is not None and v.strip():
         return v.strip()
     return settings.llm_model_for_search_json
+
+
+def effective_llm_model_kb_web_gate() -> str:
+    """Model for RC KB→web gate JSON only; not used for intent / sufficiency JSON routers."""
+    v = _db_str("llm_model_kb_web_gate")
+    if v is not None and v.strip():
+        return v.strip()
+    gate_env = (getattr(settings, "llm_model_kb_web_gate", None) or "").strip()
+    if gate_env:
+        return gate_env
+    return effective_llm_model()
+
+
+_VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset({"kb_first", "always_augment"})
+
+_DEFAULT_RETRIEVAL_RANKING_POLICY: dict[str, Any] = {
+    "version": "v1",
+    "policy_name": "default",
+    "source_order": ["rag", "grep", "fts"],
+    "actionable_definition": (
+        "Prioritize snippets that provide concrete troubleshooting, integration, or configuration "
+        "instructions for the user's query."
+    ),
+    "vendor_glossary": [],
+    "must_include_terms": [],
+    "must_avoid_terms": [],
+}
+
+
+def effective_rc_web_retrieval_mode() -> str:
+    v = _db_str("rc_web_retrieval_mode")
+    if v is not None and v.strip():
+        s = v.strip().lower()
+        if s in _VALID_RC_WEB_RETRIEVAL_MODES:
+            return s
+    raw = (getattr(settings, "rc_web_retrieval_mode", None) or "kb_first").strip().lower()
+    if raw in _VALID_RC_WEB_RETRIEVAL_MODES:
+        return raw
+    return "kb_first"
+
+
+def _normalize_retrieval_policy(raw: dict[str, Any]) -> dict[str, Any]:
+    out = dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+    if not isinstance(raw, dict):
+        return out
+    if isinstance(raw.get("version"), str) and raw.get("version", "").strip():
+        out["version"] = raw["version"].strip()
+    if isinstance(raw.get("policy_name"), str) and raw.get("policy_name", "").strip():
+        out["policy_name"] = raw["policy_name"].strip()
+    if isinstance(raw.get("actionable_definition"), str) and raw.get("actionable_definition", "").strip():
+        out["actionable_definition"] = raw["actionable_definition"].strip()
+    if isinstance(raw.get("source_order"), list):
+        vals = [str(x).strip().lower() for x in raw["source_order"] if str(x).strip()]
+        dedup: list[str] = []
+        for v in vals:
+            if v not in dedup:
+                dedup.append(v)
+        if dedup:
+            out["source_order"] = dedup[:6]
+    for k in ("vendor_glossary", "must_include_terms", "must_avoid_terms"):
+        val = raw.get(k)
+        if isinstance(val, list):
+            cleaned = [str(x).strip() for x in val if str(x).strip()]
+            out[k] = cleaned[:80]
+    return out
+
+
+def effective_retrieval_ranking_policy() -> dict[str, Any]:
+    raw = _db_str("retrieval_ranking_policy")
+    if raw and raw.strip():
+        try:
+            return _normalize_retrieval_policy(json.loads(raw))
+        except Exception:
+            return dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+    env_raw = (getattr(settings, "retrieval_ranking_policy", None) or "").strip()
+    if env_raw:
+        try:
+            return _normalize_retrieval_policy(json.loads(env_raw))
+        except Exception:
+            return dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+    return dict(_DEFAULT_RETRIEVAL_RANKING_POLICY)
+
+
+def effective_retrieval_ranking_policy_json() -> str:
+    return json.dumps(effective_retrieval_ranking_policy(), ensure_ascii=True)
 
 
 def effective_llm_model_search_rerank() -> str:
@@ -205,29 +350,32 @@ def effective_llm_provider_preset() -> str:
 
 def effective_chat_api_key() -> str | None:
     """API key for ChatOpenAI-compatible calls (OpenRouter, OpenAI direct, or Gemini-via-OR)."""
+    preset = effective_llm_provider_preset()
+    if preset == "openai":
+        if database.app_setting_is_set("openai_api_key"):
+            v = (database.get_app_setting("openai_api_key") or "").strip()
+            if v:
+                return v
+        oa = getattr(settings, "openai_api_key", None)
+        if oa and str(oa).strip():
+            return str(oa).strip()
+        return None
     if database.app_setting_is_set("openrouter_api_key"):
         v = (database.get_app_setting("openrouter_api_key") or "").strip()
         if v:
             return v
-    preset = effective_llm_provider_preset()
-    if preset == "openai":
-        oa = getattr(settings, "openai_api_key", None)
-        if oa and str(oa).strip():
-            return str(oa).strip()
-        or_k = settings.openrouter_api_key
-        if or_k and str(or_k).strip():
-            return str(or_k).strip()
-        return None
     return settings.openrouter_api_key
 
 
 def effective_chat_base_url() -> str:
+    preset = effective_llm_provider_preset()
+    if preset == "openai":
+        # OpenAI direct always uses the official API root; a saved OpenRouter base URL must
+        # not override it (would break chat/embeddings when switching presets).
+        return _DEFAULT_OPENAI_BASE
     v = _db_str("openrouter_base_url")
     if v is not None and v.strip():
         return v.strip()
-    preset = effective_llm_provider_preset()
-    if preset == "openai":
-        return _DEFAULT_OPENAI_BASE
     return settings.openrouter_base_url.strip()
 
 
@@ -295,11 +443,46 @@ def effective_gog_credentials_path() -> str:
 
 
 def effective_scheduler_timezone() -> str:
-    """IANA timezone for cron scheduler (Configure DB overrides env)."""
     v = _db_str("scheduler_timezone")
     if v is not None and v.strip():
         return v.strip()
     return (getattr(settings, "scheduler_timezone", None) or "Asia/Seoul").strip()
+
+
+def _truthy_str(v: str) -> bool:
+    return v.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def effective_langsmith_tracing() -> bool:
+    v = _db_str("langsmith_tracing")
+    if v is not None and v.strip():
+        return _truthy_str(v)
+    return bool(getattr(settings, "langsmith_tracing", False))
+
+
+def effective_langsmith_api_key() -> str:
+    v = _db_str("langsmith_api_key")
+    if v is not None and v.strip():
+        return v.strip()
+    return str(getattr(settings, "langsmith_api_key", None) or "").strip()
+
+
+def effective_langsmith_project() -> str:
+    v = _db_str("langsmith_project")
+    if v is not None and v.strip():
+        return v.strip()
+    return str(getattr(settings, "langsmith_project", None) or "email_draft_agent").strip()
+
+
+def gog_credentials_path_resolved() -> Path | None:
+    p_raw = effective_gog_credentials_path().strip()
+    if not p_raw:
+        return None
+    p = Path(p_raw)
+    if not p.is_absolute():
+        root = Path(__file__).resolve().parent.parent
+        p = (root / p).resolve()
+    return p if p.exists() else None
 
 
 def effective_guardrail_include_sender_domains() -> str:
@@ -316,45 +499,133 @@ def effective_guardrail_exclude_sender_domains() -> str:
     return (getattr(settings, "guardrail_exclude_sender_domains", None) or "").strip()
 
 
-def effective_guardrail_exclude_subject_keywords() -> str:
-    v = _db_str("guardrail_exclude_subject_keywords")
+def effective_guardrail_include_intent_keywords() -> str:
+    v = _db_str_decrypted("guardrail_include_intent_keywords")
     if v is not None:
         return v.strip()
-    return (getattr(settings, "guardrail_exclude_subject_keywords", None) or "").strip()
+    return (getattr(settings, "guardrail_include_intent_keywords", None) or "").strip()
+
+
+def effective_guardrail_exclude_intent_keywords() -> str:
+    v = _db_str_decrypted("guardrail_exclude_intent_keywords")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_exclude_intent_keywords", None) or "").strip()
+
+
+def effective_guardrail_team_guidance() -> str:
+    v = _db_str_decrypted("guardrail_team_guidance")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "guardrail_team_guidance", None) or "").strip()
 
 
 def effective_guardrail_strictness() -> str:
     v = _db_str("guardrail_strictness")
-    raw = (v if v is not None else getattr(settings, "guardrail_strictness", None) or "balanced").strip().lower()
-    if raw in {"strict", "balanced", "permissive"}:
-        return raw
-    return "balanced"
+    raw = ""
+    if v is not None:
+        raw = v.strip().lower()
+    else:
+        raw = (getattr(settings, "guardrail_strictness", None) or "balanced").strip().lower()
+    if raw not in {"strict", "balanced", "permissive"}:
+        return "balanced"
+    return raw
 
 
-def scheduler_timezone_offset_hours() -> int | None:
-    """Whole-hour UTC offset of the effective scheduler zone (for Configure GMT dropdown)."""
-    tz_name = effective_scheduler_timezone()
-    if not tz_name:
-        return 0
+def _bounded_int_str(raw: str | None, *, default: int, min_v: int, max_v: int) -> str:
     try:
-        z = ZoneInfo(tz_name)
-    except Exception:
-        return None
-    off = datetime.now(z).utcoffset()
-    if off is None:
-        return 0
-    return int(off.total_seconds() // 3600)
+        n = int(str(raw or "").strip())
+    except (TypeError, ValueError):
+        n = int(default)
+    if n < min_v:
+        n = min_v
+    if n > max_v:
+        n = max_v
+    return str(n)
 
 
-def gog_credentials_path_resolved() -> Path | None:
-    p_raw = effective_gog_credentials_path().strip()
-    if not p_raw:
+def effective_probe_inbox_max_results() -> str:
+    v = _db_str("probe_inbox_max_results")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=10, min_v=1, max_v=100)
+    return _bounded_int_str(getattr(settings, "probe_inbox_max_results", 10), default=10, min_v=1, max_v=100)
+
+
+_DEFAULT_PROBE_INBOX_GMAIL_SEARCH = "in:inbox category:primary newer_than:30d"
+
+
+def _sanitize_probe_inbox_gmail_search(raw: str) -> str | None:
+    """Single-line Gmail search string; reject obvious injection / binary."""
+    s = " ".join((raw or "").splitlines()).strip()
+    if not s or len(s) > 500:
         return None
-    p = Path(p_raw)
-    if not p.is_absolute():
-        root = Path(__file__).resolve().parent.parent
-        p = (root / p).resolve()
-    return p if p.exists() else None
+    if "\x00" in s or "`" in s:
+        return None
+    return s
+
+
+def effective_probe_inbox_gmail_search() -> str:
+    """
+    Gmail query passed to gog when the agent calls fetch_inbox_emails without a custom search.
+    Default is Primary + ~30 days so older client threads are not silently dropped (2d was too tight).
+    """
+    v = _db_str("probe_inbox_gmail_search")
+    if v:
+        cleaned = _sanitize_probe_inbox_gmail_search(v)
+        if cleaned:
+            return cleaned
+    env_v = (getattr(settings, "probe_inbox_gmail_search", None) or "").strip()
+    if env_v:
+        cleaned = _sanitize_probe_inbox_gmail_search(env_v)
+        if cleaned:
+            return cleaned
+    return _DEFAULT_PROBE_INBOX_GMAIL_SEARCH
+
+
+def effective_user_inbox_peek_max_results() -> str:
+    v = _db_str("user_inbox_peek_max_results")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=5, min_v=1, max_v=100)
+    return _bounded_int_str(
+        getattr(settings, "user_inbox_peek_max_results", 5), default=5, min_v=1, max_v=100
+    )
+
+
+def effective_prompt_email_agent_system_template() -> str:
+    """Full system prompt template with {vendor_name}, {role_title}, {product_context}, {learning_section}."""
+    v = _db_str("prompt_email_agent_system_template")
+    if v is not None and v.strip():
+        return v
+    from src.agent.prompts import EMAIL_AGENT_SYSTEM_TEMPLATE
+
+    return EMAIL_AGENT_SYSTEM_TEMPLATE
+
+
+def effective_prompt_probe_user_message() -> str:
+    v = _db_str("prompt_probe_user_message")
+    if v is not None and v.strip():
+        return v.strip()
+    from src.agent.prompts import PROBE_TRIGGER_MESSAGE
+
+    return PROBE_TRIGGER_MESSAGE
+
+
+def effective_prompt_probe_mode_append() -> str:
+    v = _db_str("prompt_probe_mode_append")
+    if v is not None and v.strip():
+        return v.strip()
+    from src.agent.prompts import PROBE_MODE_SYSTEM_APPEND
+
+    return PROBE_MODE_SYSTEM_APPEND.strip()
+
+
+def effective_prompt_action_review_append() -> str:
+    v = _db_str("prompt_action_review_append")
+    if v is not None and v.strip():
+        return v.strip()
+    from src.agent.prompts import ACTION_REVIEW_SYSTEM_APPEND
+
+    return ACTION_REVIEW_SYSTEM_APPEND.strip()
 
 
 def _mask_env_row(key: str, val: str) -> str:
@@ -363,25 +634,56 @@ def _mask_env_row(key: str, val: str) -> str:
     return mask_env_display(key, val)
 
 
-def recommended_ui_hints() -> dict[str, str]:
+def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
     """
-    Static recommended defaults for Configure grey hints (same role as a former .env.example).
-    Does not reflect runtime effective values or OS environment.
+    Static recommended defaults for one provider preset (Configure grey hints).
+    Does not reflect per-field DB overrides; base URL / model id shapes follow the preset.
     """
     s = settings
-    base = (s.llm_model or "openai/gpt-4o").strip()
-    role_small = "openai/gpt-4o-mini"
+    p = (preset or "openrouter").strip().lower()
+    if p not in _VALID_PRESETS:
+        p = "openrouter"
+    if p == "openai":
+        base = "gpt-4o"
+        role_small = "gpt-4o-mini"
+        base_url = _DEFAULT_OPENAI_BASE
+        embed_provider = "openai"
+        embed_model = "text-embedding-3-large"
+    else:
+        # openrouter + gemini_openrouter: OpenRouter-compatible base and vendor/model ids.
+        base = (s.llm_model or "openai/gpt-4o").strip()
+        role_small = "openai/gpt-4o-mini"
+        base_url = (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip()
+        embed_provider = "openrouter"
+        embed_model = (s.rag_embedding_model or "text-embedding-3-large").strip()
     return {
         "llm_model": base,
         "llm_model_main": base,
         "llm_model_search_json": role_small,
+        "llm_model_kb_web_gate": role_small,
         "llm_model_search_rerank": role_small,
         "llm_model_memory": role_small,
-        "rag_embedding_provider": (s.rag_embedding_provider or "openrouter").strip(),
-        "rag_embedding_model": (s.rag_embedding_model or "openai/text-embedding-3-large").strip(),
-        "openrouter_base_url": (s.openrouter_base_url or "https://openrouter.ai/api/v1").strip(),
+        "rc_web_retrieval_mode": "kb_first",
+        "retrieval_ranking_policy": json.dumps(_DEFAULT_RETRIEVAL_RANKING_POLICY, ensure_ascii=True),
+        "rag_embedding_provider": embed_provider,
+        "rag_embedding_model": embed_model,
+        "openrouter_base_url": base_url,
+        "scheduler_timezone": (getattr(s, "scheduler_timezone", None) or "Asia/Seoul").strip(),
+        "langsmith_project": (getattr(s, "langsmith_project", None) or "email_draft_agent").strip(),
         "guardrail_strictness": "balanced",
+        "probe_inbox_max_results": _bounded_int_str(
+            getattr(s, "probe_inbox_max_results", 10), default=10, min_v=1, max_v=100
+        ),
+        "probe_inbox_gmail_search": _DEFAULT_PROBE_INBOX_GMAIL_SEARCH,
+        "user_inbox_peek_max_results": _bounded_int_str(
+            getattr(s, "user_inbox_peek_max_results", 5), default=5, min_v=1, max_v=100
+        ),
     }
+
+
+def recommended_ui_hints() -> dict[str, str]:
+    """Hints matching the *effective* saved+env preset (backward compatible for older clients)."""
+    return _recommended_ui_hints_for_preset(effective_llm_provider_preset())
 
 
 def configure_saved_masked() -> dict[str, str]:
@@ -391,7 +693,13 @@ def configure_saved_masked() -> dict[str, str]:
         if not database.app_setting_is_set(k):
             continue
         v = database.get_app_setting(k, "") or ""
-        out[k] = _mask_env_row(k, str(v))
+        s = str(v)
+        if k in GUARDRAIL_ENCRYPTED_KEYS and s.startswith("enc:v1:"):
+            out[k] = "••• (encrypted at rest — forms above show decrypted text)"
+        elif k.startswith("prompt_") and len(s) > 0:
+            out[k] = f"••• ({len(s)} chars — see Prompt overrides above)"
+        else:
+            out[k] = _mask_env_row(k, s)
     return out
 
 
@@ -471,24 +779,62 @@ def gog_setup_diagnostics() -> dict[str, Any]:
 
 def runtime_settings_snapshot() -> dict:
     """Payload for GET /settings/runtime (values + metadata for the Configure UI)."""
+    from src.agent.prompt_seed import ensure_prompt_library_materialized
+
+    ensure_prompt_library_materialized()
     keys_db = RUNTIME_CONFIGURE_KEYS
     stored = {k: database.app_setting_is_set(k) for k in keys_db}
     or_key_db = database.app_setting_is_set("openrouter_api_key") and bool(
         (database.get_app_setting("openrouter_api_key") or "").strip()
     )
+    oai_key_db = database.app_setting_is_set("openai_api_key") and bool(
+        (database.get_app_setting("openai_api_key") or "").strip()
+    )
     gog_pw_db = database.app_setting_is_set("gog_keyring_password") and bool(
         (database.get_app_setting("gog_keyring_password") or "").strip()
     )
+    ls_key_db = database.app_setting_is_set("langsmith_api_key") and bool(
+        (database.get_app_setting("langsmith_api_key") or "").strip()
+    )
     oai_k = getattr(settings, "openai_api_key", None) or ""
+
+    # Preview must never take down the whole snapshot: a bad template (missing `{placeholder}`)
+    # would otherwise 500 GET /settings/runtime and leave Configure fields empty.
+    try:
+        from src.agent.prompts import build_prompt_effective_by_mode
+
+        prompt_effective_by_mode = build_prompt_effective_by_mode()
+    except Exception as e:
+        prompt_effective_by_mode = {
+            "assemble_order": (
+                "Preview failed — usually a `{placeholder}` mismatch in the main system template. "
+                "Keep {vendor_name}, {product_context}, {role_title}, {learning_section}."
+            ),
+            "modes": [],
+            "preview_error": f"{type(e).__name__}: {e}",
+        }
+
+    # Optional dependency: cryptography (see requirements.txt). Missing wheel must not 500 Configure.
+    try:
+        from src.configure_crypto import encryption_enabled
+
+        _enc_flag = bool(encryption_enabled())
+    except Exception:
+        _enc_flag = False
+
     return {
-        "scheduler_timezone_offset_hours": scheduler_timezone_offset_hours(),
+        "configure_encryption_enabled": _enc_flag,
+        "prompt_effective_by_mode": prompt_effective_by_mode,
         "effective": {
             "llm_provider_preset": effective_llm_provider_preset(),
             "llm_model": effective_llm_model(),
             "llm_model_main": effective_llm_model_main(),
             "llm_model_search_json": effective_llm_model_search_json(),
+            "llm_model_kb_web_gate": effective_llm_model_kb_web_gate(),
             "llm_model_search_rerank": effective_llm_model_search_rerank(),
             "llm_model_memory": effective_llm_model_memory(),
+            "rc_web_retrieval_mode": effective_rc_web_retrieval_mode(),
+            "retrieval_ranking_policy": effective_retrieval_ranking_policy(),
             "rag_embedding_provider": effective_rag_embedding_provider(),
             "rag_embedding_model": effective_rag_embedding_model(),
             "openrouter_base_url": effective_chat_base_url(),
@@ -498,18 +844,35 @@ def runtime_settings_snapshot() -> dict:
             "xdg_config_home": effective_xdg_config_home(),
             "gog_credentials_path": effective_gog_credentials_path(),
             "scheduler_timezone": effective_scheduler_timezone(),
+            "langsmith_tracing": "true" if effective_langsmith_tracing() else "false",
+            "langsmith_project": effective_langsmith_project(),
+            "probe_inbox_max_results": effective_probe_inbox_max_results(),
+            "probe_inbox_gmail_search": effective_probe_inbox_gmail_search(),
+            "user_inbox_peek_max_results": effective_user_inbox_peek_max_results(),
             "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
             "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
-            "guardrail_exclude_subject_keywords": effective_guardrail_exclude_subject_keywords(),
+            "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
+            "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
+            "guardrail_team_guidance": effective_guardrail_team_guidance(),
             "guardrail_strictness": effective_guardrail_strictness(),
+            "prompt_email_agent_system_template": effective_prompt_email_agent_system_template(),
+            "prompt_probe_user_message": effective_prompt_probe_user_message(),
+            "prompt_probe_mode_append": effective_prompt_probe_mode_append(),
+            "prompt_action_review_append": effective_prompt_action_review_append(),
         },
         "stored_in_database": {k: stored[k] for k in keys_db},
         "openrouter_api_key_set_in_database": or_key_db,
+        "openai_api_key_set_in_database": oai_key_db,
         "openrouter_api_key_set_in_env": bool((settings.openrouter_api_key or "").strip()),
         "openai_api_key_set_in_env": bool(oai_k.strip()),
+        "langsmith_api_key_set_in_database": ls_key_db,
+        "langsmith_api_key_set_in_env": bool((getattr(settings, "langsmith_api_key", None) or "").strip()),
         "gog_keyring_password_set_in_database": gog_pw_db,
         "gog_setup": gog_setup_diagnostics(),
         "recommended_hints": recommended_ui_hints(),
+        "recommended_hints_by_preset": {
+            k: _recommended_ui_hints_for_preset(k) for k in sorted(_VALID_PRESETS)
+        },
         "configure_saved_masked": configure_saved_masked(),
         "recommended_models": [
             "openai/gpt-4o",
@@ -518,26 +881,28 @@ def runtime_settings_snapshot() -> dict:
             "google/gemini-pro-1.5",
         ],
         "recommended_embedding_models": [
-            "openai/text-embedding-3-large",
-            "openai/text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-3-small",
         ],
         "provider_presets": {
             "openrouter": {
                 "label": "OpenRouter",
                 "hint": "Multi-vendor models via one API; use vendor/model ids.",
                 "default_base_url": "https://openrouter.ai/api/v1",
+                "recommended_embedding_provider": "openrouter",
                 "recommended_models": [
                     "openai/gpt-4o",
                     "openai/gpt-4o-mini",
                     "anthropic/claude-3.5-sonnet",
                     "google/gemini-2.0-flash-001",
                 ],
-                "recommended_embedding_models": ["openai/text-embedding-3-large", "openai/text-embedding-3-small"],
+                "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
             },
             "openai": {
                 "label": "OpenAI",
-                "hint": "Direct OpenAI API; set OPENAI_API_KEY or paste a key in Configure. RC web search uses OpenAI Responses + web_search (not OpenRouter).",
+                "hint": "Direct OpenAI API. Use OPENAI_API_KEY in the environment or save openai_api_key in Configure. Base URL is fixed to https://api.openai.com/v1. RC web search uses OpenAI Responses + web_search.",
                 "default_base_url": _DEFAULT_OPENAI_BASE,
+                "recommended_embedding_provider": "openai",
                 "recommended_models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1-mini"],
                 "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
             },
@@ -545,11 +910,12 @@ def runtime_settings_snapshot() -> dict:
                 "label": "Gemini (via OpenRouter)",
                 "hint": "Google Gemini models routed through OpenRouter (same client as OpenRouter preset).",
                 "default_base_url": "https://openrouter.ai/api/v1",
+                "recommended_embedding_provider": "openrouter",
                 "recommended_models": [
                     "google/gemini-2.0-flash-001",
                     "google/gemini-pro-1.5",
                 ],
-                "recommended_embedding_models": ["openai/text-embedding-3-large", "openai/text-embedding-3-small"],
+                "recommended_embedding_models": ["text-embedding-3-large", "text-embedding-3-small"],
             },
         },
     }

@@ -22,7 +22,8 @@ def get_chat_llm(*, model: str, temperature: float, extra_body: dict | None = No
         preset = effective_llm_provider_preset()
         if preset == "openai":
             raise ValueError(
-                "Set OPENAI_API_KEY (or OPENROUTER_API_KEY) in the environment or paste an API key in Configure."
+                "Set OPENAI_API_KEY in the environment or paste an OpenAI API key in Configure and Save "
+                "(stored as openai_api_key)."
             )
         raise ValueError(
             "Set OPENROUTER_API_KEY in the environment or paste an API key in Configure."

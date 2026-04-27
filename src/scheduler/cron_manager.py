@@ -1,34 +1,103 @@
 """Cron job manager using APScheduler."""
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from src.config import settings
+from src.api import run_state
 from src.db import database
-from src.runtime_config import effective_scheduler_timezone
+from src.runtime_config import (
+    effective_guardrail_exclude_intent_keywords,
+    effective_guardrail_exclude_sender_domains,
+    effective_guardrail_include_intent_keywords,
+    effective_guardrail_include_sender_domains,
+    effective_guardrail_strictness,
+)
 
 
 _scheduler: BackgroundScheduler | None = None
 
 
+def describe_cron_expression(cron_expr: str) -> str:
+    """Return a user-facing schedule summary for common patterns."""
+    parts = (cron_expr or "").strip().split()
+    if len(parts) != 5:
+        return "Custom cron schedule"
+    minute, hour, day, month, dow = parts
+    if minute == "0" and hour.startswith("*/") and day == "*" and month == "*" and dow in {"*", "1-5"}:
+        n = hour[2:] or "?"
+        if dow == "1-5":
+            return f"Every {n} hours on weekdays"
+        return f"Every {n} hours (all days)"
+    if minute.isdigit() and hour.isdigit() and day == "*" and month == "*" and dow in {"*", "1-5"}:
+        hh = int(hour)
+        mm = int(minute)
+        if dow == "1-5":
+            return f"At {hh:02d}:{mm:02d} on weekdays"
+        return f"Daily at {hh:02d}:{mm:02d}"
+    if day == "*" and month == "*" and dow == "1-5":
+        return "Weekdays only (custom time)"
+    return "Custom cron schedule"
+
+
+def preview_next_runs(cron_expr: str, tz: str, count: int = 3) -> list[str]:
+    """Return next N run times formatted in the given timezone."""
+    out: list[str] = []
+    try:
+        zone = ZoneInfo((tz or "Asia/Seoul").strip() or "Asia/Seoul")
+    except Exception:
+        zone = ZoneInfo("Asia/Seoul")
+    try:
+        trigger = CronTrigger.from_crontab((cron_expr or "").strip(), timezone=zone)
+    except Exception:
+        return out
+    now = datetime.now(zone)
+    prev = None
+    for _ in range(max(0, int(count))):
+        nxt = trigger.get_next_fire_time(prev, now if prev is None else prev)
+        if not nxt:
+            break
+        out.append(nxt.astimezone(zone).strftime("%Y-%m-%d %H:%M"))
+        prev = nxt
+    return out
+
+
 def _run_probe_job(name: str = "default"):
     from src.agent.probe_actions import merge_csm_actions_metadata
-    from src.agent.prompts import PROBE_TRIGGER_MESSAGE
+    from src.agent.prompts import get_probe_trigger_message
     from src.agent.email_agent import run_agent
+    run_id = run_state.create_run(trigger_type=f"cron:{name}", input_text=get_probe_trigger_message()[:500])
+    run_state.mark_running(run_id)
+    run_state.add_event(run_id, "chain_start", f"Cron job started: {name}")
     try:
-        output = run_agent(PROBE_TRIGGER_MESSAGE, probe=True)
+        output = run_agent(get_probe_trigger_message(), probe=True)
+        run_state.complete_run(run_id, output)
         existing = database.latest_dashboard_actions_by_gmail_thread()
-        meta = merge_csm_actions_metadata(output, {}, existing_by_thread=existing)
+        meta = merge_csm_actions_metadata(
+            output,
+            {
+                "run_id": run_id,
+                "guardrail_include_sender_domains": effective_guardrail_include_sender_domains(),
+                "guardrail_exclude_sender_domains": effective_guardrail_exclude_sender_domains(),
+                "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
+                "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
+                "guardrail_strictness": effective_guardrail_strictness(),
+            },
+            existing_by_thread=existing,
+        )
         database.log_interaction(
-            f"cron:{name}", PROBE_TRIGGER_MESSAGE, output, "completed", metadata=meta
+            f"cron:{name}", get_probe_trigger_message(), output, "completed", metadata=meta
         )
     except Exception as e:
-        database.log_interaction(f"cron:{name}", PROBE_TRIGGER_MESSAGE, "", "error", str(e))
+        run_state.fail_run(run_id, str(e))
+        database.log_interaction(f"cron:{name}", get_probe_trigger_message(), "", "error", str(e))
 
 
 def get_scheduler() -> BackgroundScheduler:
     global _scheduler
     if _scheduler is None:
-        tz = effective_scheduler_timezone()
+        tz = getattr(settings, "scheduler_timezone", "Asia/Seoul")
         _scheduler = BackgroundScheduler(timezone=tz)
         _scheduler.start()
         for j in database.get_cron_jobs():
@@ -38,7 +107,7 @@ def get_scheduler() -> BackgroundScheduler:
 
 
 def get_scheduler_timezone() -> str:
-    return effective_scheduler_timezone()
+    return getattr(settings, "scheduler_timezone", "Asia/Seoul")
 
 
 def _add_job_to_scheduler(name: str, cron_expr: str, tz: str):

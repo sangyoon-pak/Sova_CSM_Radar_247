@@ -1,15 +1,12 @@
-# Scripts Inventory
+# Scripts (runtime, install, local hygiene)
 
-This folder is intentionally small and each file has a current use:
+This folder stays small. **Do not remove** items the app or install docs depend on.
 
-- `gmail-get-decoded.py` — Gmail read helper used by runtime inbox fetch tool.
-- `install-gog-local.sh` — local gog CLI installer for Gmail OAuth setup.
-- `test-gmail-local.sh` — quick local Gmail verification helper.
-- `test_search_agent_e2e.py` — end-to-end retrieval smoke test.
-- `test_retrieval_local.py` — local retrieval debugging with query/file inputs.
-- `test_full_agent_reply.py` — full agent debug run with optional retrieval logging.
-- `test_langsmith_trace.py` — minimal LangSmith tracing verification.
+| File | Purpose |
+|------|--------|
+| `gmail-get-decoded.py` | Invoked by `src/agent/tools/gmail_tool.py` for Gmail fetch (subprocess). Required at runtime when using Gmail. |
+| `install-gog-local.sh` | Bundled `gog` CLI installer (macOS). See [docs/INSTALLATION.md](../docs/INSTALLATION.md). |
+| `reset_configure_overrides.py` | Clears Configure DB overrides and local gog OAuth under effective `GOG_HOME`. See [docs/INSTALLATION.md](../docs/INSTALLATION.md) and [docs/GMAIL_SETUP.md](../docs/GMAIL_SETUP.md). |
+| `reset_local_data.py` | **Destructive:** removes local app SQLite, KB FTS DB, RAG dir, and uploaded KB files under `data/`, then runs `init_db()`. Use **before publishing or cloning for public distribution** so no trial DB/uploads ship (`python scripts/reset_local_data.py --yes`). **Stop the server first.** |
 
-If a script is no longer referenced in docs, runtime paths, or active debugging workflows,
-it should be removed in the next cleanup pass.
-
+**`scripts/.local/`** — Default layout for `GOG_HOME` (binaries + OAuth). Listed in `.gitignore`; never commit tokens or `credentials.json` here.

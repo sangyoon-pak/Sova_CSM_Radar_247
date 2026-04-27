@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sova — CSM Radar Agent 24/7</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9,100..1000;1,9,100..1000&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <style>
     /* Enterprise-style tokens: neutral surfaces, one primary accent, restrained destructive. */
     :root {
@@ -30,8 +27,7 @@
       --shadow: 0 1px 2px rgba(45, 44, 41, 0.04), 0 4px 16px rgba(45, 44, 41, 0.05);
       --shadow-sm: 0 1px 0 rgba(45, 44, 41, 0.04);
       --radius: 12px;
-      --sans: "DM Sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
-      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
     html[data-theme="light"] {
       --bg: #f5f4f1;
@@ -70,8 +66,7 @@
       --shadow: 0 2px 8px rgba(0,0,0,0.32);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.35rem 1.5rem 2rem; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
-    code, pre, kbd, samp { font-family: var(--mono); }
+    body { font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 1.35rem 1.5rem 2rem; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
     a { color: var(--accent); text-underline-offset: 2px; }
     h1 { font-size: 1.35rem; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.025em; line-height: 1.28; color: var(--text); }
     .subtitle { color: var(--muted); font-size: 0.875rem; margin-bottom: 0; font-weight: 450; letter-spacing: 0.01em; }
@@ -284,6 +279,18 @@
     .status-pill { font-size: 0.78rem; color: var(--muted); padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid var(--border); background: transparent; }
     .status-pill.running { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
     .status-pill.error { border-color: color-mix(in srgb, var(--danger) 60%, var(--border)); color: var(--danger); }
+    .configure-inline-tag {
+      display: inline-block;
+      margin-left: 0.45rem;
+      padding: 0.05rem 0.42rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--muted);
+      background: var(--surface2);
+      vertical-align: middle;
+    }
     .bubble-body {
       font-family: var(--mono);
       white-space: pre-wrap;
@@ -437,6 +444,10 @@
       overflow-y: auto;
       font-family: var(--mono);
     }
+    .run-queue-list { margin-top: 0.45rem; display:flex; flex-direction:column; gap:0.4rem; }
+    .run-queue-item { border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.6rem; background:var(--surface); }
+    .run-queue-meta { color:var(--muted); font-size:0.78rem; }
+    .run-queue-status { font-weight:800; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.04em; }
     .hero-blurb {
       color: var(--muted);
       font-size: 0.875rem;
@@ -452,101 +463,27 @@
     .landing-grid {
       display: grid;
       grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr);
-      gap: 0.8rem;
+      gap: 1rem;
       align-items: stretch;
-      margin-top: 0.65rem;
-    }
-    .landing-grid--2x2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .landing-top-next {
-      margin-top: 0.65rem;
-      margin-bottom: 0.55rem;
-    }
-    .landing-hero-grid {
-      display: grid;
-      grid-template-columns: 1.16fr 1fr;
-      gap: 0.75rem;
-      align-items: start;
-      margin-top: 0.65rem;
-    }
-    .landing-hero-side {
-      display: grid;
-      gap: 0.65rem;
-    }
-    .landing-note-card {
-      border: 1px solid color-mix(in srgb, var(--border-subtle) 90%, transparent);
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--muted) 4%, var(--surface));
-      padding: 0.58rem 0.7rem;
-    }
-    .landing-inline-note {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.65rem;
-      padding: 0.55rem 0.62rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      background: color-mix(in srgb, var(--muted) 5%, var(--surface));
-    }
-    .landing-inline-note__mark {
-      flex-shrink: 0;
-      width: 1.2rem;
-      height: 1.2rem;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--muted);
-      margin-top: 0.05rem;
-      background: var(--surface);
-    }
-    .landing-inline-note__body {
-      min-width: 0;
-    }
-    .landing-inline-note__title {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 0.18rem;
-    }
-    .landing-inline-note__body p {
-      margin: 0;
-      font-size: 0.82rem;
-      line-height: 1.42;
-      color: var(--muted);
-    }
-    .landing-list--plain .item {
-      background: transparent;
-      border: none;
-      border-top: 1px solid var(--border-subtle);
-      border-radius: 0;
-      padding: 0.42rem 0;
-    }
-    .landing-list--plain .item:first-child {
-      border-top: none;
-      padding-top: 0.2rem;
+      margin-top: 0.8rem;
     }
     .landing-panel {
-      border: 1px solid var(--border-subtle);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
       background: var(--surface);
-      padding: 0.9rem;
+      padding: 1rem;
     }
     .landing-logo-wrap {
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 190px;
-      background: linear-gradient(165deg, color-mix(in srgb, var(--accent-soft) 72%, var(--surface)), var(--surface));
-      border-radius: 12px;
+      min-height: 220px;
+      background: linear-gradient(165deg, color-mix(in srgb, var(--accent-soft) 75%, var(--surface)), var(--surface));
+      border-radius: 14px;
       border: 1px solid var(--border-subtle);
       position: relative;
       overflow: hidden;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.85rem;
     }
     .sova-orb {
       width: 88px;
@@ -595,9 +532,9 @@
     }
     .landing-copy {
       color: var(--muted);
-      font-size: 0.84rem;
-      line-height: 1.48;
-      margin-bottom: 0.55rem;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      margin-bottom: 0.7rem;
     }
     .landing-copy code {
       font-family: var(--mono);
@@ -656,13 +593,13 @@
       color: var(--muted);
     }
     .landing-grid.landing-extra {
-      margin-top: 0.65rem;
+      margin-top: 0.85rem;
     }
     .landing-list {
       display: grid;
-      gap: 0.35rem;
-      font-size: 0.85rem;
-      line-height: 1.42;
+      gap: 0.45rem;
+      font-size: 0.86rem;
+      line-height: 1.45;
       color: var(--text);
     }
     .landing-list .item {
@@ -674,58 +611,93 @@
     ul.landing-next-ul {
       margin: 0.35rem 0 0.25rem 0;
       padding-left: 1.25rem;
-      max-width: 48rem;
+      width: 100%;
+      max-width: none;
+      box-sizing: border-box;
       font-size: 0.88rem;
       line-height: 1.5;
       color: var(--text);
     }
     ul.landing-next-ul li { margin-bottom: 0.45rem; }
-    ul.landing-next-ul code { font-size: 0.84em; }
-    .landing-next-steps-details {
-      margin: 0;
-      padding: 0;
-      border: none;
+    /* Deeper inset + spacing vs. lead copy (only in Next steps card) */
+    .landing-next-steps .landing-next-ul {
+      margin-top: 0.5rem;
+      margin-bottom: 0.35rem;
+      padding-left: 1.65rem;
+      list-style-position: outside;
     }
-    .landing-next-steps-details > summary {
+    .landing-next-steps .landing-next-ul li {
+      padding-left: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
+    ul.landing-next-ul code { font-size: 0.84em; }
+    .landing-docs-line a { font-weight: 600; }
+    /* Landing: full-width “Next steps” card (matches container width; inner blocks use full row) */
+    .landing-panel.landing-next-steps {
+      width: 100%;
+      max-width: none;
+      margin-bottom: 0.75rem;
+      padding: 0;
+      overflow: hidden;
+      background: var(--surface-raised);
+    }
+    .landing-next-steps > summary {
       cursor: pointer;
       list-style: none;
       display: flex;
-      align-items: flex-start;
-      gap: 0.35rem;
-      font-size: 1.02rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.01em;
+      align-items: center;
+      gap: 0.4rem;
       margin: 0;
-      user-select: none;
-    }
-    .landing-next-steps-details > summary::-webkit-details-marker {
-      display: none;
-    }
-    .landing-next-steps-details > summary::marker {
-      content: '';
-    }
-    .landing-next-steps-details__caret {
-      display: inline-block;
-      color: var(--muted);
+      padding: 0.7rem 1.35rem;
+      font-weight: 700;
       font-size: 0.95rem;
-      font-weight: 900;
-      margin-top: 0.14rem;
-      transition: transform 0.18s ease;
-      flex-shrink: 0;
+      color: var(--text);
+      background: color-mix(in srgb, var(--accent) 9%, var(--surface-raised));
+      border-bottom: 1px solid transparent;
     }
-    .landing-next-steps-details[open] .landing-next-steps-details__caret {
-      transform: rotate(90deg);
+    .landing-next-steps[open] > summary {
+      border-bottom-color: var(--border-subtle);
     }
-    .landing-next-steps-details__body {
-      margin-top: 0.55rem;
+    .landing-next-steps > summary:focus { outline: none; }
+    .landing-next-steps > summary:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      outline-offset: -2px;
     }
-    .landing-docs-line a { font-weight: 600; }
+    .landing-next-steps > :not(summary) {
+      max-width: none;
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: 1.35rem;
+      padding-right: 1.35rem;
+    }
+    .landing-next-steps > :not(summary):first-of-type {
+      padding-top: 1rem;
+    }
+    .landing-next-steps > :not(summary):last-child {
+      padding-bottom: 1.15rem;
+    }
+    .landing-next-steps .landing-disclaimer {
+      width: 100%;
+      max-width: none;
+      margin: 0.75rem 0 0.35rem;
+      padding: 0.85rem 1rem;
+    }
+    .landing-next-steps .landing-cta {
+      margin-top: 0.5rem;
+    }
+    .landing-next-steps__lead {
+      margin-bottom: 0.55rem;
+    }
+    .landing-next-steps__docs {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin: 0.65rem 0 0.5rem 0;
+    }
     .landing-cta {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.45rem;
-      margin-top: 0.6rem;
+      gap: 0.5rem;
+      margin-top: 0.85rem;
     }
     @media (max-width: 980px) {
       .landing-grid { grid-template-columns: 1fr; }
@@ -954,6 +926,25 @@
       border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
       background: color-mix(in srgb, var(--accent) 8%, transparent);
     }
+    .thread-item-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.35rem;
+      margin-bottom: 0.4rem;
+    }
+    .thread-item-row .thread-chk {
+      flex-shrink: 0;
+      margin-top: 0.42rem;
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .thread-item-row .thread-item {
+      flex: 1;
+      min-width: 0;
+      margin-bottom: 0;
+    }
     .thread-title { font-weight: 600; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
     .thread-meta { color: var(--muted); font-size: 0.75rem; margin-top: 0.12rem; font-variant-numeric: tabular-nums; }
     .transcript {
@@ -1093,142 +1084,6 @@
       gap: 0.75rem;
       align-items: start;
     }
-    .kb-section-panel {
-      margin-top: 0.5rem;
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius);
-      padding: 0.35rem 0.65rem 0.75rem;
-      background: var(--surface-raised);
-    }
-    .kb-section-panel > summary {
-      cursor: pointer;
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 0.875rem;
-      list-style: none;
-      padding: 0.35rem 0;
-    }
-    .kb-section-panel > summary::-webkit-details-marker {
-      display: none;
-    }
-    .kb-section-panel > summary .section-caret {
-      display: inline-block;
-      margin-right: 0.25rem;
-      transition: transform 0.15s ease;
-    }
-    .kb-section-panel[open] > summary .section-caret {
-      transform: rotate(90deg);
-    }
-    .kb-section-panel__body {
-      margin-top: 0.5rem;
-    }
-    .kb-list-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem;
-      margin-bottom: 0.45rem;
-    }
-    .kb-list-scroll {
-      max-height: min(60vh, 520px);
-      overflow-y: auto;
-      padding: 0.5rem 0.65rem !important;
-    }
-    /* .result-box sets pre-wrap; when inherited into <details>, whitespace text nodes between
-       </summary> and the body become huge vertical gaps — reset for KB / RC lists only */
-    #docRegistry.kb-list-scroll,
-    #rcUrlList.kb-list-scroll {
-      white-space: normal;
-    }
-    .kb-doc-row,
-    .rc-url-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.5rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px dashed var(--border);
-    }
-    .kb-doc-row:last-child,
-    .rc-url-row:last-child {
-      border-bottom: none;
-    }
-    .kb-doc-row__details {
-      flex: 1;
-      min-width: 0;
-      margin: 0;
-      border: none;
-      padding: 0;
-    }
-    .kb-doc-row__summary {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.5rem;
-      cursor: pointer;
-      list-style: none;
-      font-size: 0.9rem;
-      line-height: 1.35;
-    }
-    .kb-doc-row__summary::-webkit-details-marker {
-      display: none;
-    }
-    .kb-doc-row__summary::marker {
-      content: '';
-    }
-    .kb-doc-row__title-line {
-      min-width: 0;
-      flex: 1;
-    }
-    .kb-doc-row__chev {
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 1.5rem;
-      height: 1.5rem;
-      margin-top: 0.05rem;
-      border-radius: 6px;
-      background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
-      border: 1px solid var(--border-subtle);
-      color: var(--accent);
-      font-size: 0.75rem;
-      font-weight: 700;
-      transition: transform 0.15s ease;
-    }
-    .kb-doc-row__details[open] .kb-doc-row__chev {
-      transform: rotate(90deg);
-    }
-    .kb-doc-row__body {
-      margin-top: 0.45rem;
-      padding: 0.4rem 0 0;
-      border-top: 1px dashed var(--border-subtle);
-    }
-    .kb-doc-row__body code {
-      font-size: 0.78rem;
-      display: block;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      line-height: 1.4;
-      color: var(--text);
-    }
-    .kb-doc-row__meta {
-      display: block;
-      margin-top: 0.35rem;
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-    .visually-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
     .dashboard-layout-bar {
       align-items: center;
       gap: 0.4rem;
@@ -1269,23 +1124,9 @@
       padding: 0.75rem 0.85rem;
       box-shadow: var(--shadow-sm);
       display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      gap: 0.45rem 0.55rem;
-      min-width: 0;
-    }
-    .csm-action-card__pick {
-      flex-shrink: 0;
-      padding-top: 0.2rem;
-      cursor: pointer;
-    }
-    .csm-action-card__body-col {
-      flex: 1;
-      min-width: 0;
-      display: flex;
       flex-direction: column;
       gap: 0.45rem;
+      min-width: 0;
     }
     .dashboard-feed--grid .csm-action-card {
       min-height: auto;
@@ -1310,9 +1151,27 @@
     .csm-action-card .csm-action-card__main > summary .csm-action-card__title {
       color: var(--text);
       margin: 0;
+      text-align: left;
+    }
+    .csm-action-card__summary-main {
       flex: 1;
       min-width: 0;
-      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .csm-action-card__meta-preview {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .csm-action-card__meta-preview strong {
+      color: var(--text);
+      font-weight: 700;
+      margin-right: 0.25rem;
     }
     .csm-action-card__main > summary::-webkit-details-marker {
       display: none;
@@ -1400,6 +1259,29 @@
       white-space: pre-wrap;
       color: var(--text);
     }
+    .csm-action-card__facts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.65rem;
+      align-items: center;
+      margin: 0.35rem 0 0.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .csm-action-card__facts strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+    .csm-action-card__pill {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
     .csm-action-card__meta {
       font-size: 0.6875rem;
       color: var(--muted);
@@ -1486,11 +1368,99 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.35rem;
-      flex: 1 0 100%;
-      width: 100%;
-      margin-top: 0;
+      margin-top: auto;
       padding-top: 0.35rem;
       border-top: 1px solid var(--border-subtle);
+    }
+    .csm-action-card__head {
+      display: flex;
+      gap: 0.45rem;
+      align-items: flex-start;
+      margin-bottom: 0.35rem;
+    }
+    .csm-action-card__cbwrap {
+      flex: 0 0 auto;
+      padding-top: 0.12rem;
+    }
+    .csm-action-card__cbwrap input {
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .csm-action-card__head-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .csm-action-card__identity {
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--muted);
+      margin-top: 0.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.65rem;
+      align-items: baseline;
+    }
+    .csm-action-card__identity strong {
+      color: var(--text);
+      font-weight: 700;
+      margin-right: 0.2rem;
+    }
+    .csm-action-card__meta-expanded {
+      margin-top: 0.42rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: 9px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--accent-soft) 32%, var(--surface));
+    }
+    .csm-action-card__feedback {
+      margin-top: 0.55rem;
+      padding-top: 0.55rem;
+      border-top: 1px dashed var(--border-subtle);
+    }
+    .csm-action-card__feedback-details summary {
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+    }
+    .csm-action-card__feedback-details summary::-webkit-details-marker { display: none; }
+    .csm-action-card__feedback-details summary::marker { content: ''; }
+    .csm-action-card__feedback-caret {
+      display: inline-block;
+      margin-right: 0.3rem;
+      color: var(--muted);
+      font-weight: 900;
+      transition: transform 0.16s ease;
+    }
+    .csm-action-card__feedback-details[open] .csm-action-card__feedback-caret {
+      transform: rotate(90deg);
+    }
+    .csm-action-card__feedback-details[open] summary {
+      margin-bottom: 0.35rem;
+    }
+    .csm-action-card__feedback-label {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: 700;
+      margin-bottom: 0.28rem;
+      color: var(--text);
+    }
+    .csm-action-card__feedback-ta {
+      width: 100%;
+      min-height: 3.25rem;
+      font-size: 0.82rem;
+      margin-bottom: 0.4rem;
+      resize: vertical;
+    }
+    .dashboard-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.5rem;
+      margin-right: 0.5rem;
     }
     .csm-legacy-card {
       border: 1px dashed var(--border);
@@ -1660,61 +1630,56 @@
     <section>
       <h2 data-i18n="landingTitle">Welcome to Sova</h2>
       <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.</p>
-      <div class="landing-panel landing-top-next">
-        <details class="landing-next-steps-details">
-          <summary>
-            <span class="landing-next-steps-details__caret" aria-hidden="true">▸</span>
-            <span class="landing-title" style="margin-bottom:0;" data-i18n="landingNextStepsTitle">Next steps</span>
-          </summary>
-          <div class="landing-next-steps-details__body">
-            <p class="landing-copy" style="margin-bottom:0.55rem;" data-i18n-html="landingNextStepsLead">You already cloned the repo and started the server—continue here in the UI:</p>
-            <ul class="landing-next-ul">
-              <li data-i18n-html="landingNextStepsLi1"></li>
-              <li data-i18n-html="landingNextStepsLi2"></li>
-              <li data-i18n-html="landingNextStepsLi3"></li>
-              <li data-i18n-html="landingNextStepsLi4"></li>
-            </ul>
-            <p class="landing-copy landing-docs-line" style="font-size:0.84rem;color:var(--muted);margin:0.65rem 0 0.5rem 0;">
-              <span data-i18n-html="landingDocsGithubBefore"></span>
-              <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
-              <span data-i18n-html="landingDocsGithubAfter"></span>
-            </p>
-            <div class="landing-cta" style="margin-top:0;">
-              <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
-              <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
-            </div>
-            <div class="landing-inline-note">
-              <span class="landing-inline-note__mark">i</span>
-              <div class="landing-inline-note__body">
-                <div class="landing-inline-note__title">
-                  <span data-i18n="landingNoteMark">Note</span> · <span data-i18n="landingDisclaimerTitle">Email provider note</span>
-                </div>
-                <p data-i18n-html="landingDisclaimerBody">Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.</p>
-              </div>
-            </div>
-          </div>
-        </details>
-      </div>
-      <div class="landing-hero-grid">
-        <div class="landing-panel">
-            <div class="landing-title" style="margin-top:0.8rem;" data-i18n="landingQuickStartTitle">Quick start</div>
-            <div class="landing-list landing-list--plain">
-              <div class="item" data-i18n-html="landingStep1"><strong>1) Configure agent profile</strong><br/>Set vendor, role, and product scope in Workbench so triage is context-aware.</div>
-              <div class="item" data-i18n-html="landingStep2"><strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.</div>
-              <div class="item" data-i18n-html="landingStep3"><strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.</div>
-              <div class="item" data-i18n-html="landingStep4"><strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.</div>
-            </div>
+      <details class="landing-panel landing-next-steps">
+        <summary>
+          <span class="section-caret">▸</span>
+          <span data-i18n="landingNextStepsTitle">Next steps</span>
+        </summary>
+        <p class="landing-copy landing-next-steps__lead" data-i18n-html="landingNextStepsLead">You already cloned the repo and started the server—continue here in the UI:</p>
+        <ul class="landing-next-ul">
+          <li data-i18n-html="landingNextStepsLi1"></li>
+          <li data-i18n-html="landingNextStepsLi2"></li>
+          <li data-i18n-html="landingNextStepsLi3"></li>
+          <li data-i18n-html="landingNextStepsLi4"></li>
+          <li data-i18n-html="landingNextStepsLi5"></li>
+        </ul>
+        <div class="landing-disclaimer">
+          <div class="landing-disclaimer__title" data-i18n="landingDisclaimerTitle">Email provider note</div>
+          <p data-i18n-html="landingDisclaimerBody">Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.</p>
         </div>
-        <div class="landing-panel landing-hero-side">
-            <div class="landing-logo-wrap">
-              <div class="sova-orb" aria-hidden="true"></div>
-            </div>
-            <div class="landing-title" data-i18n="landingLogoTitle">Sova — CSM Radar Agent 24/7</div>
-            <p class="landing-copy" data-i18n="landingLogoCopy">Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.</p>
-            <div class="landing-cta">
-              <button type="button" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
-              <button type="button" class="ghost" onclick="showTab('tab-action-dashboard')" data-i18n="landingCtaDashboard">Open Action dashboard</button>
-            </div>
+        <p class="landing-copy landing-docs-line landing-next-steps__docs">
+          <span data-i18n-html="landingDocsGithubBefore"></span>
+          <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
+          <span data-i18n-html="landingDocsGithubAfter"></span>
+        </p>
+        <p class="landing-copy landing-docs-line landing-next-steps__docs" data-i18n-html="landingDocsArchitectureLine"></p>
+        <div class="landing-cta">
+          <button type="button" onclick="showTab('tab-configure')" data-i18n="landingCtaConfigure">Open Configure</button>
+          <button type="button" class="ghost" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
+          <button type="button" class="ghost" onclick="showTab('tab-cron')" data-i18n="landingCtaCron">Open Cron</button>
+        </div>
+      </details>
+      <div class="landing-grid">
+        <div class="landing-panel">
+          <div class="landing-logo-wrap">
+            <div class="sova-orb" aria-hidden="true"></div>
+          </div>
+          <div class="landing-title" data-i18n="landingLogoTitle">Sova — CSM Radar Agent 24/7</div>
+          <p class="landing-copy" data-i18n="landingLogoCopy">Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.</p>
+          <div class="landing-cta">
+            <button type="button" onclick="showTab('tab-agent')" data-i18n="landingCtaWorkbench">Open Workbench</button>
+            <button type="button" class="ghost" onclick="showTab('tab-action-dashboard')" data-i18n="landingCtaDashboard">Open Action dashboard</button>
+          </div>
+        </div>
+        <div class="landing-panel">
+          <div class="landing-title" data-i18n="landingQuickStartTitle">Quick start</div>
+          <div class="landing-list">
+            <div class="item" data-i18n-html="landingStep1"><strong>1) Configure agent profile</strong><br/>Set vendor, role, and product scope in Workbench so triage is context-aware.</div>
+            <div class="item" data-i18n-html="landingStep2"><strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.</div>
+            <div class="item" data-i18n-html="landingStep3"><strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.</div>
+            <div class="item" data-i18n-html="landingStep4"><strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.</div>
+            <div class="item" data-i18n-html="landingStep5"><strong>5) Schedule inbox probes</strong><br/>Use the <strong>Cron</strong> tab for presets and schedules, or describe cadence in Workbench (cron admin mode) when your message is about jobs.</div>
+          </div>
         </div>
       </div>
       <div class="landing-grid landing-extra">
@@ -1758,8 +1723,24 @@
               <button type="button" class="ghost" onclick="applyProviderPresetDefaults()" data-i18n="configureApplyPreset">Apply preset defaults</button>
             </div>
             <p class="configure-hint" data-i18n-html="configureOrHint">Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.</p>
-            <div class="configure-field"><label for="cfg_openrouter_base_url" data-i18n="cfgOpenrouterUrl">Base URL</label><input id="cfg_openrouter_base_url" type="text" /><span class="configure-env" id="cfg_env_openrouter_base_url"></span></div>
-            <div class="configure-field"><label for="cfg_openrouter_api_key" data-i18n="cfgOpenrouterKey">API key (chat &amp; embeddings)</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
+            <div class="configure-field" id="cfg_base_url_block">
+              <label for="cfg_openrouter_base_url" id="cfg_base_url_label">Base URL</label>
+              <input id="cfg_openrouter_base_url" type="text" />
+              <span class="configure-env" id="cfg_env_openrouter_base_url"></span>
+              <p class="configure-hint" id="cfg_base_url_hint" style="margin:0.25rem 0 0 0;font-size:0.78rem;"></p>
+            </div>
+            <div class="configure-field"><label for="cfg_openrouter_api_key" id="cfg_chat_api_key_label">API key</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /><p class="configure-hint" id="cfg_chat_api_key_hint" style="margin:0.25rem 0 0 0;font-size:0.78rem;"></p></div>
+            <p class="configure-hint" style="margin-top:0.55rem;">Use a valid IANA zone (e.g. Asia/Seoul). Thread list, message times, action cards, run traces, and cron summaries all display in this timezone. LangSmith emits traces for new runs only when tracing is on and a key is set.</p>
+            <div class="configure-field"><label for="cfg_scheduler_timezone">Scheduler / UI timezone</label><input id="cfg_scheduler_timezone" type="text" placeholder="Asia/Seoul" /><span class="configure-env" id="cfg_env_scheduler_timezone"></span></div>
+            <div class="configure-field"><label for="cfg_langsmith_tracing">LangSmith tracing</label>
+              <select id="cfg_langsmith_tracing">
+                <option value="false">off</option>
+                <option value="true">on</option>
+              </select>
+            </div>
+            <div class="configure-field"><label for="cfg_langsmith_project">LangSmith project</label><input id="cfg_langsmith_project" type="text" placeholder="email_draft_agent" /></div>
+            <div class="configure-field"><label for="cfg_langsmith_api_key">LangSmith API key</label><input id="cfg_langsmith_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
+            <p id="cfg_langsmith_key_status" class="configure-hint"></p>
             <p id="cfg_key_status" class="configure-hint"></p>
           </div>
         </details>
@@ -1771,16 +1752,68 @@
             <div class="configure-field"><label for="cfg_llm_model" data-i18n="cfgLlmModel">Default model (LLM_MODEL)</label><input id="cfg_llm_model" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_main" data-i18n="cfgLlmMain">Main agent</label><input id="cfg_llm_model_main" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_main"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_search_json" data-i18n="cfgLlmSearchJson">Search / JSON steps</label><input id="cfg_llm_model_search_json" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_search_json"></span></div>
+            <div class="configure-field"><label for="cfg_llm_model_kb_web_gate" data-i18n="cfgLlmKbWebGate" data-i18n-title="cfgLlmKbWebGateHelp">KB → web gate (RC)</label><input id="cfg_llm_model_kb_web_gate" type="text" autocomplete="off" list="datalistChatModels" title="" /><span class="configure-env" id="cfg_env_llm_model_kb_web_gate"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_search_rerank" data-i18n="cfgLlmRerank">Rerank</label><input id="cfg_llm_model_search_rerank" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_search_rerank"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_memory" data-i18n="cfgLlmMemory">Memory / learning</label><input id="cfg_llm_model_memory" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_memory"></span></div>
           </div>
         </details>
         <details class="configure-details">
+          <summary data-i18n="configureRetrievalPolicyBlock">Retrieval ranking policy</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n="configureRetrievalPolicyHint">Vendor-agnostic retrieval policy for LLM reranking. This controls ranking behavior (not hardcoded boosts).</p>
+            <div class="configure-field">
+              <label for="cfg_retrieval_ranking_policy" data-i18n="cfgRetrievalRankingPolicy">RETRIEVAL_RANKING_POLICY (JSON)</label>
+              <textarea id="cfg_retrieval_ranking_policy" rows="8" style="width:100%;max-width:52rem;" spellcheck="false"></textarea>
+              <span class="configure-env" id="cfg_env_retrieval_ranking_policy"></span>
+            </div>
+          </div>
+        </details>
+        <details class="configure-details">
           <summary data-i18n="configureEmbedBlock">Embeddings (RAG)</summary>
           <div class="configure-details__body">
+            <p class="configure-hint" id="cfg_embed_hint"></p>
             <datalist id="datalistEmbedModels"></datalist>
-            <div class="configure-field"><label for="cfg_rag_embedding_provider" data-i18n="cfgEmbedProv">Provider</label><input id="cfg_rag_embedding_provider" type="text" /></div>
-            <div class="configure-field"><label for="cfg_rag_embedding_model" data-i18n="cfgEmbedModel">Embedding model</label><input id="cfg_rag_embedding_model" type="text" list="datalistEmbedModels" /><span class="configure-env" id="cfg_env_rag_embedding_model"></span></div>
+            <div class="configure-field"><label for="cfg_rag_embedding_provider" data-i18n="cfgEmbedProv">Provider</label><select id="cfg_rag_embedding_provider"></select><span class="configure-env" id="cfg_env_rag_embedding_provider"></span></div>
+            <div class="configure-field"><label for="cfg_rag_embedding_model" data-i18n="cfgEmbedModel">Embedding model <span id="cfg_embed_model_tag" class="configure-inline-tag"></span></label><input id="cfg_rag_embedding_model" type="text" list="datalistEmbedModels" /><span class="configure-env" id="cfg_env_rag_embedding_model"></span></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary>CSM guardrails</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint">Include/exclude <strong>intents</strong> use one natural-language rule per line (or a JSON array). Matching prefers embeddings (same stack as RAG) when API keys are set; otherwise phrase/word overlap. Delete a line to remove a rule.</p>
+            <p class="configure-hint" id="cfg_guardrail_encryption_note" style="margin-top:0.35rem;"></p>
+            <div class="configure-field"><label for="cfg_guardrail_strictness">Strictness</label>
+              <select id="cfg_guardrail_strictness">
+                <option value="strict">strict</option>
+                <option value="balanced">balanced</option>
+                <option value="permissive">permissive</option>
+              </select>
+            </div>
+            <div class="configure-field"><label for="cfg_guardrail_include_sender_domains">Include sender domains</label><input id="cfg_guardrail_include_sender_domains" type="text" placeholder="customer.com, partner.org" /></div>
+            <div class="configure-field"><label for="cfg_guardrail_exclude_sender_domains">Exclude sender domains</label><input id="cfg_guardrail_exclude_sender_domains" type="text" placeholder="internal.company.com" /></div>
+            <div class="configure-field"><label for="cfg_guardrail_include_intent_keywords">Include intents (natural language)</label><textarea id="cfg_guardrail_include_intent_keywords" rows="5" style="width:100%;max-width:52rem;" placeholder="e.g. urgent production outage&#10;e.g. customer escalated to leadership"></textarea></div>
+            <div class="configure-field"><label for="cfg_guardrail_exclude_intent_keywords">Exclude intents (natural language)</label><textarea id="cfg_guardrail_exclude_intent_keywords" rows="5" style="width:100%;max-width:52rem;" placeholder="e.g. automated quota monitoring alerts&#10;e.g. internal newsletter"></textarea></div>
+            <div class="configure-field"><label for="cfg_guardrail_team_guidance">Team guidance</label><textarea id="cfg_guardrail_team_guidance" rows="3" placeholder="Internal policy notes for what to surface/ignore."></textarea></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary>Agent prompts (database)</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint"><strong>Source of truth:</strong> these four prompts live in the <strong>app database</strong> (<code>app_settings</code>). The agent reads them from there at runtime. Bundled text in <code>src/agent/prompts.py</code> is only used to <strong>fill or repair</strong> empty rows.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;">On server start or when you open Configure, any prompt row that is missing or blank is <strong>back-filled</strong> with the current bundled default and saved to the database. If you <strong>clear a field</strong> (all whitespace) and click <strong>Save configuration</strong>, that row is reset to the bundled default and <strong>written to the database</strong> again—so you always see the full text here after save or reload, not an invisible fallback.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;"><strong>Curly braces <code>{…}</code></strong> are <strong>runtime placeholders</strong>—do not paste your vendor name or product list in place of them. Keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code> exactly as written. At run time, the first three are filled from <strong>Workbench → Agent profile</strong> (vendor, product scope, role title). <code>{learning_section}</code> is filled from <strong>learning memory</strong> (distilled from Run history feedback), not from the profile form. <strong>Everything else</strong> in the template is yours to edit—rules, tone, and instructions—without changing those four placeholder names.</p>
+            <div class="configure-field"><label for="cfg_prompt_email_agent_system_template">Main system prompt template <span class="configure-hint" id="cfg_prompt_email_agent_system_template_sync"></span></label><textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea></div>
+            <div class="configure-field"><label for="cfg_prompt_probe_user_message">Probe user message (Scan inbox / cron) <span class="configure-hint" id="cfg_prompt_probe_user_message_sync"></span></label><textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea></div>
+            <div class="configure-field"><label for="cfg_prompt_probe_mode_append">Probe mode system append <span class="configure-hint" id="cfg_prompt_probe_mode_append_sync"></span></label><textarea id="cfg_prompt_probe_mode_append" rows="8" style="width:100%;max-width:52rem;" placeholder="Appended to system prompt when probe=True."></textarea></div>
+            <div class="configure-field"><label for="cfg_prompt_action_review_append">Action review system append <span class="configure-hint" id="cfg_prompt_action_review_append_sync"></span></label><textarea id="cfg_prompt_action_review_append" rows="5" style="width:100%;max-width:52rem;" placeholder="“Discuss this action” threads."></textarea></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary>Effective prompts by mode (read-only)</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint">Preview of the <strong>assembled</strong> system prompt per mode (database template + Workbench profile + learning + team guidance + mode append). Probe mode also shows the stored probe user message.</p>
+            <p class="configure-hint" id="promptEffectiveAssembleNote" style="margin-top:0.25rem;"></p>
+            <div id="promptEffectiveByModeContainer"></div>
           </div>
         </details>
         <details class="configure-details">
@@ -1795,44 +1828,6 @@
             <div class="configure-field"><label for="cfg_gog_credentials_path" data-i18n="cfgGogCredentialsPath">GOG_CREDENTIALS_PATH</label><input id="cfg_gog_credentials_path" type="text" autocomplete="off" placeholder="optional absolute path to credentials.json" /></div>
             <p id="cfg_gog_keyring_status" class="configure-hint"></p>
             <div id="gogSetupStatus" class="gog-setup-status" aria-live="polite"></div>
-          </div>
-        </details>
-        <details class="configure-details">
-          <summary data-i18n="configureSchedulerBlock">Scheduler &amp; time</summary>
-          <div class="configure-details__body">
-            <p class="configure-hint" data-i18n-html="configureSchedulerHint">Pick a <strong>GMT offset</strong> for cron scheduling. Values are stored as fixed UTC offsets (<code>Etc/GMT…</code>). Choose <strong>Inherit</strong> to clear your saved override and use the server default. <strong>Restart the API server</strong> after saving so the scheduler reloads.</p>
-            <div class="configure-field">
-              <label for="cfg_scheduler_timezone" data-i18n="cfgSchedulerTz">Scheduler (GMT offset)</label>
-              <select id="cfg_scheduler_timezone"></select>
-              <span class="configure-env" id="cfg_env_scheduler_timezone"></span>
-            </div>
-          </div>
-        </details>
-        <details class="configure-details">
-          <summary>Agent guardrails</summary>
-          <div class="configure-details__body">
-            <p class="configure-hint">Optional runtime controls to tune card filtering without code edits.</p>
-            <div class="configure-field">
-              <label for="cfg_guardrail_strictness">Guardrail strictness</label>
-              <select id="cfg_guardrail_strictness">
-                <option value="strict">strict</option>
-                <option value="balanced">balanced</option>
-                <option value="permissive">permissive</option>
-              </select>
-              <span class="configure-env" id="cfg_env_guardrail_strictness"></span>
-            </div>
-            <div class="configure-field">
-              <label for="cfg_guardrail_include_sender_domains">Include sender domains (comma-separated)</label>
-              <input id="cfg_guardrail_include_sender_domains" type="text" autocomplete="off" placeholder="example.com,customer.co.kr" />
-            </div>
-            <div class="configure-field">
-              <label for="cfg_guardrail_exclude_sender_domains">Exclude sender domains (comma-separated)</label>
-              <input id="cfg_guardrail_exclude_sender_domains" type="text" autocomplete="off" placeholder="internal.company.com,alerts.vendor.com" />
-            </div>
-            <div class="configure-field">
-              <label for="cfg_guardrail_exclude_subject_keywords">Exclude keywords (subject/brief/digest, comma-separated)</label>
-              <input id="cfg_guardrail_exclude_subject_keywords" type="text" autocomplete="off" placeholder="quota,newsletter,digest,fyi" />
-            </div>
           </div>
         </details>
         <details class="configure-details">
@@ -1876,9 +1871,29 @@
             <input id="profileRoleTitle" type="text" data-i18n-placeholder="rolePlaceholder" placeholder="Role title" style="min-width:260px;flex:1;" />
           </div>
           <textarea id="profileProductContext" data-i18n-placeholder="productPlaceholder" placeholder="Product lines / scope (comma-separated)"></textarea>
+          <div style="margin-top:0.7rem;">
+            <p class="profile-help" style="margin-bottom:0.4rem;">Inbox scan range setup (saved in Configure settings):</p>
+            <div class="row" style="margin-bottom:0.5rem;">
+              <div style="display:flex;flex-direction:column;gap:0.25rem;min-width:260px;flex:1;">
+                <label for="cfg_probe_inbox_max_results" style="font-size:0.8rem;color:var(--muted);font-weight:700;">Probe inbox scan range (Scan inbox / cron)</label>
+                <input id="cfg_probe_inbox_max_results" type="number" min="1" max="100" step="1" placeholder="10" style="min-width:200px;" />
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.25rem;min-width:260px;flex:1;">
+                <label for="cfg_user_inbox_peek_max_results" style="font-size:0.8rem;color:var(--muted);font-weight:700;">User inbox peek range (e.g. latest email)</label>
+                <input id="cfg_user_inbox_peek_max_results" type="number" min="1" max="100" step="1" placeholder="5" style="min-width:200px;" />
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.25rem;margin-bottom:0.5rem;">
+              <label for="cfg_probe_inbox_gmail_search" style="font-size:0.8rem;color:var(--muted);font-weight:700;" data-i18n="profileProbeGmailSearchLabel">Probe Gmail search query (Scan inbox / cron)</label>
+              <input id="cfg_probe_inbox_gmail_search" type="text" data-i18n-placeholder="profileProbeGmailSearchPlaceholder" placeholder="in:inbox category:primary newer_than:30d" style="width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;font-size:0.82rem;" autocomplete="off" spellcheck="false" />
+              <p class="profile-help" style="margin:0;" data-i18n-html="profileProbeGmailSearchHelp">Gmail query used when the tool does not pass a custom <code>search</code> argument. Widen <code>newer_than:</code> or remove <code>category:primary</code> if threads are missing from the slice.</p>
+            </div>
+          </div>
           <div class="row" style="margin-top:0.5rem;">
             <button type="button" class="ghost" onclick="saveAgentProfile()" data-i18n="saveProfile">Save profile</button>
+            <button type="button" class="ghost" onclick="saveWorkbenchInboxRangeSettings()">Save inbox ranges</button>
             <span id="profileSaveStatus" style="color:var(--muted);font-size:0.82rem;" data-i18n="profileLoaded">Loaded saved profile.</span>
+            <span id="workbenchSetupSaveStatus" style="color:var(--muted);font-size:0.82rem;"></span>
           </div>
         </div>
       </details>
@@ -1892,7 +1907,13 @@
               <button type="button" class="danger btn-compact" onclick="deleteActiveThread()" data-i18n="deleteThread">Delete</button>
             </div>
           </div>
-          <input id="threadSearch" type="text" data-i18n-placeholder="searchThreads" placeholder="Search threads…" style="padding:0.55rem 0.65rem;border-radius:10px;margin-bottom:0.55rem;" oninput="loadThreads()" />
+          <input id="threadSearch" type="text" data-i18n-placeholder="searchThreads" placeholder="Search threads…" style="padding:0.55rem 0.65rem;border-radius:10px;margin-bottom:0.45rem;" oninput="loadThreads()" />
+          <div class="thread-bulk-bar row" style="gap:0.35rem;flex-wrap:wrap;margin-bottom:0.45rem;align-items:center;">
+            <button type="button" class="ghost btn-compact" onclick="threadsSelectAllVisible()" data-i18n="threadsSelectAll">Select all</button>
+            <button type="button" class="ghost btn-compact" onclick="threadsClearSelection()" data-i18n="threadsSelectNone">Clear</button>
+            <button type="button" class="danger btn-compact" onclick="deleteSelectedThreads()" data-i18n="threadsDeleteSelected">Delete selected</button>
+            <span id="threadBulkHint" class="action-board-hint" style="flex:1;min-width:0;text-align:right;"></span>
+          </div>
           <div id="threadList"><div class="empty" style="padding:1rem 0;" data-i18n="loading">Loading…</div></div>
         </div>
 
@@ -1904,8 +1925,9 @@
               </div>
               <div id="threadHint" style="color:var(--muted);font-size:0.75rem;margin-top:0.25rem;line-height:1.35;" data-i18n="selectThread">Select a thread to start.</div>
             </div>
-            <div class="row" style="gap:0.4rem;flex-shrink:0;">
+            <div class="row" style="gap:0.4rem;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">
               <div id="processingIndicator" class="processing-indicator"><span class="spinner"></span><span id="processingText" data-i18n="processing">Working…</span></div>
+              <button type="button" class="danger btn-compact workbench-stop-btn" style="display:none;" onclick="workbenchStopRun()" data-i18n="workbenchStop">Stop</button>
               <button type="button" onclick="probeThread()" data-i18n="probeInbox">Probe inbox</button>
               <button type="button" class="ghost btn-compact" onclick="sendThreadMessage()" data-i18n="send">Send</button>
             </div>
@@ -1914,7 +1936,10 @@
           <div class="subh" data-i18n="messageLabel">Message</div>
           <div class="composer-wrap">
             <textarea id="composer" data-i18n-placeholder="composerPlaceholder" placeholder="Ask for action items, draft a reply, or paste a client thread…" style="margin-top:0;"></textarea>
-            <div class="composer-help" data-i18n="composerHelp">Enter to send · Shift+Enter for new line</div>
+            <div class="row composer-actions" style="margin-top:0.45rem;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+              <div class="composer-help" style="margin-top:0;" data-i18n="composerHelp">Enter to send · Shift+Enter for new line</div>
+              <button type="button" class="danger btn-compact workbench-stop-btn" style="display:none;" onclick="workbenchStopRun()" data-i18n="workbenchStop">Stop</button>
+            </div>
           </div>
 
           <details id="traceDetails" style="margin-top:0.75rem;">
@@ -1929,6 +1954,10 @@
               <button type="button" class="ghost" onclick="clearTraceUI()" data-i18n="clear">Clear</button>
             </div>
             <div id="runTrace" class="trace-list" style="display:block;"></div>
+          </details>
+          <details id="runQueueDetails" style="margin-top:0.6rem;">
+            <summary style="cursor:pointer;color:var(--muted);font-weight:700;"><span class="section-caret">▸</span><span>Run queue</span></summary>
+            <div id="runQueueList" class="run-queue-list"></div>
           </details>
         </div>
       </div>
@@ -1952,7 +1981,7 @@
           </div>
           <div class="filter-field">
             <label for="dashboardActionStatusFilter" data-i18n="dashboardActionStatusFilter">Action status</label>
-            <select id="dashboardActionStatusFilter" onchange="loadActionBoard(true)">
+            <select id="dashboardActionStatusFilter" onchange="rerenderActionBoardFromCache()">
               <option value="all" data-i18n="dashboardActionStatusAll">All actions</option>
               <option value="not_started" data-i18n="dashboardActionStatusNotStarted">Not started</option>
               <option value="in_progress" data-i18n="dashboardActionStatusInProgress">In progress</option>
@@ -1967,13 +1996,29 @@
               <option value="error" data-i18n="dashboardStatusError">Error</option>
             </select>
           </div>
+          <div class="filter-field">
+            <label for="dashboardPriorityFilter" data-i18n="dashboardPriorityFilter">Priority</label>
+            <select id="dashboardPriorityFilter" onchange="rerenderActionBoardFromCache()">
+              <option value="all" data-i18n="dashboardPriorityAll">All priorities</option>
+              <option value="urgent" data-i18n="dashboardPriorityUrgent">Urgent</option>
+              <option value="high" data-i18n="dashboardPriorityHigh">High</option>
+              <option value="medium" data-i18n="dashboardPriorityMedium">Medium</option>
+              <option value="low" data-i18n="dashboardPriorityLow">Low</option>
+            </select>
+          </div>
+          <div class="filter-field" style="min-width:11rem;flex:1;">
+            <label for="dashboardDomainFilter" data-i18n="dashboardDomainFilter">Customer domain</label>
+            <input type="text" id="dashboardDomainFilter" data-i18n-placeholder="dashboardDomainPlaceholder" placeholder="Filter by domain…" oninput="scheduleRerenderActionBoard()" />
+          </div>
         </div>
         <div class="dashboard-controls__right row dashboard-layout-bar">
           <label for="dashboardActionSort" class="action-board-hint" data-i18n="dashboardActionSort">Sort</label>
-          <select id="dashboardActionSort" onchange="loadActionBoard(true)">
+          <select id="dashboardActionSort" onchange="rerenderActionBoardFromCache()">
             <option value="updated_desc" data-i18n="dashboardSortUpdatedDesc">Newest update</option>
             <option value="updated_asc" data-i18n="dashboardSortUpdatedAsc">Oldest update</option>
             <option value="status" data-i18n="dashboardSortStatus">Status</option>
+            <option value="priority_desc" data-i18n="dashboardSortPriorityDesc">Priority (urgent first)</option>
+            <option value="priority_asc" data-i18n="dashboardSortPriorityAsc">Priority (low first)</option>
           </select>
           <span class="action-board-hint" data-i18n="dashboardLayoutLabel">Layout</span>
           <button type="button" class="ghost btn-compact" id="dashLayoutList" onclick="setDashboardLayout('list')" data-i18n-title="dashboardLayoutListTitle" title="List (grouped by run)">List</button>
@@ -1982,9 +2027,12 @@
       </div>
       <div id="actionBoardFeed" class="dashboard-feed dashboard-feed--list"><div class="empty" style="padding:0.75rem 0;" data-i18n="loading">Loading…</div></div>
       <div class="action-board-toolbar">
-        <button type="button" class="ghost btn-compact" onclick="dashboardSelectAllActions(true)" data-i18n="kbSelectAll">Select all</button>
-        <button type="button" class="ghost btn-compact" onclick="dashboardSelectAllActions(false)" data-i18n="kbClearSelection">Clear selection</button>
-        <button type="button" class="danger btn-compact" onclick="dashboardBulkDismissActions()" data-i18n="kbDeleteSelected">Delete selected</button>
+        <div class="dashboard-bulk-bar">
+          <button type="button" class="ghost btn-compact" onclick="dashboardSelectAllCards()" data-i18n="dashboardSelectAll">Select all</button>
+          <button type="button" class="ghost btn-compact" onclick="dashboardClearCardSelection()" data-i18n="dashboardSelectNone">Clear</button>
+          <button type="button" class="danger btn-compact" onclick="dashboardBulkDismissSelected()" data-i18n="dashboardDismissSelected">Remove selected</button>
+          <span id="dashboardBulkSelectionHint" class="action-board-hint"></span>
+        </div>
         <button type="button" class="ghost btn-compact" onclick="loadActionBoard(true)" data-i18n="actionBoardRefresh">Refresh</button>
         <button type="button" class="ghost btn-compact" id="dashboardLoadMoreBtn" style="display:none;" onclick="loadActionBoard(false)" data-i18n="dashboardLoadMore">Load more</button>
         <span class="action-board-hint" data-i18n="actionBoardHelp">Full detail and feedback stay under Run history.</span>
@@ -1996,11 +2044,29 @@
   <div class="tab-pane" id="tab-cron">
     <section>
       <h2 data-i18n="cronTitle">Cron jobs</h2>
-      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+      <p class="configure-hint" style="margin:0 0 0.5rem 0;" data-i18n="cronHelp">
+        Schedule automatic "Scan inbox" runs. Use a preset first, then adjust the cron expression if needed.
+      </p>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+        <select id="cronPreset" onchange="applyCronPreset(this.value)" style="min-width:240px;">
+          <option value="" data-i18n="cronPresetSelect">Preset cadence…</option>
+          <option value="0 * * * *" data-i18n="cronPresetHourly">Every hour</option>
+          <option value="0 */2 * * *" data-i18n="cronPresetEvery2h">Every 2 hours</option>
+          <option value="0 */4 * * *" data-i18n="cronPresetEvery4h">Every 4 hours</option>
+          <option value="0 9 * * 1-5" data-i18n="cronPresetWeekdayMorning">Weekdays 09:00</option>
+          <option value="0 9,18 * * *" data-i18n="cronPresetDailyTwice">Daily 09:00 + 18:00</option>
+          <option value="0 9 * * *" data-i18n="cronPresetDaily">Daily 09:00</option>
+        </select>
+        <button type="button" class="ghost" onclick="document.getElementById('cronExpr').value='0 * * * *'" data-i18n="cronQuickHourly">Use hourly</button>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
         <input type="text" id="cronName" data-i18n-placeholder="cronNamePh" placeholder="Job name">
         <input type="text" id="cronExpr" data-i18n-placeholder="cronExprPh" placeholder="0 * * * *">
         <button type="button" onclick="addCron()" data-i18n="add">Add</button>
       </div>
+      <p class="configure-hint" style="margin:-0.55rem 0 0.75rem 0;" data-i18n="cronWorkbenchHint">
+        Workbench also supports natural language: "create a cron job every 2 hours", "disable nightly probe", "delete job X".
+      </p>
       <div id="cronList"></div>
       <details style="margin-top:0.75rem;">
         <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span><span data-i18n="recentCron">Recent cron summaries</span></summary>
@@ -2018,25 +2084,18 @@
     <div id="subtab-upload" class="subtab-pane active">
       <section>
         <h2 data-i18n="docUpload">Document upload</h2>
-        <details class="kb-section-panel">
-          <summary><span class="section-caret">▸</span><span data-i18n="kbPanelUploadSummary">Upload, reindex &amp; saved documents</span></summary>
-          <div class="kb-section-panel__body">
-            <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-              <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text,.pdf,.docx" multiple />
-              <button type="button" onclick="uploadDoc()" data-i18n="uploadSelected">Upload</button>
-              <button type="button" class="ghost" onclick="reindexKb()" data-i18n="reindexDocs">Reindex</button>
-            </div>
-            <p class="reindex-help" style="margin-top:0.55rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="reindexHelpHtml">
-              <strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.
-            </p>
-            <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-            <div class="kb-list-toolbar" style="margin-top:0.75rem;">
-              <button type="button" class="ghost btn-compact" onclick="kbDocSelectAll(true)" data-i18n="kbSelectAll">Select all</button>
-              <button type="button" class="ghost btn-compact" onclick="kbDocSelectAll(false)" data-i18n="kbClearSelection">Clear selection</button>
-              <button type="button" class="danger btn-compact" onclick="kbDocBulkDelete()" data-i18n="kbDeleteSelected">Delete selected</button>
-            </div>
-            <div id="docRegistry" class="result-box kb-list-scroll"></div>
-          </div>
+        <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+          <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" multiple />
+          <button type="button" onclick="uploadDoc()" data-i18n="uploadSelected">Upload</button>
+          <button type="button" class="ghost" onclick="reindexKb()" data-i18n="reindexDocs">Reindex</button>
+        </div>
+        <p class="reindex-help" style="margin-top:0.55rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="reindexHelpHtml">
+          <strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.
+        </p>
+        <div id="uploadResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
+        <details style="margin-top:0.45rem;">
+          <summary style="cursor:pointer;color:var(--muted);"><span class="section-caret">▸</span><span data-i18n="persistedDocs">Saved documents</span></summary>
+          <div id="docRegistry" class="result-box" style="display:block;padding:0.45rem 0.55rem;white-space:normal;font-family:inherit;font-size:0.82rem;"></div>
         </details>
       </section>
     </div>
@@ -2044,26 +2103,28 @@
     <div id="subtab-rc" class="subtab-pane">
       <section>
         <h2 data-i18n="rcTitle">RC URLs (web sources)</h2>
-        <details class="kb-section-panel">
-          <summary><span class="section-caret">▸</span><span data-i18n="kbPanelRcSummary">Add URLs, discover pages &amp; saved list</span></summary>
-          <div class="kb-section-panel__body">
-            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-              <input id="rcUrlInput" type="text" data-i18n-placeholder="rcUrlPh" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
-              <button type="button" onclick="addRcUrl()" data-i18n="rcAdd">Add</button>
-              <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Discover subpages (≤10)</button>
-            </div>
-            <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-            <div class="kb-list-toolbar" style="margin-top:0.75rem;">
-              <button type="button" class="ghost btn-compact" onclick="rcUrlSelectAll(true)" data-i18n="kbSelectAll">Select all</button>
-              <button type="button" class="ghost btn-compact" onclick="rcUrlSelectAll(false)" data-i18n="kbClearSelection">Clear selection</button>
-              <button type="button" class="danger btn-compact" onclick="rcUrlBulkDelete()" data-i18n="kbDeleteSelected">Delete selected</button>
-            </div>
-            <div id="rcUrlList" class="result-box kb-list-scroll"></div>
-            <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcHintHtml">
-              When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.
-            </p>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <input id="rcUrlInput" type="text" data-i18n-placeholder="rcUrlPh" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+          <button type="button" onclick="addRcUrl()" data-i18n="rcAdd">Add</button>
+          <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Discover subpages (≤10)</button>
+        </div>
+        <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
+        <div id="rcUrlList" style="margin-top:0.75rem;"></div>
+        <div style="margin-top:1rem;padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
+          <label for="rcWebRetrievalMode" style="display:block;font-size:0.88rem;margin-bottom:0.35rem;font-weight:600;" data-i18n="rcWebModeLabel">RC web retrieval mode</label>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+              <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
+              <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
+            </select>
+            <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
+            <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
           </div>
-        </details>
+          <p style="margin:0.5rem 0 0 0;font-size:0.78rem;color:var(--muted);line-height:1.4;" data-i18n-html="rcWebModeWarnHtml"></p>
+        </div>
+        <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcHintHtml">
+          When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.
+        </p>
       </section>
     </div>
   </div>
@@ -2104,6 +2165,16 @@
         <div id="maintenanceStats" style="margin-top:0.45rem;color:var(--muted);font-size:0.78rem;"></div>
       </details>
       <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.55rem;" data-i18n="historyTip">Tip: expand a run and submit feedback. Feedback updates learning memory.</p>
+      <div class="row" style="margin-bottom:0.55rem;gap:0.45rem;align-items:center;">
+        <label for="historyTriggerFilter" style="font-size:0.8rem;color:var(--muted);" data-i18n="historyTriggerFilter">Run type</label>
+        <select id="historyTriggerFilter" onchange="loadInteractions()">
+          <option value="all" data-i18n="historyTriggerAll">All</option>
+          <option value="thread_cron_admin" data-i18n="historyTriggerCronAdmin">Cron admin (Workbench)</option>
+          <option value="thread_probe">Thread probe</option>
+          <option value="thread_message">Thread message</option>
+          <option value="cron:">Cron scheduler</option>
+        </select>
+      </div>
       <div id="interactions"><div class="empty" data-i18n="loading">Loading…</div></div>
     </section>
   </div>
@@ -2133,20 +2204,23 @@
         landingNextStepsLi2: '<strong>Workbench</strong> — Set vendor, role, and product scope (agent profile) before probes and chat.',
         landingNextStepsLi3: '<strong>Knowledge</strong> — Upload <code>.md</code> / <code>.txt</code> and <strong>Reindex</strong> for RAG; add RC URLs if you use web search.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Review probes, action cards, and traces after runs.',
-        landingNoteMark: 'Note',
+        landingNextStepsLi5: '<strong>Cron</strong> — Schedule automated inbox probes from the Cron tab (presets + cron expression), or manage jobs in natural language from Workbench when the thread is about cron.',
         landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, optional Gmail): see ',
         landingDocsGithubLinkLabel: 'docs on GitHub',
         landingDocsGithubAfter: ' — or open <code>docs/INSTALLATION.md</code> in your local clone.',
+        landingDocsArchitectureLine: 'Runtime flow, API routes, and the <strong>Configure</strong> map: <code>docs/ARCHITECTURE.md</code> in your clone (same <code>docs/</code> tree on GitHub).',
         landingCtaConfigure: 'Open Configure',
+        landingCtaCron: 'Open Cron',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'Built for CSM teams: monitor inbound client asks, surface only actionable tasks, and keep work transparent across status and run history.',
         landingCtaWorkbench: 'Open Workbench',
         landingCtaDashboard: 'Open Action dashboard',
         landingQuickStartTitle: 'Quick start',
         landingStep1: '<strong>1) Configure models &amp; Gmail (optional)</strong><br/>Use the <strong>Configure</strong> tab for OpenRouter models, API key, embeddings, and gog paths. Then set vendor / role / product scope in Workbench.',
-        landingStep2: '<strong>2) Probe now or schedule periodic Cron runs</strong><br/>Use Workbench for one-off probes, or the Cron tab to run recurring inbox probes automatically and feed the Action dashboard.',
+        landingStep2: '<strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.',
         landingStep3: '<strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.',
         landingStep4: '<strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.',
+        landingStep5: '<strong>5) Schedule inbox probes</strong><br/>Use the <strong>Cron</strong> tab for presets and schedules, or describe cadence in Workbench (cron admin mode) when your message is about jobs.',
         landingFeedbackTitle: 'Feedback & self-evolution',
         landingFeedbackBody: 'Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.',
         landingKnowledgeTitle: 'Product docs & RC URLs',
@@ -2156,6 +2230,11 @@
         configureTitle: 'Configure',
         configureLead: 'Choose provider preset, models, API keys, and Gmail <strong>gog</strong> fields. <strong>Save configuration</strong> stores values in this app’s database. <strong>Clear all database overrides</strong> removes everything saved from this screen, deletes local <strong>gog</strong> OAuth tokens under <code>GOG_HOME</code> (see Gmail section), and restores built-in defaults.',
         configureEmbedHint: 'After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.',
+        configureEmbedProviderHintOpenAI: 'OpenAI preset: use provider `openai`.',
+        configureEmbedProviderHintOpenRouter: 'OpenRouter/Gemini preset: use provider `openrouter`.',
+        configureEmbedProviderOptOpenAI: 'openai (OpenAI API)',
+        configureEmbedProviderOptOpenRouter: 'openrouter (OpenRouter-compatible API)',
+        configureEmbedModelTagPrefix: 'Recommended now',
         configureLlmBlock: 'LLM models',
         configureLlmHint: 'Gray lines show recommended defaults (starting point only). Pick a suggestion or paste any OpenRouter model id.',
         configureRecommendedLabel: 'Recommended',
@@ -2166,7 +2245,8 @@
         configureSavedValueCol: 'Value (masked)',
         configureKeyMissingDb: 'No API key saved — paste above and Save configuration.',
         configureEmbedBlock: 'Embeddings (RAG)',
-        configureOrHint: 'Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.',
+        configureOrHint:
+          'Paste the API key for the selected preset and <strong>Save configuration</strong> to store it in the app database on this machine (OpenAI preset → <code>openai_api_key</code>; OpenRouter / Gemini (OR) → <code>openrouter_api_key</code>).',
         configureGogBlock: 'Gmail (gog)',
         configureGogLead: 'Run one-time OAuth in a terminal (<a href="/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a>). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.',
         configureGogKeyringDb: 'Keyring passphrase is stored in the app database (leave password blank and Save to keep it; enter a new value to replace).',
@@ -2190,7 +2270,20 @@
         configureClearAllDone: 'Database overrides cleared.',
         configureClearAllGogSuffix: 'Removed {n} local gog OAuth file(s).',
         configureKeyDb: 'OpenRouter API key stored in app database',
+        configureKeyDbOpenRouter: 'OpenRouter API key stored in app database',
+        configureKeyDbOpenAI: 'OpenAI API key stored in app database',
+        configureKeyOpenAiLine1:
+          'OpenAI preset: use OPENAI_API_KEY in the environment, or paste your key and Save (stored as openai_api_key).',
+        configureKeyOpenAiLine2: '',
+        configureKeyOpenRouterLine: 'OpenRouter / Gemini-via-OpenRouter: use one OpenRouter API key.',
+        configureBaseUrlLockedOpenAI: '',
+        configureBaseUrlHintOpenAI: '',
+        configureBaseUrlHintOpenRouter:
+          'Set the OpenAI-compatible API base for OpenRouter (or Gemini via OpenRouter). Grey hint shows the usual default; save after you change it.',
         configureProviderSummary: 'Provider & API',
+        configureRetrievalPolicyBlock: 'Retrieval ranking policy',
+        configureRetrievalPolicyHint:
+          'Vendor-agnostic policy JSON used by retrieval reranker. Keep valid JSON. This replaces hardcoded vendor boosts.',
         configurePresetHint: 'Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.',
         configureApplyPreset: 'Apply preset defaults',
         configureEnvColKey: 'Variable',
@@ -2198,8 +2291,12 @@
         cfgLlmModel: 'Default model (LLM_MODEL)',
         cfgLlmMain: 'Main agent',
         cfgLlmSearchJson: 'Search / JSON steps',
+        cfgLlmKbWebGate: 'KB → web gate (RC)',
+        cfgLlmKbWebGateHelp:
+          'Only for search_rc_web: JSON gate before hosted web. Not for intent/subquery JSON (use Search / JSON steps). Empty → LLM_MODEL.',
         cfgLlmRerank: 'Rerank',
         cfgLlmMemory: 'Memory / learning',
+        cfgRetrievalRankingPolicy: 'RETRIEVAL_RANKING_POLICY (JSON)',
         cfgEmbedProv: 'Provider',
         cfgEmbedModel: 'Embedding model',
         cfgOpenrouterUrl: 'Base URL',
@@ -2212,6 +2309,8 @@
         landingEnvDdLlmModel: 'Default model id (OpenRouter format, e.g. <code>openai/gpt-4o</code>) used for every role when the overrides below are unset.',
         landingEnvDdMain: 'Main CSM agent: tool calls, inbox probe, Workbench replies. Falls back to <code>LLM_MODEL</code>.',
         landingEnvDdSearchJson: 'Document retrieval helpers: subquery split, term extraction, JSON-heavy steps. Falls back to <code>LLM_MODEL</code>.',
+        landingEnvDdKbWebGate:
+          'RC path only: decides whether to run hosted web after KB. Separate from <code>LLM_MODEL_SEARCH_JSON</code>. Unset → <code>LLM_MODEL</code>.',
         landingEnvDdSearchRerank: 'Snippet reranking for KB hits. Falls back to <code>LLM_MODEL</code>.',
         landingEnvDdMemory: 'Learning from user feedback and memory compaction. Falls back to <code>LLM_MODEL</code>.',
         landingSetupHeadingEmbed: 'Embeddings (RAG index)',
@@ -2231,6 +2330,10 @@
         profileConfigure: 'Configure',
         profilePill: 'Applies to all runs',
         profileHelp: 'Vendor and product context is merged into the system prompt on every run (CSM assistant behavior).',
+        profileProbeGmailSearchLabel: 'Probe Gmail search query (Scan inbox / cron)',
+        profileProbeGmailSearchPlaceholder: 'in:inbox category:primary newer_than:30d',
+        profileProbeGmailSearchHelp:
+          'Gmail query used when the tool does not pass a custom <code>search</code> argument. Widen <code>newer_than:</code> or remove <code>category:primary</code> if threads are missing from the slice.',
         vendorPlaceholder: 'Vendor name',
         rolePlaceholder: 'Role title (e.g. CSM)',
         productPlaceholder: 'Product lines / scope (comma-separated)',
@@ -2250,6 +2353,8 @@
         threadNumber: 'Thread #{id}',
         probeInbox: 'Scan inbox',
         send: 'Send',
+        workbenchStop: 'Stop',
+        workbenchStopping: 'Stopping…',
         processing: 'Working…',
         probing: 'Probing inbox…',
         assistantWorking: 'Sova Agent is working…',
@@ -2269,6 +2374,19 @@
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
         cronTitle: 'Cron jobs',
+        cronHelp: 'Schedule automatic "Scan inbox" runs. Start with a preset, then fine-tune the cron expression if needed.',
+        cronPresetSelect: 'Preset cadence…',
+        cronPresetHourly: 'Every hour',
+        cronPresetEvery2h: 'Every 2 hours',
+        cronPresetEvery4h: 'Every 4 hours',
+        cronPresetWeekdayMorning: 'Weekdays 09:00',
+        cronPresetDailyTwice: 'Daily 09:00 + 18:00',
+        cronPresetDaily: 'Daily 09:00',
+        cronQuickHourly: 'Use hourly',
+        cronWorkbenchHint: 'Workbench also supports natural language cron requests (create / adjust / disable / delete).',
+        cronScheduleMeaning: 'Meaning',
+        cronNextRuns: 'Next scheduled runs (preview)',
+        cronNoNextRuns: 'No upcoming runs preview.',
         cronNamePh: 'Job name',
         cronExprPh: '0 * * * *',
         add: 'Add',
@@ -2288,7 +2406,21 @@
         rcAdd: 'Add',
         rcDiscover: 'Discover subpages (≤10)',
         rcHintHtml: 'When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.',
+        rcWebModeLabel: 'RC web retrieval mode',
+        rcWebModeKbFirst: 'KB first (LLM gate may skip web)',
+        rcWebModeAugment: 'Always augment with web',
+        rcWebModeSave: 'Save',
+        rcWebModeWarnHtml:
+          '<strong>Always augment</strong> runs hosted web after KB on every call → <strong>higher token and inference cost</strong> (provider billing). <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
+        rcWebModeSaving: 'Saving…',
+        rcWebModeSaved: 'Saved.',
+        rcWebModeSaveFail: 'Save failed',
         noRcUrls: 'No RC URLs saved.',
+        rcSelectAll: 'Select all',
+        rcSelectRowAria: 'Select URL for bulk delete',
+        rcDeleteSelected: 'Delete selected',
+        rcBulkDeleteConfirm: 'Remove {n} selected URL(s) from the list?',
+        rcNoneSelected: 'Select one or more URLs first.',
         enabled: 'enabled',
         remove: 'Remove',
         delete: 'Delete',
@@ -2307,6 +2439,9 @@
         optPurgeMemory: 'Purge memory table',
         maintenanceStatsFail: 'Could not load database stats.',
         historyTip: 'Tip: expand a run and submit feedback. Feedback updates learning memory.',
+        historyTriggerFilter: 'Run type',
+        historyTriggerAll: 'All',
+        historyTriggerCronAdmin: 'Cron admin (Workbench)',
         noRunHistory: 'No run history yet.',
         noToolCalls: 'No tool calls recorded',
         expandDetails: 'Expand details',
@@ -2337,7 +2472,14 @@
         deleteKbConfirm: 'Delete this document?',
         removeUrlConfirm: 'Remove this URL?',
         deleteThreadConfirm: 'Delete thread {id}? All messages and linked run-history rows for this chat will be removed.',
-        langHelp: 'UI language only — assistant replies follow your message language.',
+        threadsSelectAll: 'Select all',
+        threadsSelectNone: 'Clear',
+        threadsDeleteSelected: 'Delete selected',
+        threadsSelectedCount: '{n} selected',
+        threadsBulkDeleteConfirm: 'Delete {n} thread(s)? All messages and linked run-history rows for those chats will be removed.',
+        threadsNoneSelected: 'Select one or more threads first.',
+        threadSelectCheckbox: 'Select for bulk delete',
+        langHelp: 'UI language controls labels only. Chat follows your message language; probe card text follows each customer thread, not UI.',
         optimizeConfirm: 'Run database cleanup now? This may delete older rows and report files.',
         clearHistoryConfirm: 'Delete all run history?',
         compactConfirm: 'Summarize and trim interactions older than 7 days?',
@@ -2352,7 +2494,7 @@
         actionBoardTitle: 'Action dashboard',
         actionBoardLead: 'Structured actions for CSM review after each inbox probe. Full model output stays in Run history.',
         actionBoardRefresh: 'Refresh',
-        actionBoardHelp: 'Full detail and feedback stay under Run history.',
+        actionBoardHelp: 'Card notes are sent to learning memory; Discuss opens a scoped Workbench thread.',
         actionBoardEmpty: 'No inbox reviews yet. Run Scan inbox, a thread probe, or a cron job.',
         actionBoardFail: 'Could not load action board',
         dashboardFilterSource: 'Source',
@@ -2373,6 +2515,30 @@
         dashboardSortUpdatedDesc: 'Newest update',
         dashboardSortUpdatedAsc: 'Oldest update',
         dashboardSortStatus: 'Status',
+        dashboardSortPriorityDesc: 'Priority (urgent first)',
+        dashboardSortPriorityAsc: 'Priority (low first)',
+        dashboardPriorityFilter: 'Priority',
+        dashboardPriorityAll: 'All priorities',
+        dashboardPriorityUrgent: 'Urgent',
+        dashboardPriorityHigh: 'High',
+        dashboardPriorityMedium: 'Medium',
+        dashboardPriorityLow: 'Low',
+        dashboardDomainFilter: 'Customer domain',
+        dashboardDomainPlaceholder: 'Filter by domain…',
+        dashboardSelectAll: 'Select all',
+        dashboardSelectNone: 'Clear',
+        dashboardDismissSelected: 'Remove selected',
+        dashboardBulkSelectedCount: '{count} selected',
+        dashboardDismissBulkConfirm: 'Remove {count} selected task(s) from the Action dashboard? Run history is kept.',
+        dashboardEmailFrom: 'From',
+        dashboardClientEmail: 'Client email',
+        dashboardEmailSubject: 'Subject',
+        dashboardFeedbackLabel: 'Give feedback for Sova to learn',
+        dashboardFeedbackPlaceholder: 'What should improve for this kind of action? Tell your agent to learn from your feedback.',
+        dashboardFeedbackSend: 'Send note',
+        dashboardFeedbackSaved: 'Feedback saved.',
+        dashboardFeedbackFail: 'Could not save feedback',
+        dashboardFeedbackEmpty: 'Enter a short note first.',
         dashboardLoadMore: 'Load more',
         dashboardViewInHistory: 'View in Run history',
         dashboardPollingHint: 'Auto-refresh every 60s on this tab.',
@@ -2398,20 +2564,39 @@
         dashboardDiscussFail: 'Could not open action chat',
         dashboardActionStatusLabel: 'Action status',
         dashboardStatusUpdateFail: 'Could not update action status',
-        kbSelectAll: 'Select all',
-        kbClearSelection: 'Clear selection',
-        kbDeleteSelected: 'Delete selected',
-        kbNothingSelected: 'No rows selected.',
-        kbBulkDeleteDocsConfirm: 'Delete {n} selected document(s) from the knowledge base?',
-        kbBulkDeleteRcConfirm: 'Remove {n} selected URL(s)?',
-        bulkSelectRow: 'Select for bulk actions',
-        dashboardBulkDismissConfirm: 'Remove {n} selected action(s) from the Action dashboard? Run history is unchanged.',
-        configureSchedulerBlock: 'Scheduler & time',
-        configureSchedulerHint: 'Pick a <strong>GMT offset</strong> for cron scheduling. Values are stored as fixed UTC offsets (<code>Etc/GMT…</code>). Choose <strong>Inherit</strong> to clear your saved override and use the server default. <strong>Restart the API server</strong> after saving so the scheduler reloads.',
-        cfgSchedulerTz: 'Scheduler (GMT offset)',
-        cfgSchedulerTzInherit: 'Inherit default (no override saved)',
-        kbPanelUploadSummary: 'Upload, reindex & saved documents',
-        kbPanelRcSummary: 'Add URLs, discover pages & saved list',
+        dashboardThreadTitle: 'Thread',
+        dashboardClientId: 'Client',
+        dashboardClientDomain: 'Domain',
+        dashboardPriority: 'Priority',
+        dashboardConfidence: 'Confidence',
+        dashboardRelevance: 'Relevance',
+        dashboardRetrievalEvidence: 'Retrieval evidence',
+        dashboardGmailThread: 'Gmail thread',
+        dashboardRunStatusRunning: 'Running',
+        dashboardRunStatusQueued: 'Queued',
+        dashCatGeneral: 'General',
+        dashCatProductTechnical: 'Product · technical',
+        dashCatAccount: 'Account',
+        relReasonModelIncludeDashboard: 'Model flagged include on dashboard',
+        relReasonPermissiveAmbiguous: 'Permissive mode — ambiguous intent surfaced',
+        relReasonStrictAmbiguous: 'Strict mode — ambiguous intent not surfaced as action',
+        relReasonModelIntentNotDashboard: 'Model did not flag dashboard action',
+        relReasonUserIncludeSenderDomain: 'Matched Configure include-sender domain',
+        relReasonEmptyText: 'No assessable text',
+        relReasonModelCategory: 'Model category: {category}',
+        relOutcomeRequiresCsm: 'Needs CSM follow-up',
+        relOutcomeInformational: 'Informational only',
+        relOutcomeInternalNonCsm: 'Internal / filtered (non-CSM)',
+        relOutcomeInsufficientContext: 'Insufficient context',
+        relReasonCustomerAsk: 'Customer question or risk signal',
+        relReasonNoAction: 'No clear customer action request',
+        relReasonStrictNoAction: 'Strict mode: no action signal',
+        relReasonExcludedKeyword: 'Matched an exclude keyword',
+        relReasonExcludedNl: 'Matched a Configure exclude intent (natural language)',
+        relReasonIncludeNl: 'Matched a Configure include intent (natural language)',
+        relReasonDefaultInternal: 'Looks like internal / automated mail',
+        relReasonExcludedDomain: 'Excluded sender domain ({domain})',
+        relPrioConfCombinedTitle: 'Priority & confidence',
       },
       ko: {
         docTitle: 'Sova — CSM Radar Agent 24/7',
@@ -2434,19 +2619,22 @@
         landingNextStepsLi2: '<strong>Workbench</strong> — Probe·채팅 전 Vendor·Role·Product scope(에이전트 프로필) 설정.',
         landingNextStepsLi3: '<strong>Knowledge</strong> — RAG용 <code>.md</code>/<code>.txt</code> 업로드 후 <strong>Reindex</strong>; 웹 검색 시 RC URL.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Probe·액션 카드·트레이스 확인.',
-        landingNoteMark: '참고',
+        landingNextStepsLi5: '<strong>Cron</strong> — Cron 탭에서 자동 인박스 Probe 예약(프리셋·크론식), Workbench에서는 스레드가 크론 관리일 때 자연어로 잡 생성/수정.',
         landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, 선택 Gmail): ',
         landingDocsGithubLinkLabel: 'GitHub 문서',
         landingDocsGithubAfter: ' — 또는 로컬 클론의 <code>docs/INSTALLATION.md</code>를 여세요.',
+        landingDocsArchitectureLine: '런타임 흐름·API 경로·<strong>설정</strong> 탭과의 매핑: 클론의 <code>docs/ARCHITECTURE.md</code> (GitHub의 <code>docs/</code> 폴더와 동일 경로).',
         landingLogoTitle: 'Sova — CSM Radar Agent 24/7',
         landingLogoCopy: 'CSM 팀을 위한 운영 화면입니다. 고객 문의를 모니터링하고, 실제 실행이 필요한 작업만 카드로 남기며, 상태와 Run history로 진행을 투명하게 관리합니다.',
         landingCtaWorkbench: 'Workbench 열기',
+        landingCtaCron: 'Cron 열기',
         landingCtaDashboard: 'Action dashboard 열기',
         landingQuickStartTitle: '빠른 시작',
         landingStep1: '<strong>1) 모델·Gmail 설정(선택)</strong><br/><strong>설정</strong> 탭에서 OpenRouter 모델·API 키·임베딩·gog 경로를 지정한 뒤, Workbench에서 Vendor/Role/Product scope를 맞추세요.',
-        landingStep2: '<strong>2) 즉시 Probe 또는 Cron 주기 실행</strong><br/>Workbench에서는 수동 Probe를, Cron 탭에서는 주기적 Inbox Probe를 자동 실행해 Action dashboard로 누적하세요.',
+        landingStep2: '<strong>2) Inbox 스캔</strong><br/>Workbench에서 Probe를 실행하면 대시보드에 구조화 액션 카드가 생성됩니다.',
         landingStep3: '<strong>3) 상태로 운영</strong><br/>시작 전 / 진행 중 / 완료 상태로 실행 우선순위와 정렬을 관리하세요.',
         landingStep4: '<strong>4) 액션 단위 심화 대화</strong><br/>“이 작업만 논의”로 스코프된 스레드를 열고 필요 시 정확한 이메일 thread를 다시 불러오세요.',
+        landingStep5: '<strong>5) 인박스 Probe 예약</strong><br/><strong>Cron</strong> 탭에서 프리셋·스케줄을 지정하거나, Workbench에서 메시지가 크론 잡일 때 캐던스를 자연어로 말해 관리하세요.',
         landingFeedbackTitle: '피드백과 자기 진화',
         landingFeedbackBody: '<strong>Run history</strong>에서 Run을 펼친 뒤 <strong>OK</strong> / <strong>NG</strong> / <strong>Good</strong> / <strong>Noise</strong> 중 하나를 눌러 피드백을 남기세요. 피드백은 <strong>learning memory</strong>에 저장되고 이후 Run에 반영되는 운영 규칙으로 정리됩니다.',
         landingKnowledgeTitle: '제품 문서·RC URL',
@@ -2461,6 +2649,8 @@
         landingEnvDdLlmModel: '기본 모델 id(OpenRouter 형식, 예: <code>openai/gpt-4o</code>). 아래 역할별 변수가 비어 있을 때 사용됩니다.',
         landingEnvDdMain: '메인 CSM 에이전트: 도구 호출·Inbox probe·Workbench 답변. 미설정 시 <code>LLM_MODEL</code>.',
         landingEnvDdSearchJson: '문서 검색 보조: 서브쿼리 분리·용어 추출·JSON 위주 단계. 미설정 시 <code>LLM_MODEL</code>.',
+        landingEnvDdKbWebGate:
+          'RC 전용: KB 후 hosted web 실행 여부. <code>LLM_MODEL_SEARCH_JSON</code>과 별도. 비우면 <code>LLM_MODEL</code>.',
         landingEnvDdSearchRerank: 'KB 스니펫 재순위. 미설정 시 <code>LLM_MODEL</code>.',
         landingEnvDdMemory: '사용자 피드백 학습·메모리 정리. 미설정 시 <code>LLM_MODEL</code>.',
         landingSetupHeadingEmbed: '임베딩 (RAG 인덱스)',
@@ -2480,6 +2670,10 @@
         profileConfigure: '설정',
         profilePill: '모든 Run에 적용',
         profileHelp: 'Vendor·Product 컨텍스트는 매 Run의 system prompt에 반영됩니다 (CSM 어시스턴트 동작).',
+        profileProbeGmailSearchLabel: 'Probe Gmail 검색 쿼리 (Inbox 스캔 / cron)',
+        profileProbeGmailSearchPlaceholder: 'in:inbox category:primary newer_than:30d',
+        profileProbeGmailSearchHelp:
+          '에이전트가 <code>search</code>를 넘기지 않을 때 gog에 전달되는 Gmail 검색입니다. <code>newer_than:</code>을 넓히거나 <code>category:primary</code>를 빼면 누락되는 스레드를 포함할 수 있습니다.',
         vendorPlaceholder: 'Vendor 이름',
         rolePlaceholder: 'Role (예: CSM)',
         productPlaceholder: 'Product / scope (comma-separated)',
@@ -2499,6 +2693,8 @@
         threadNumber: 'Thread #{id}',
         probeInbox: 'Inbox 스캔',
         send: '전송',
+        workbenchStop: '중지',
+        workbenchStopping: '중지 중…',
         processing: '처리 중…',
         probing: 'Inbox 확인 중…',
         assistantWorking: 'Sova Agent 처리 중…',
@@ -2518,6 +2714,19 @@
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
         cronTitle: 'Cron',
+        cronHelp: 'Inbox 스캔 자동 실행 스케줄입니다. 프리셋을 먼저 고르고 필요하면 cron 식을 미세 조정하세요.',
+        cronPresetSelect: '실행 주기 프리셋…',
+        cronPresetHourly: '매시간',
+        cronPresetEvery2h: '2시간마다',
+        cronPresetEvery4h: '4시간마다',
+        cronPresetWeekdayMorning: '평일 09:00',
+        cronPresetDailyTwice: '매일 09:00 + 18:00',
+        cronPresetDaily: '매일 09:00',
+        cronQuickHourly: '매시간으로 채우기',
+        cronWorkbenchHint: 'Workbench에서도 자연어로 cron 관리가 가능합니다 (생성/수정/중지/삭제).',
+        cronScheduleMeaning: '의미',
+        cronNextRuns: '다음 예약 실행(미리보기)',
+        cronNoNextRuns: '예상 실행 시간을 계산할 수 없습니다.',
         cronNamePh: 'Job 이름',
         cronExprPh: '0 * * * *',
         add: 'Add',
@@ -2530,6 +2739,10 @@
         reindexHelpHtml: '<strong>Reindex</strong>로 업로드 파일 전체의 search index를 다시 만듭니다. 색인 실패·출처 누락 시.',
         persistedDocs: '저장된 문서',
         noDocsYet: '문서 없음',
+        configureRetrievalPolicyBlock: '검색 랭킹 정책',
+        configureRetrievalPolicyHint:
+          '벤더-중립 정책 JSON을 LLM rerank에 사용합니다. 하드코딩된 벤더 가중치를 대체합니다.',
+        cfgRetrievalRankingPolicy: 'RETRIEVAL_RANKING_POLICY (JSON)',
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web)',
@@ -2537,7 +2750,24 @@
         rcAdd: 'Add',
         rcDiscover: 'Discover subpages (≤10)',
         rcHintHtml: 'RC URL이 <strong>enabled</strong>면 Run 중 해당 도메인 web search를 쓸 수 있어요.',
+        rcWebModeLabel: 'RC 웹 검색 모드',
+        rcWebModeKbFirst: 'KB 우선 (게이트가 web 생략 가능)',
+        rcWebModeAugment: '항상 web으로 보강',
+        rcWebModeSave: '저장',
+        rcWebModeWarnHtml:
+          '<strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 <strong>토큰·추론 비용이 커집니다</strong>(과금). <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
+        rcWebModeSaving: '저장 중…',
+        rcWebModeSaved: '저장됨.',
+        rcWebModeSaveFail: '저장 실패',
+        cfgLlmKbWebGate: 'KB→웹 게이트 (RC)',
+        cfgLlmKbWebGateHelp:
+          'search_rc_web 전용: hosted web 전 JSON 게이트. 인텐트/서브쿼리 JSON과 무관(「Search / JSON steps」). 비우면 LLM_MODEL.',
         noRcUrls: '저장된 RC URL 없음',
+        rcSelectAll: '전체 선택',
+        rcSelectRowAria: '일괄 삭제용 선택',
+        rcDeleteSelected: '선택 삭제',
+        rcBulkDeleteConfirm: '선택한 URL {n}개를 목록에서 제거할까요?',
+        rcNoneSelected: '삭제할 URL을 하나 이상 선택하세요.',
         enabled: 'On',
         remove: 'Remove',
         delete: 'Delete',
@@ -2556,6 +2786,9 @@
         optPurgeMemory: 'Memory 테이블 purge',
         maintenanceStatsFail: 'DB stats 로드 실패',
         historyTip: 'Run을 펼쳐 피드백 — learning memory 반영',
+        historyTriggerFilter: 'Run 유형',
+        historyTriggerAll: '전체',
+        historyTriggerCronAdmin: 'Cron 관리 (Workbench)',
         noRunHistory: 'Run history 없음',
         noToolCalls: 'Tool call 기록 없음',
         expandDetails: '펼치기',
@@ -2586,7 +2819,14 @@
         deleteKbConfirm: '이 문서 삭제할까요?',
         removeUrlConfirm: '이 URL 제거할까요?',
         deleteThreadConfirm: 'Thread {id} 삭제? 이 채팅 메시지와 연결된 실행 이력도 함께 삭제됩니다.',
-        langHelp: 'UI만 한/영. 답장 언어는 메시지 따름 (Sova와 무관).',
+        threadsSelectAll: '전체 선택',
+        threadsSelectNone: '선택 해제',
+        threadsDeleteSelected: '선택 삭제',
+        threadsSelectedCount: '{n}개 선택',
+        threadsBulkDeleteConfirm: '스레드 {n}개를 삭제할까요? 해당 채팅 메시지와 연결된 실행 이력도 함께 삭제됩니다.',
+        threadsNoneSelected: '삭제할 스레드를 하나 이상 선택하세요.',
+        threadSelectCheckbox: '일괄 삭제용 선택',
+        langHelp: 'UI는 꼭지·라벨만 한/영. 채팅은 메시지 언어. Probe 카드 본문은 고객 스레드 기준(UI와 무관).',
         optimizeConfirm: 'DB cleanup 실행? 오래된 row·report 파일 삭제될 수 있음',
         clearHistoryConfirm: 'Run history 전부 삭제?',
         compactConfirm: '7일 지난 interaction 요약·정리?',
@@ -2601,7 +2841,7 @@
         actionBoardTitle: 'Action dashboard',
         actionBoardLead: 'Inbox Probe마다 CSM 검토용 구조화 액션이 쌓입니다. 전체 모델 출력은 Run history에 있습니다.',
         actionBoardRefresh: '새로고침',
-        actionBoardHelp: '상세·피드백은 Run history에서 확인하세요.',
+        actionBoardHelp: '카드 메모는 학습 메모리로 저장되며, 논의는 Workbench 스레드로 열립니다.',
         actionBoardEmpty: '아직 inbox 리뷰가 없습니다. Inbox 스캔, 스레드 Probe, 또는 Cron을 실행하세요.',
         actionBoardFail: 'Action dashboard를 불러오지 못했습니다',
         dashboardFilterSource: '출처',
@@ -2622,6 +2862,30 @@
         dashboardSortUpdatedDesc: '최신 업데이트',
         dashboardSortUpdatedAsc: '오래된 업데이트',
         dashboardSortStatus: '상태',
+        dashboardSortPriorityDesc: '우선순위(긴급 우선)',
+        dashboardSortPriorityAsc: '우선순위(낮은 순)',
+        dashboardPriorityFilter: '우선순위',
+        dashboardPriorityAll: '전체',
+        dashboardPriorityUrgent: '긴급',
+        dashboardPriorityHigh: '높음',
+        dashboardPriorityMedium: '보통',
+        dashboardPriorityLow: '낮음',
+        dashboardDomainFilter: '고객 도메인',
+        dashboardDomainPlaceholder: '도메인으로 필터…',
+        dashboardSelectAll: '전체 선택',
+        dashboardSelectNone: '선택 해제',
+        dashboardDismissSelected: '선택 항목 제거',
+        dashboardBulkSelectedCount: '{count}개 선택',
+        dashboardDismissBulkConfirm: '선택한 {count}개 작업을 Action dashboard에서 제거할까요? Run history는 유지됩니다.',
+        dashboardEmailFrom: '발신',
+        dashboardClientEmail: '고객 이메일',
+        dashboardEmailSubject: '제목',
+        dashboardFeedbackLabel: 'Sova 학습을 위한 피드백 남기기',
+        dashboardFeedbackPlaceholder: '이 유형의 액션에서 무엇을 바꾸면 좋을지 적어 주세요. 에이전트가 이 피드백에서 학습하도록 알려주세요.',
+        dashboardFeedbackSend: '보내기',
+        dashboardFeedbackSaved: '피드백을 저장했습니다.',
+        dashboardFeedbackFail: '피드백을 저장하지 못했습니다',
+        dashboardFeedbackEmpty: '메모를 먼저 입력하세요.',
         dashboardLoadMore: '더 보기',
         dashboardViewInHistory: 'Run history에서 보기',
         dashboardPollingHint: '이 탭에서 60초마다 자동 새로고침.',
@@ -2647,20 +2911,39 @@
         dashboardDiscussFail: '액션 채팅을 열지 못했습니다',
         dashboardActionStatusLabel: '작업 상태',
         dashboardStatusUpdateFail: '작업 상태를 업데이트하지 못했습니다',
-        kbSelectAll: '전체 선택',
-        kbClearSelection: '선택 해제',
-        kbDeleteSelected: '선택 삭제',
-        kbNothingSelected: '선택된 항목이 없습니다.',
-        kbBulkDeleteDocsConfirm: '선택한 문서 {n}개를 지식 베이스에서 삭제할까요?',
-        kbBulkDeleteRcConfirm: '선택한 URL {n}개를 제거할까요?',
-        bulkSelectRow: '일괄 작업용 선택',
-        dashboardBulkDismissConfirm: '선택한 액션 {n}개를 Action dashboard에서 제거할까요? Run history는 유지됩니다.',
-        configureSchedulerBlock: '스케줄러·시간',
-        configureSchedulerHint: 'Cron에 쓸 <strong>GMT 오프셋</strong>을 고릅니다. 저장 값은 고정 UTC 오프셋(<code>Etc/GMT…</code>)으로 들어갑니다. <strong>상속(Inherit)</strong>을 선택하면 저장된 덮어쓰기를 지우고 서버 기본값을 씁니다. 저장 후 <strong>API 서버를 재시작</strong>하세요.',
-        cfgSchedulerTz: '스케줄러 (GMT 오프셋)',
-        cfgSchedulerTzInherit: '기본값 상속 (저장된 덮어쓰기 없음)',
-        kbPanelUploadSummary: '업로드, 재색인 및 저장 문서',
-        kbPanelRcSummary: 'URL 추가, 하위 페이지 발견 및 저장 목록',
+        dashboardThreadTitle: '스레드',
+        dashboardClientId: '고객',
+        dashboardClientDomain: '도메인',
+        dashboardPriority: '우선순위',
+        dashboardConfidence: '신뢰도',
+        dashboardRelevance: '관련성',
+        dashboardRetrievalEvidence: '검색 근거',
+        dashboardGmailThread: 'Gmail 스레드',
+        dashboardRunStatusRunning: '실행 중',
+        dashboardRunStatusQueued: '대기 중',
+        dashCatGeneral: '일반',
+        dashCatProductTechnical: '제품 · 기술',
+        dashCatAccount: '계정',
+        relReasonModelIncludeDashboard: '모델이 대시보드 포함으로 표시',
+        relReasonPermissiveAmbiguous: '허용 모드 — 모호한 의도도 노출',
+        relReasonStrictAmbiguous: '엄격 모드 — 모호한 의도는 액션으로 노출 안 함',
+        relReasonModelIntentNotDashboard: '모델이 대시보드 액션으로 표시하지 않음',
+        relReasonUserIncludeSenderDomain: '설정의 포함 발신 도메인과 일치',
+        relReasonEmptyText: '판단할 텍스트 없음',
+        relReasonModelCategory: '모델 카테고리: {category}',
+        relOutcomeRequiresCsm: 'CSM 후속 조치 필요',
+        relOutcomeInformational: '정보성(조치 불필요)',
+        relOutcomeInternalNonCsm: '내부·비CSM으로 분류',
+        relOutcomeInsufficientContext: '맥락 부족',
+        relReasonCustomerAsk: '고객 문의 또는 리스크 신호',
+        relReasonNoAction: '명확한 조치 요청 없음',
+        relReasonStrictNoAction: '엄격 모드: 조치 신호 없음',
+        relReasonExcludedKeyword: '제외 키워드와 일치',
+        relReasonExcludedNl: '설정의 제외 의도(자연어 규칙)와 일치',
+        relReasonIncludeNl: '설정의 포함 의도(자연어 규칙)와 일치',
+        relReasonDefaultInternal: '내부·자동 메일로 판단',
+        relReasonExcludedDomain: '제외 발신 도메인 ({domain})',
+        relPrioConfCombinedTitle: '우선순위·신뢰도',
       },
     };
 
@@ -2737,11 +3020,21 @@
         daf.options[2].text = uiText('dashboardActionStatusInProgress');
         daf.options[3].text = uiText('dashboardActionStatusCompleted');
       }
+      const dpf = document.getElementById('dashboardPriorityFilter');
+      if (dpf && dpf.options && dpf.options.length >= 5) {
+        dpf.options[0].text = uiText('dashboardPriorityAll');
+        dpf.options[1].text = uiText('dashboardPriorityUrgent');
+        dpf.options[2].text = uiText('dashboardPriorityHigh');
+        dpf.options[3].text = uiText('dashboardPriorityMedium');
+        dpf.options[4].text = uiText('dashboardPriorityLow');
+      }
       const das = document.getElementById('dashboardActionSort');
-      if (das && das.options && das.options.length >= 3) {
+      if (das && das.options && das.options.length >= 5) {
         das.options[0].text = uiText('dashboardSortUpdatedDesc');
         das.options[1].text = uiText('dashboardSortUpdatedAsc');
         das.options[2].text = uiText('dashboardSortStatus');
+        das.options[3].text = uiText('dashboardSortPriorityDesc');
+        das.options[4].text = uiText('dashboardSortPriorityAsc');
       }
       const cfgRoot = document.getElementById('tab-configure');
       if (cfgRoot) {
@@ -2786,42 +3079,181 @@
     }
 
     let _activeThreadId = null;
+    let _threadsListCache = [];
+    const _selectedThreadIds = new Set();
     let _dashboardOffset = 0;
     let _dashboardProbeRows = [];
+    let _dashboardDomainFilterTimer = null;
     let _dashboardPollTimer = null;
     const DASHBOARD_TAB_ID = 'tab-action-dashboard';
     const DASHBOARD_HASH = 'action-dashboard';
     const CONFIGURE_TAB_ID = 'tab-configure';
     const CONFIGURE_HASH = 'configure';
     const DASHBOARD_LAYOUT_KEY = 'sova_action_dashboard_layout';
+    /** Default matches server `SCHEDULER_TIMEZONE` / Configure until runtime settings load. */
+    const DEFAULT_DISPLAY_TIMEZONE = 'Asia/Seoul';
+    let _configuredTimeZone = DEFAULT_DISPLAY_TIMEZONE;
     const TAB_TO_HASH = {
       [DASHBOARD_TAB_ID]: DASHBOARD_HASH,
       [CONFIGURE_TAB_ID]: CONFIGURE_HASH,
     };
+    /**
+     * Naive ISO / SQLite "YYYY-MM-DD HH:MM:SS" values are stored as UTC on the server.
+     * Append Z so the browser does not interpret them in the user's local timezone.
+     */
+    function _coerceUtcInstantString(ts) {
+      const s0 = String(ts || '').trim();
+      if (!s0) return s0;
+      let s = s0.replace(' ', 'T');
+      if (/[zZ]$/.test(s)) return s;
+      if (/[+-]\d{2}:\d{2}$/.test(s)) return s0;
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?$/.test(s)) return s + 'Z';
+      return s0;
+    }
+    function _parseUtcMs(ts) {
+      const raw = _coerceUtcInstantString(ts);
+      if (!raw) return 0;
+      const ms = Date.parse(raw);
+      return Number.isFinite(ms) ? ms : 0;
+    }
+    function _safeTimeZone() {
+      const tz = String(_configuredTimeZone || '').trim() || DEFAULT_DISPLAY_TIMEZONE;
+      try {
+        new Intl.DateTimeFormat(undefined, { timeZone: tz });
+        return tz;
+      } catch {
+        try {
+          new Intl.DateTimeFormat(undefined, { timeZone: DEFAULT_DISPLAY_TIMEZONE });
+          return DEFAULT_DISPLAY_TIMEZONE;
+        } catch {
+          return undefined;
+        }
+      }
+    }
     function _fmtTime(ts) {
-      try { return new Date(ts).toLocaleString(); } catch { return ''; }
+      try {
+        const raw = _coerceUtcInstantString(ts);
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return String(ts || '');
+        const tz = _safeTimeZone();
+        return tz ? d.toLocaleString(undefined, { timeZone: tz }) : d.toLocaleString();
+      } catch {
+        return '';
+      }
+    }
+    /** Time-of-day only; same configured timezone as thread list and action cards. */
+    function _fmtTimeShort(ts) {
+      try {
+        const raw = _coerceUtcInstantString(ts);
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return '';
+        const tz = _safeTimeZone();
+        if (!tz) return d.toLocaleTimeString();
+        return d.toLocaleTimeString(undefined, {
+          timeZone: tz,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+      } catch {
+        return '';
+      }
     }
     function _threadTitle(t) {
       return (t && t.title) ? String(t.title) : `Thread #${t.id}`;
     }
+    function _threadListItemHtml(t) {
+      const tid = Number(t.id);
+      const active = (_activeThreadId === tid) ? 'active' : '';
+      const checked = _selectedThreadIds.has(tid) ? 'checked' : '';
+      const alab = escapeHtml(uiText('threadSelectCheckbox'));
+      return `<div class="thread-item-row">
+          <input type="checkbox" class="thread-chk" ${checked} aria-label="${alab}"
+            onclick="event.stopPropagation(); toggleThreadSelection(${tid}, this)" />
+          <div class="thread-item ${active}" role="button" tabindex="0" onclick="selectThread(${tid})"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectThread(${tid});}">
+            <div class="thread-title">${escapeHtml(_threadTitle(t))}</div>
+            <div class="thread-meta">${escapeHtml(_fmtTime(t.updated_at || t.created_at || ''))}</div>
+          </div>
+        </div>`;
+    }
+    function updateThreadBulkToolbar() {
+      const hint = document.getElementById('threadBulkHint');
+      if (!hint) return;
+      const n = _selectedThreadIds.size;
+      hint.textContent = n ? uiFmt('threadsSelectedCount', { n: String(n) }) : '';
+    }
+    function rerenderThreadListFromCache() {
+      const el = document.getElementById('threadList');
+      if (!el || !_threadsListCache.length) return;
+      el.innerHTML = _threadsListCache.map(t => _threadListItemHtml(t)).join('');
+      updateThreadBulkToolbar();
+    }
+    function toggleThreadSelection(threadId, el) {
+      const tid = Number(threadId);
+      if (el && el.checked) _selectedThreadIds.add(tid);
+      else _selectedThreadIds.delete(tid);
+      updateThreadBulkToolbar();
+    }
+    function threadsSelectAllVisible() {
+      for (const t of _threadsListCache) {
+        _selectedThreadIds.add(Number(t.id));
+      }
+      rerenderThreadListFromCache();
+    }
+    function threadsClearSelection() {
+      _selectedThreadIds.clear();
+      rerenderThreadListFromCache();
+    }
+    async function deleteSelectedThreads() {
+      if (!_selectedThreadIds.size) {
+        alert(uiText('threadsNoneSelected'));
+        return;
+      }
+      const ids = Array.from(_selectedThreadIds, Number);
+      const n = ids.length;
+      if (!confirm(uiFmt('threadsBulkDeleteConfirm', { n: String(n) }))) return;
+      try {
+        await fetchJson('/threads/bulk-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thread_ids: ids }),
+        });
+        _selectedThreadIds.clear();
+        if (_activeThreadId != null && ids.includes(Number(_activeThreadId))) {
+          _activeThreadId = null;
+        }
+        await loadThreads();
+        await loadThreadMessages();
+      } catch (e) {
+        alert(uiText('deleteFail') + ': ' + e.message);
+      }
+    }
     async function loadThreads() {
       const q = (document.getElementById('threadSearch')?.value || '').trim();
       const data = await fetchJson('/threads?limit=50' + (q ? `&q=${encodeURIComponent(q)}` : ''));
+      _threadsListCache = Array.isArray(data) ? data : [];
       const el = document.getElementById('threadList');
-      if (!data.length) {
+      const idsInView = new Set(_threadsListCache.map(t => Number(t.id)));
+      for (const sid of Array.from(_selectedThreadIds)) {
+        if (!idsInView.has(sid)) _selectedThreadIds.delete(sid);
+      }
+      if (!_threadsListCache.length) {
         el.innerHTML = `<div class="empty" style="padding:1rem 0;">${escapeHtml(uiText('noThreads'))}</div>`;
         _activeThreadId = null;
+        updateThreadBulkToolbar();
         return;
       }
-      el.innerHTML = data.map(t => {
-        const active = (_activeThreadId === t.id) ? 'active' : '';
-        return `<div class="thread-item ${active}" onclick="selectThread(${t.id})">
-          <div class="thread-title">${escapeHtml(_threadTitle(t))}</div>
-          <div class="thread-meta">${escapeHtml(_fmtTime(t.updated_at || t.created_at || ''))}</div>
-        </div>`;
-      }).join('');
-      if (!_activeThreadId) {
-        await selectThread(data[0].id);
+      el.innerHTML = _threadsListCache.map(t => _threadListItemHtml(t)).join('');
+      updateThreadBulkToolbar();
+      if (
+        !_activeThreadId
+        || !_threadsListCache.some(t => Number(t.id) === Number(_activeThreadId))
+      ) {
+        await selectThread(_threadsListCache[0].id);
       }
     }
     async function createThread() {
@@ -2890,8 +3322,15 @@
         const started = await fetchJson('/threads/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ thread_id: _activeThreadId, text: text || '', probe: !!probe })
+          body: JSON.stringify({
+          thread_id: _activeThreadId,
+          text: text || '',
+          probe: !!probe,
+          ui_locale: _uiLang === 'ko' ? 'ko' : 'en',
+        })
         });
+        _workbenchActiveRunId = started.run_id;
+        setWorkbenchStopVisible(true);
         await loadThreadMessages(); // shows the user message immediately
         await pollRun(started.run_id);
         await loadThreadMessages(); // shows assistant message after completion
@@ -2900,6 +3339,8 @@
       } catch (e) {
         alert('Error: ' + e.message);
       } finally {
+        _workbenchActiveRunId = null;
+        setWorkbenchStopVisible(false);
         setProcessingUI(false);
       }
     }
@@ -3006,64 +3447,159 @@
       }
     }
     // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
+    let _selectedKbDocIds = new Set();
+    /** RC URL strings (decoded) selected for bulk delete only — not the same as "enabled" toggles. */
+    let _selectedRcUrls = new Set();
+
+    function rcUrlUpdateBulkDeleteBtn() {
+      const bulkBtn = document.getElementById('rcBulkDeleteBtn');
+      if (!bulkBtn) return;
+      const n = _selectedRcUrls.size;
+      bulkBtn.disabled = n === 0;
+      bulkBtn.textContent = n > 0 ? `${uiText('rcDeleteSelected')} (${n})` : uiText('rcDeleteSelected');
+    }
+
+    function syncRcSelectAllMaster() {
+      const root = document.getElementById('rcUrlList');
+      const master = document.getElementById('rcSelectAllMaster');
+      if (!root || !master) return;
+      const boxes = root.querySelectorAll('.rc-url-select');
+      const n = boxes.length;
+      const c = Array.from(boxes).filter((b) => b.checked).length;
+      master.checked = n > 0 && c === n;
+      master.indeterminate = c > 0 && c < n;
+    }
+
+    function onRcUrlSelectChange(cb) {
+      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
+      if (!url) return;
+      if (cb.checked) _selectedRcUrls.add(url);
+      else _selectedRcUrls.delete(url);
+      rcUrlUpdateBulkDeleteBtn();
+      syncRcSelectAllMaster();
+    }
+
+    function rcUrlToggleSelectAll(checked) {
+      const root = document.getElementById('rcUrlList');
+      if (!root) return;
+      const boxes = root.querySelectorAll('.rc-url-select');
+      _selectedRcUrls = new Set();
+      boxes.forEach((el) => {
+        el.checked = !!checked;
+        const u = decodeURIComponent(el.getAttribute('data-rc') || '');
+        if (checked && u) _selectedRcUrls.add(u);
+      });
+      rcUrlUpdateBulkDeleteBtn();
+      syncRcSelectAllMaster();
+    }
+
+    async function onRcUrlEnabledToggle(cb) {
+      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
+      if (!url) return;
+      const enabled = cb.checked;
+      try {
+        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
+      } catch (e) {
+        alert('Error: ' + e.message);
+        cb.checked = !enabled;
+      }
+    }
+
+    async function deleteSelectedRcUrls() {
+      const urls = Array.from(_selectedRcUrls);
+      if (!urls.length) {
+        alert(uiText('rcNoneSelected'));
+        return;
+      }
+      if (!confirm(uiFmt('rcBulkDeleteConfirm', { n: String(urls.length) }))) return;
+      try {
+        for (const url of urls) {
+          await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
+        }
+        _selectedRcUrls = new Set();
+        await loadRcUrls();
+      } catch (e) {
+        alert('Error: ' + e.message);
+        await loadRcUrls();
+      }
+    }
+
+    function toggleKbDocSelected(docId, checked) {
+      const id = Number(docId);
+      if (!Number.isFinite(id)) return;
+      if (checked) _selectedKbDocIds.add(id);
+      else _selectedKbDocIds.delete(id);
+      const bulkBtn = document.getElementById('kbBulkDeleteBtn');
+      if (bulkBtn) {
+        const n = _selectedKbDocIds.size;
+        bulkBtn.disabled = n === 0;
+        bulkBtn.textContent = n > 0 ? `Delete selected (${n})` : 'Delete selected';
+      }
+    }
+
+    function toggleKbDocSelectAll(checked) {
+      const boxes = document.querySelectorAll('.kb-doc-select');
+      _selectedKbDocIds = new Set();
+      boxes.forEach((el) => {
+        el.checked = !!checked;
+        const id = Number(el.getAttribute('data-doc-id'));
+        if (checked && Number.isFinite(id)) _selectedKbDocIds.add(id);
+      });
+      toggleKbDocSelected(-1, false);
+    }
+
+    async function deleteSelectedKbDocs() {
+      const ids = Array.from(_selectedKbDocIds);
+      if (!ids.length) return;
+      if (!confirm(`Delete ${ids.length} selected document(s)?`)) return;
+      for (const id of ids) {
+        await fetchJson(`/kb/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      }
+      _selectedKbDocIds = new Set();
+      await loadDocRegistry();
+    }
+
     async function loadDocRegistry() {
       const data = await fetchJson('/kb/documents?limit=200');
       const el = document.getElementById('docRegistry');
-      if (!data.length) {
-        el.innerHTML = `<div class="empty">${escapeHtml(uiText('noDocsYet'))}</div>`;
-        initKnowledgeAndRcDelegation();
-        return;
-      }
+      if (!data.length) { el.textContent = uiText('noDocsYet'); return; }
+      const validIds = new Set(data.map((d) => Number(d.id)).filter((x) => Number.isFinite(x)));
+      _selectedKbDocIds = new Set(Array.from(_selectedKbDocIds).filter((x) => validIds.has(x)));
+      const controls = `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.35rem;margin:0 0 0.22rem 0;">
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--muted);">
+          <input type="checkbox" onchange="toggleKbDocSelectAll(this.checked)" />
+          Select all
+        </label>
+        <button id="kbBulkDeleteBtn" type="button" class="danger btn-compact" style="padding:0.25rem 0.5rem;border-radius:7px;" onclick="deleteSelectedKbDocs()" ${_selectedKbDocIds.size ? '' : 'disabled'}>
+          ${_selectedKbDocIds.size ? `Delete selected (${_selectedKbDocIds.size})` : 'Delete selected'}
+        </button>
+      </div>`;
       el.innerHTML = data.map(d => {
         const loc = d.url ? d.url : (d.path || '');
         const title = d.title || '';
-        const lang = d.language || '';
         const scope = d.scope || '';
-        const id = Number(d.id);
-        return `<div class="kb-doc-row" data-doc-id="${id}">
-          <input type="checkbox" class="kb-doc-pick" aria-label="${escapeHtml(uiText('bulkSelectRow'))}" />
-          <details class="kb-doc-row__details">
-            <summary class="kb-doc-row__summary">
-              <span class="kb-doc-row__title-line"><strong>${escapeHtml(title)}</strong> <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span></span>
-              <span class="kb-doc-row__chev" aria-hidden="true">▸</span>
-            </summary>
-            <div class="kb-doc-row__body">
-              <code>${escapeHtml(loc)}</code>
-              <span class="kb-doc-row__meta">lang=${escapeHtml(lang)} scope=${escapeHtml(scope)}</span>
+        const scopeLine = scope
+          ? `<span style="color:var(--muted);font-size:0.78rem;">scope=${escapeHtml(scope)}</span>`
+          : '';
+        const checked = _selectedKbDocIds.has(Number(d.id)) ? 'checked' : '';
+        return `<details style="margin:0 0 0.22rem 0;border:1px solid var(--border);border-radius:9px;padding:0.12rem 0.45rem;background:var(--surface);">
+          <summary style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:0.45rem;cursor:pointer;list-style:none;padding:0.02rem 0;">
+            <div style="display:flex;align-items:center;">
+              <input class="kb-doc-select" data-doc-id="${Number(d.id)}" type="checkbox" ${checked}
+                onclick="event.stopPropagation()"
+                onchange="toggleKbDocSelected(${Number(d.id)}, this.checked)" />
             </div>
-          </details>
-          <button type="button" class="danger btn-compact kb-doc-del-one" data-doc-id="${id}">${escapeHtml(uiText('delete'))}</button>
-        </div>`;
+            <div style="min-width:0;display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;">
+              <strong style="min-width:0;">${escapeHtml(title)}</strong>
+              <span style="color:var(--muted)">[${escapeHtml(d.source_type || '')}]</span>
+              ${scopeLine}
+            </div>
+            <button type="button" class="danger btn-compact" style="padding:0.2rem 0.42rem;border-radius:7px;line-height:1;" onclick="event.preventDefault();event.stopPropagation();deleteKbDoc(${d.id})">${escapeHtml(uiText('delete'))}</button>
+          </summary>
+          <div style="margin:0.12rem 0 0 0;word-break:break-all;font-size:0.78rem;font-family:var(--mono);line-height:1.3;color:var(--text);">${escapeHtml(loc)}</div>
+        </details>`;
       }).join('');
-      initKnowledgeAndRcDelegation();
-    }
-
-    function kbDocSelectAll(v) {
-      document.querySelectorAll('#docRegistry .kb-doc-pick').forEach((cb) => { cb.checked = !!v; });
-    }
-
-    async function kbDocBulkDelete() {
-      const ids = [...document.querySelectorAll('#docRegistry .kb-doc-pick:checked')]
-        .map((cb) => {
-          const row = cb.closest('.kb-doc-row');
-          return row ? Number(row.getAttribute('data-doc-id')) : NaN;
-        })
-        .filter((n) => Number.isFinite(n));
-      if (!ids.length) {
-        alert(uiText('kbNothingSelected'));
-        return;
-      }
-      if (!confirm(uiFmt('kbBulkDeleteDocsConfirm', { n: String(ids.length) }))) return;
-      for (const id of ids) {
-        try {
-          await fetchJson(`/kb/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
-        } catch (e) {
-          alert(uiText('deleteFail') + ': ' + e.message);
-          loadDocRegistry();
-          return;
-        }
-      }
-      loadDocRegistry();
+      el.innerHTML = controls + el.innerHTML;
     }
 
     async function deleteKbDoc(id) {
@@ -3075,87 +3611,48 @@
         alert('Error deleting document: ' + e.message);
       }
     }
-    function initKnowledgeAndRcDelegation() {
-      const rcList = document.getElementById('rcUrlList');
-      if (rcList && !rcList._rcDelegated) {
-        rcList._rcDelegated = true;
-        rcList.addEventListener('change', (e) => {
-          const t = e.target;
-          if (t && t.classList && t.classList.contains('rc-enable')) {
-            const enc = t.getAttribute('data-u');
-            if (!enc) return;
-            const url = decodeURIComponent(enc);
-            toggleRcUrl(url, t.checked);
-          }
-        });
-        rcList.addEventListener('click', (e) => {
-          const btn = e.target.closest('.rc-del-one');
-          if (!btn) return;
-          const enc = btn.getAttribute('data-u');
-          if (!enc) return;
-          deleteRcUrl(decodeURIComponent(enc));
-        });
-      }
-      const docReg = document.getElementById('docRegistry');
-      if (docReg && !docReg._kbDelegated) {
-        docReg._kbDelegated = true;
-        docReg.addEventListener('click', (e) => {
-          const btn = e.target.closest('.kb-doc-del-one');
-          if (!btn) return;
-          const raw = btn.getAttribute('data-doc-id');
-          const id = Number(raw);
-          if (id) deleteKbDoc(id);
-        });
-      }
-    }
-
     async function loadRcUrls() {
       const data = await fetchJson('/rc/urls?limit=200');
       const el = document.getElementById('rcUrlList');
       if (!data.length) {
+        _selectedRcUrls = new Set();
         el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRcUrls'))}</div>`;
-        initKnowledgeAndRcDelegation();
+        rcUrlUpdateBulkDeleteBtn();
         return;
       }
-      el.innerHTML = data.map(r => {
-        const checked = r.enabled ? 'checked' : '';
-        const uEnc = encodeURIComponent(r.url);
-        return `<div class="cron-item rc-url-row" style="gap:0.75rem;" data-u="${uEnc}">
-          <input type="checkbox" class="rc-pick" data-u="${uEnc}" aria-label="${escapeHtml(uiText('bulkSelectRow'))}" />
-          <label style="display:flex;align-items:center;gap:0.35rem;flex-shrink:0;">
-            <input type="checkbox" class="rc-enable" data-u="${uEnc}" ${checked}> ${escapeHtml(uiText('enabled'))}
+      const valid = new Set(data.map((r) => String(r.url || '').trim()).filter(Boolean));
+      _selectedRcUrls = new Set(Array.from(_selectedRcUrls).filter((u) => valid.has(u)));
+      const selAria = escapeHtml(uiText('rcSelectRowAria'));
+      const rows = data.map((r) => {
+        const url = String(r.url || '').trim();
+        const enc = encodeURIComponent(url);
+        const enChecked = r.enabled ? 'checked' : '';
+        const rowSel = _selectedRcUrls.has(url) ? 'checked' : '';
+        return `<div class="cron-item rc-url-row" style="display:grid;grid-template-columns:auto auto 1fr auto;gap:0.55rem;align-items:center;">
+          <input type="checkbox" class="rc-url-select" data-rc="${enc}" aria-label="${selAria}" ${rowSel}
+            onclick="event.stopPropagation()" onchange="onRcUrlSelectChange(this)" />
+          <label style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;margin:0;font-size:0.8rem;color:var(--muted);cursor:pointer;">
+            <input type="checkbox" class="rc-url-enabled" data-rc="${enc}" ${enChecked}
+              onclick="event.stopPropagation()" onchange="onRcUrlEnabledToggle(this)" />
+            <span>${escapeHtml(uiText('enabled'))}</span>
           </label>
-          <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.url)}</code>
-          <button type="button" class="danger btn-compact rc-del-one" data-u="${uEnc}">${escapeHtml(uiText('remove'))}</button>
+          <code style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(url)}</code>
+          <button type="button" class="danger btn-compact" style="padding:0.2rem 0.42rem;border-radius:7px;line-height:1;"
+            onclick="deleteRcUrlEncoded('${enc}')">${escapeHtml(uiText('remove'))}</button>
         </div>`;
       }).join('');
-      initKnowledgeAndRcDelegation();
-    }
-
-    function rcUrlSelectAll(v) {
-      document.querySelectorAll('#rcUrlList .rc-pick').forEach((cb) => { cb.checked = !!v; });
-    }
-
-    async function rcUrlBulkDelete() {
-      const encs = [...document.querySelectorAll('#rcUrlList .rc-pick:checked')]
-        .map((cb) => cb.getAttribute('data-u'))
-        .filter(Boolean);
-      if (!encs.length) {
-        alert(uiText('kbNothingSelected'));
-        return;
-      }
-      if (!confirm(uiFmt('kbBulkDeleteRcConfirm', { n: String(encs.length) }))) return;
-      for (const enc of encs) {
-        const url = decodeURIComponent(enc);
-        try {
-          await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
-        } catch (e) {
-          alert('Error: ' + e.message);
-          loadRcUrls();
-          return;
-        }
-      }
-      loadRcUrls();
+      const controls = `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.35rem;margin:0 0 0.45rem 0;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--muted);cursor:pointer;">
+          <input type="checkbox" id="rcSelectAllMaster" onchange="rcUrlToggleSelectAll(this.checked)" />
+          ${escapeHtml(uiText('rcSelectAll'))}
+        </label>
+        <button id="rcBulkDeleteBtn" type="button" class="danger btn-compact" style="padding:0.25rem 0.5rem;border-radius:7px;" onclick="deleteSelectedRcUrls()" ${_selectedRcUrls.size ? '' : 'disabled'}>
+          ${_selectedRcUrls.size ? `${escapeHtml(uiText('rcDeleteSelected'))} (${_selectedRcUrls.size})` : escapeHtml(uiText('rcDeleteSelected'))}
+        </button>
+      </div>`;
+      el.innerHTML = controls + rows;
+      syncRcSelectAllMaster();
+      rcUrlUpdateBulkDeleteBtn();
     }
     async function addRcUrl() {
       const url = document.getElementById('rcUrlInput').value.trim();
@@ -3172,18 +3669,12 @@
         el.textContent = 'Error: ' + e.message;
       }
     }
-    async function toggleRcUrl(url, enabled) {
-      try {
-        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
-      } catch (e) {
-        alert('Error: ' + e.message);
-      }
-      loadRcUrls();
-    }
-    async function deleteRcUrl(url) {
+    async function deleteRcUrlEncoded(enc) {
+      const url = decodeURIComponent(enc);
       if (!confirm(uiText('removeUrlConfirm'))) return;
       try {
         await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
+        _selectedRcUrls.delete(url);
       } catch (e) {
         alert('Error: ' + e.message);
       }
@@ -3208,7 +3699,8 @@
       const expr = document.getElementById('cronExpr').value.trim();
       if (!name || !expr) { alert(uiText('cronNeedName')); return; }
       try {
-        await fetchJson('/cron', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, cron_expression: expr, timezone: 'Asia/Seoul' }) });
+        const tzCron = (String(_configuredTimeZone || '').trim() || DEFAULT_DISPLAY_TIMEZONE);
+        await fetchJson('/cron', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, cron_expression: expr, timezone: tzCron }) });
         loadCronJobs();
         document.getElementById('cronName').value = '';
         document.getElementById('cronExpr').value = '';
@@ -3223,11 +3715,38 @@
       await fetchJson(`/cron/${encodeURIComponent(name)}`, { method: 'DELETE' });
       loadCronJobs();
     }
+    function applyCronPreset(expr) {
+      const e = document.getElementById('cronExpr');
+      if (!e) return;
+      const v = String(expr || '').trim();
+      if (!v) return;
+      e.value = v;
+    }
     async function loadCronJobs() {
       const jobs = await fetchJson('/cron');
       const el = document.getElementById('cronList');
       if (!jobs.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noCronJobs'))}</div>`; return; }
-      el.innerHTML = jobs.map(j => `<div class="cron-item"><span style="flex:1">${j.name}</span><code>${j.cron_expression}</code><label><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron('${j.name}', this.checked)"> ${escapeHtml(uiText('cronEnabled'))}</label><button type="button" class="danger" onclick="deleteCron('${j.name}')">${escapeHtml(uiText('delete'))}</button></div>`).join('');
+      el.innerHTML = jobs.map(j => {
+        const nm = String(j.name || '');
+        const expr = String(j.cron_expression || '');
+        const human = String(j.human_schedule || '').trim();
+        const nextRuns = Array.isArray(j.next_runs) ? j.next_runs : [];
+        const nextHtml = nextRuns.length
+          ? nextRuns.map((x) => `<code style="margin-right:0.3rem;">${escapeHtml(String(x))}</code>`).join('')
+          : `<span class="configure-hint">${escapeHtml(uiText('cronNoNextRuns'))}</span>`;
+        return `<div class="cron-item" style="align-items:flex-start;gap:0.75rem;">
+          <div style="flex:1;min-width:280px;">
+            <div style="display:flex;gap:0.45rem;align-items:center;flex-wrap:wrap;">
+              <strong>${escapeHtml(nm)}</strong>
+              <code>${escapeHtml(expr)}</code>
+            </div>
+            <div class="configure-hint" style="margin-top:0.2rem;">${escapeHtml(uiText('cronScheduleMeaning'))}: ${escapeHtml(human || 'Custom cron schedule')}</div>
+            <div class="configure-hint" style="margin-top:0.2rem;">${escapeHtml(uiText('cronNextRuns'))}: ${nextHtml}</div>
+          </div>
+          <label style="white-space:nowrap;"><input type="checkbox" ${j.enabled ? 'checked' : ''} onchange="toggleCron(decodeURIComponent('${encodeURIComponent(nm)}'), this.checked)"> ${escapeHtml(uiText('cronEnabled'))}</label>
+          <button type="button" class="danger" onclick="deleteCron(decodeURIComponent('${encodeURIComponent(nm)}'))">${escapeHtml(uiText('delete'))}</button>
+        </div>`;
+      }).join('');
     }
     async function loadCronSummary() {
       const data = await fetchJson('/cron/summary?limit=20');
@@ -3235,11 +3754,31 @@
       if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noCronRuns'))}</div>`; return; }
       el.innerHTML = data.map(i => {
         const msg = (i.output_text || i.error_message || '').slice(0, 500);
-        return `<div class="interaction"><div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
+        return `<div class="interaction"><div class="interaction-meta">${_fmtTime(i.created_at)} · ${i.trigger_type} · ${i.status}</div><pre style="white-space:pre-wrap;font-size:0.8rem">${msg}</pre></div>`;
       }).join('');
     }
     let _traceLen = 0;
     let _traceAll = [];
+    let _workbenchActiveRunId = null;
+    let _runQueuePollTimer = null;
+
+    function setWorkbenchStopVisible(show) {
+      document.querySelectorAll('.workbench-stop-btn').forEach((b) => {
+        b.style.display = show ? 'inline-block' : 'none';
+      });
+    }
+
+    async function workbenchStopRun() {
+      const id = _workbenchActiveRunId;
+      if (!id) return;
+      try {
+        await fetchJson(`/agent/runs/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
+        setProcessingUI(true, uiText('workbenchStopping'));
+      } catch (e) {
+        console.warn('Stop request failed:', e);
+      }
+    }
+
     function startTraceUI() {
       const el = document.getElementById('runTrace');
       if (el) el.innerHTML = '';
@@ -3262,7 +3801,7 @@
       el.className = 'trace-item';
       const hasDetail = !!(e.detail && String(e.detail).trim());
       const detailHtml = hasDetail ? `<div class="trace-detail">${escapeHtml(e.detail)}</div>` : '';
-      const ts = e.ts ? new Date(e.ts).toLocaleTimeString() : '';
+      const ts = e.ts ? _fmtTimeShort(e.ts) : '';
       // Per-event collapsible to reduce "log wall" feeling.
       if (hasDetail) {
         el.innerHTML = `
@@ -3297,9 +3836,51 @@
       if (el) el.innerHTML = '';
     }
 
+    function renderRunQueue(items) {
+      const el = document.getElementById('runQueueList');
+      if (!el) return;
+      const rows = Array.isArray(items) ? items : [];
+      if (!rows.length) {
+        el.innerHTML = `<div class="empty">${escapeHtml(_uiLang === 'ko' ? '대기/실행 중인 런이 없습니다.' : 'No queued or running runs.')}</div>`;
+        return;
+      }
+      el.innerHTML = rows.map((r) => {
+        const st = String(r.status || '');
+        const rid = String(r.run_id || '').slice(0, 8);
+        const trig = String(r.trigger_type || '');
+        const when = _fmtTime(String(r.updated_at || r.created_at || ''));
+        const prompt = String(r.input_text || '').trim().slice(0, 140);
+        return `<div class="run-queue-item">
+          <div class="row" style="justify-content:space-between;align-items:center;gap:0.6rem;">
+            <span class="run-queue-status">${escapeHtml(st)}</span>
+            <span class="run-queue-meta">#${escapeHtml(rid)} · ${escapeHtml(when)}</span>
+          </div>
+          <div class="run-queue-meta" style="margin-top:0.2rem;">${escapeHtml(trig)}</div>
+          ${prompt ? `<div style="font-size:0.82rem;margin-top:0.3rem;white-space:pre-wrap;">${escapeHtml(prompt)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    async function loadRunQueue() {
+      try {
+        const pack = await fetchJson('/agent/runs?limit=40&status=all');
+        const items = (pack && Array.isArray(pack.items)) ? pack.items : [];
+        const active = items.filter((x) => ['queued', 'running'].includes(String(x.status || '').toLowerCase()));
+        renderRunQueue(active);
+      } catch (_e) {
+        renderRunQueue([]);
+      }
+    }
+
+    function startRunQueuePolling() {
+      if (_runQueuePollTimer) clearInterval(_runQueuePollTimer);
+      void loadRunQueue();
+      _runQueuePollTimer = window.setInterval(() => { void loadRunQueue(); }, 1500);
+    }
+
     function isImportantEvent(e) {
       const t = String(e.type || '');
-      return t === 'tool_start' || t === 'tool_end' || t === 'model_start' || t === 'model_end' || t === 'web_round_start' || t === 'web_round_end';
+      return t === 'tool_start' || t === 'tool_end' || t === 'model_start' || t === 'model_end' || t === 'web_round_start' || t === 'web_round_end' || t === 'run_cancelled';
     }
 
     function rerenderTraceFiltered() {
@@ -3347,6 +3928,7 @@
       if (type === 'model_end') return _uiLang === 'ko' ? '응답 작성 중…' : 'Drafting response…';
       if (type === 'chain_start') return _uiLang === 'ko' ? '다음 단계 계획…' : 'Planning next steps…';
       if (type === 'chain_end') return _uiLang === 'ko' ? '마무리 중…' : 'Finalizing…';
+      if (type === 'run_cancelled') return _uiLang === 'ko' ? '중지됨' : 'Stopped';
       return uiText('assistantWorking');
     }
 
@@ -3395,8 +3977,10 @@
       llm_model: 'LLM_MODEL',
       llm_model_main: 'LLM_MODEL_MAIN',
       llm_model_search_json: 'LLM_MODEL_SEARCH_JSON',
+      llm_model_kb_web_gate: 'LLM_MODEL_KB_WEB_GATE',
       llm_model_search_rerank: 'LLM_MODEL_SEARCH_RERANK',
       llm_model_memory: 'LLM_MODEL_MEMORY',
+      retrieval_ranking_policy: 'RETRIEVAL_RANKING_POLICY',
       rag_embedding_provider: 'RAG_EMBEDDING_PROVIDER',
       rag_embedding_model: 'RAG_EMBEDDING_MODEL',
       openrouter_base_url: 'OPENROUTER_BASE_URL',
@@ -3408,11 +3992,20 @@
       gog_keyring_password: 'GOG_KEYRING_PASSWORD',
       xdg_config_home: 'XDG_CONFIG_HOME',
       gog_credentials_path: 'GOG_CREDENTIALS_PATH',
-      scheduler_timezone: 'SCHEDULER_TIMEZONE',
       guardrail_include_sender_domains: 'GUARDRAIL_INCLUDE_SENDER_DOMAINS',
       guardrail_exclude_sender_domains: 'GUARDRAIL_EXCLUDE_SENDER_DOMAINS',
-      guardrail_exclude_subject_keywords: 'GUARDRAIL_EXCLUDE_SUBJECT_KEYWORDS',
+      guardrail_include_intent_keywords: 'GUARDRAIL_INCLUDE_INTENT_KEYWORDS',
+      guardrail_exclude_intent_keywords: 'GUARDRAIL_EXCLUDE_INTENT_KEYWORDS',
+      guardrail_team_guidance: 'GUARDRAIL_TEAM_GUIDANCE',
       guardrail_strictness: 'GUARDRAIL_STRICTNESS',
+      langsmith_api_key: 'LANGSMITH_API_KEY',
+      langsmith_project: 'LANGSMITH_PROJECT',
+      langsmith_tracing: 'LANGSMITH_TRACING',
+      scheduler_timezone: 'SCHEDULER_TIMEZONE',
+      probe_inbox_max_results: 'PROBE_INBOX_MAX_RESULTS',
+      probe_inbox_gmail_search: 'PROBE_INBOX_GMAIL_SEARCH',
+      user_inbox_peek_max_results: 'USER_INBOX_PEEK_MAX_RESULTS',
+      rc_web_retrieval_mode: 'RC_WEB_RETRIEVAL_MODE',
     };
     function _canonicalEnvKey(k) {
       if (!k) return k;
@@ -3463,6 +4056,65 @@
       wrap.innerHTML = `<div class="gog-setup-status-badge ${badgeClass}">${escapeHtml(badgeText)}</div><ul class="gog-setup-checks">${list}</ul>`;
     }
 
+    function renderPromptEffectiveByMode(pr) {
+      const wrap = document.getElementById('promptEffectiveByModeContainer');
+      const noteEl = document.getElementById('promptEffectiveAssembleNote');
+      if (noteEl) {
+        noteEl.textContent = pr && pr.assemble_order ? String(pr.assemble_order) : '';
+      }
+      if (!wrap) return;
+      if (!pr || !Array.isArray(pr.modes) || !pr.modes.length) {
+        const err = pr && pr.preview_error ? String(pr.preview_error) : '';
+        const errBlock = err
+          ? `<pre style="white-space:pre-wrap;font-size:0.82rem;color:var(--danger, #b00);margin:0.5rem 0 0 0;">${escapeHtml(err)}</pre>`
+          : '';
+        wrap.innerHTML =
+          '<p class="configure-hint">No assembled preview available.</p>' + errBlock;
+        return;
+      }
+      wrap.innerHTML = pr.modes
+        .map((m) => {
+          const sysTrunc = m.system_prompt_truncated
+            ? '<p class="configure-hint" style="margin:0.25rem 0;">System prompt truncated for display.</p>'
+            : '';
+          const utTrunc = m.user_turn_truncated
+            ? '<p class="configure-hint" style="margin:0.25rem 0;">User/trigger text truncated for display.</p>'
+            : '';
+          const userBlock =
+            m.id === 'inbox_probe'
+              ? `<details style="margin-top:0.5rem;"><summary>Probe user / trigger message (human turn)</summary><pre style="white-space:pre-wrap;max-height:16rem;overflow:auto;font-size:0.85rem;margin:0.35rem 0 0 0;">${escapeHtml(
+                  m.user_turn || ''
+                )}</pre>${utTrunc}</details>`
+              : `<p class="configure-hint" style="margin:0.35rem 0 0 0;">${escapeHtml(m.user_turn || '')}</p>`;
+          return `<section class="prompt-mode-block" style="margin-bottom:1rem;padding:0.75rem;border:1px solid var(--border, #ccc);border-radius:8px;">
+            <h4 style="margin:0 0 0.35rem 0;font-size:1rem;">${escapeHtml(m.label || m.id)}</h4>
+            <p class="configure-hint" style="margin:0 0 0.5rem 0;">${escapeHtml(m.description || '')}</p>
+            <details open><summary>System prompt (effective)</summary>
+              <pre style="white-space:pre-wrap;max-height:22rem;overflow:auto;font-size:0.85rem;margin:0.35rem 0 0 0;">${escapeHtml(
+                m.system_prompt || ''
+              )}</pre>${sysTrunc}
+            </details>
+            ${userBlock}
+          </section>`;
+        })
+        .join('');
+    }
+
+    function updatePromptFieldSyncLabels(data) {
+      const st = data.stored_in_database || {};
+      const pairs = [
+        ['cfg_prompt_email_agent_system_template_sync', 'prompt_email_agent_system_template'],
+        ['cfg_prompt_probe_user_message_sync', 'prompt_probe_user_message'],
+        ['cfg_prompt_probe_mode_append_sync', 'prompt_probe_mode_append'],
+        ['cfg_prompt_action_review_append_sync', 'prompt_action_review_append'],
+      ];
+      for (const [spanId, key] of pairs) {
+        const el = document.getElementById(spanId);
+        if (!el) continue;
+        el.textContent = st[key] ? ' — saved in app database' : '';
+      }
+    }
+
     function refreshPresetDatalists() {
       if (!_lastRuntimePayload) return;
       const p = document.getElementById('cfg_llm_provider_preset')?.value || 'openrouter';
@@ -3473,12 +4125,83 @@
       }
     }
 
-    function onConfigurePresetChange() {
+    function updateConfigureProviderDependentUi() {
       refreshPresetDatalists();
       const p = document.getElementById('cfg_llm_provider_preset')?.value;
       const meta = _lastRuntimePayload && _lastRuntimePayload.provider_presets && p && _lastRuntimePayload.provider_presets[p];
-      const hint = document.getElementById('cfg_preset_hint');
-      if (hint && meta && meta.hint) hint.textContent = meta.hint;
+      const presetHint = document.getElementById('cfg_preset_hint');
+      if (presetHint && meta && meta.hint) presetHint.textContent = meta.hint;
+
+      const preset = p || 'openrouter';
+      const lab = document.getElementById('cfg_chat_api_key_label');
+      if (lab) {
+        if (preset === 'openai') lab.textContent = 'OpenAI API key';
+        else if (preset === 'gemini_openrouter') lab.textContent = 'OpenRouter API key (Gemini)';
+        else lab.textContent = 'OpenRouter API key';
+      }
+      const kh = document.getElementById('cfg_chat_api_key_hint');
+      if (kh) {
+        kh.textContent =
+          preset === 'openai'
+            ? configureUiText('configureKeyOpenAiLine1')
+            : configureUiText('configureKeyOpenRouterLine');
+      }
+      const embProviderSelect = document.getElementById('cfg_rag_embedding_provider');
+      if (embProviderSelect) {
+        const opts = preset === 'openai'
+          ? [
+              { value: 'openai', label: configureUiText('configureEmbedProviderOptOpenAI') },
+            ]
+          : [
+              { value: 'openrouter', label: configureUiText('configureEmbedProviderOptOpenRouter') },
+            ];
+        const cur = String(embProviderSelect.value || '').trim().toLowerCase();
+        embProviderSelect.innerHTML = opts
+          .map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`)
+          .join('');
+        const hasCur = opts.some((o) => o.value === cur);
+        embProviderSelect.value = hasCur ? cur : (meta?.recommended_embedding_provider || opts[0].value);
+      }
+      const embHint = document.getElementById('cfg_embed_hint');
+      if (embHint) {
+        embHint.textContent =
+          preset === 'openai'
+            ? configureUiText('configureEmbedProviderHintOpenAI')
+            : configureUiText('configureEmbedProviderHintOpenRouter');
+      }
+      const embTag = document.getElementById('cfg_embed_model_tag');
+      if (embTag) {
+        const recEmbed = (meta && meta.recommended_embedding_models && meta.recommended_embedding_models[0]) || '';
+        embTag.textContent = recEmbed
+          ? `${configureUiText('configureEmbedModelTagPrefix')}: ${recEmbed}`
+          : '';
+        embTag.style.display = recEmbed ? 'inline-block' : 'none';
+      }
+      const bb = document.getElementById('cfg_base_url_block');
+      if (bb) bb.style.display = preset === 'openai' ? 'none' : '';
+      const bu = document.getElementById('cfg_openrouter_base_url');
+      const bl = document.getElementById('cfg_base_url_label');
+      if (bu) {
+        bu.readOnly = false;
+        bu.title = '';
+      }
+      if (bl) {
+        bl.textContent = configureUiText('cfgOpenrouterUrl');
+      }
+      const buHint = document.getElementById('cfg_base_url_hint');
+      if (buHint) {
+        buHint.textContent = configureUiText('configureBaseUrlHintOpenRouter');
+      }
+      if (_lastRuntimePayload) {
+        _setConfigureEnvSpans(
+          _configureRecommendedForUiPreset(_lastRuntimePayload),
+          _lastRuntimePayload.stored_in_database || {},
+        );
+      }
+    }
+
+    function onConfigurePresetChange() {
+      updateConfigureProviderDependentUi();
     }
 
     function applyProviderPresetDefaults() {
@@ -3499,7 +4222,7 @@
         if (el) el.value = em[0];
       }
       const rp = document.getElementById('cfg_rag_embedding_provider');
-      if (rp) rp.value = 'openrouter';
+      if (rp) rp.value = meta.recommended_embedding_provider || (p === 'openai' ? 'openai' : 'openrouter');
       refreshPresetDatalists();
     }
 
@@ -3508,12 +4231,13 @@
       llm_model: 'openai/gpt-4o',
       llm_model_main: 'openai/gpt-4o',
       llm_model_search_json: 'openai/gpt-4o-mini',
+      llm_model_kb_web_gate: 'openai/gpt-4o-mini',
       llm_model_search_rerank: 'openai/gpt-4o-mini',
       llm_model_memory: 'openai/gpt-4o-mini',
-      rag_embedding_model: 'openai/text-embedding-3-large',
+      retrieval_ranking_policy: '{"version":"v1","policy_name":"default","source_order":["rag","grep","fts"],"actionable_definition":"Prioritize snippets that provide concrete troubleshooting, integration, or configuration instructions for the user query.","vendor_glossary":[],"must_include_terms":[],"must_avoid_terms":[]}',
+      rag_embedding_provider: 'openrouter',
+      rag_embedding_model: 'text-embedding-3-large',
       openrouter_base_url: 'https://openrouter.ai/api/v1',
-      scheduler_timezone: 'Asia/Seoul',
-      guardrail_strictness: 'balanced',
     };
 
     function _mergeRecommendedHints(data) {
@@ -3521,54 +4245,15 @@
       return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS, ...fromApi };
     }
 
-    /** IANA fixed offset: UTC+N → Etc/GMT-N (Olson sign inversion). */
-    function gmtOffsetHoursToIana(hours) {
-      const h = Number(hours);
-      if (!Number.isFinite(h)) return 'UTC';
-      if (h === 0) return 'UTC';
-      if (h > 0) return `Etc/GMT-${h}`;
-      return `Etc/GMT+${-h}`;
-    }
-
-    function ensureSchedulerTzGmtSelect() {
-      const sel = document.getElementById('cfg_scheduler_timezone');
-      if (!sel || sel.dataset.gmtFilled === '1') return;
-      sel.dataset.gmtFilled = '1';
-      sel.innerHTML = '';
-      const inh = document.createElement('option');
-      inh.value = '';
-      inh.textContent = configureUiText('cfgSchedulerTzInherit');
-      sel.appendChild(inh);
-      for (let h = -12; h <= 14; h++) {
-        const o = document.createElement('option');
-        o.value = gmtOffsetHoursToIana(h);
-        o.textContent = h === 0 ? 'GMT±0 (UTC)' : `GMT${h > 0 ? '+' : ''}${h}`;
-        sel.appendChild(o);
-      }
-    }
-
-    function syncSchedulerTimezoneSelect(data, eff, stored) {
-      ensureSchedulerTzGmtSelect();
-      const sel = document.getElementById('cfg_scheduler_timezone');
-      if (!sel) return;
-      const effTz = String(eff.scheduler_timezone || '').trim();
-      if (stored.scheduler_timezone) {
-        const direct = [...sel.options].some((o) => o.value === effTz);
-        if (direct) {
-          sel.value = effTz;
-          return;
-        }
-        const oh = data.scheduler_timezone_offset_hours;
-        if (oh != null && Number.isFinite(Number(oh))) {
-          const want = gmtOffsetHoursToIana(Number(oh));
-          const ok = [...sel.options].some((o) => o.value === want);
-          sel.value = ok ? want : '';
-          return;
-        }
-        sel.value = '';
-        return;
-      }
-      sel.value = '';
+    /** Grey "Recommended" hints follow the **dropdown** preset so unsaved switches match OpenRouter vs OpenAI. */
+    function _configureRecommendedForUiPreset(data) {
+      if (!data) return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS };
+      const p = document.getElementById('cfg_llm_provider_preset')?.value || 'openrouter';
+      const by = data.recommended_hints_by_preset || {};
+      const fromPreset = by[p];
+      const fromApi = data.recommended_hints || data.recommendedHints || {};
+      const from = fromPreset != null ? fromPreset : fromApi;
+      return { ...CONFIGURE_DEFAULT_RECOMMENDED_HINTS, ...from };
     }
 
     function _setConfigureEnvSpans(recommended, stored) {
@@ -3576,12 +4261,15 @@
         ['cfg_env_llm_model', 'llm_model'],
         ['cfg_env_llm_model_main', 'llm_model_main'],
         ['cfg_env_llm_model_search_json', 'llm_model_search_json'],
+        ['cfg_env_llm_model_kb_web_gate', 'llm_model_kb_web_gate'],
         ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank'],
         ['cfg_env_llm_model_memory', 'llm_model_memory'],
+        ['cfg_env_retrieval_ranking_policy', 'retrieval_ranking_policy'],
+        ['cfg_env_rag_embedding_provider', 'rag_embedding_provider'],
         ['cfg_env_rag_embedding_model', 'rag_embedding_model'],
         ['cfg_env_openrouter_base_url', 'openrouter_base_url'],
         ['cfg_env_scheduler_timezone', 'scheduler_timezone'],
-        ['cfg_env_guardrail_strictness', 'guardrail_strictness'],
+        ['cfg_env_langsmith_project', 'langsmith_project'],
       ];
       map.forEach(([spanId, key]) => {
         const el = document.getElementById(spanId);
@@ -3590,7 +4278,7 @@
         const isStored = stored && stored[key];
         const parts = [];
         if (recVal) parts.push(`${configureUiText('configureRecommendedLabel')}: ${recVal}`);
-        if (isStored) parts.push(configureUiText('configureSavedInDbShort'));
+        if (isStored && key !== 'rag_embedding_model') parts.push(configureUiText('configureSavedInDbShort'));
         el.textContent = parts.join(parts.length > 1 ? ' · ' : '');
       });
     }
@@ -3606,13 +4294,38 @@
           const el = document.getElementById(id);
           if (el) el.value = val != null ? String(val) : '';
         };
+        /** When no DB row exists yet, do not replace a non-empty field with empty effective (avoids racing GET wiping drafts before Save). */
+        const setvCfgGuardrail = (id, storeKey, effVal) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const incoming = effVal != null ? String(effVal) : '';
+          if (stored[storeKey]) {
+            el.value = incoming;
+            return;
+          }
+          const cur = (el.value || '').trim();
+          if (cur && !incoming.trim()) return;
+          el.value = incoming;
+        };
         const pp = document.getElementById('cfg_llm_provider_preset');
         if (pp) pp.value = eff.llm_provider_preset || 'openrouter';
         setv('cfg_llm_model', stored.llm_model ? eff.llm_model : (eff.llm_model || ''));
         setv('cfg_llm_model_main', stored.llm_model_main ? eff.llm_model_main : '');
         setv('cfg_llm_model_search_json', stored.llm_model_search_json ? eff.llm_model_search_json : '');
+        setv('cfg_llm_model_kb_web_gate', stored.llm_model_kb_web_gate ? eff.llm_model_kb_web_gate : '');
         setv('cfg_llm_model_search_rerank', stored.llm_model_search_rerank ? eff.llm_model_search_rerank : '');
         setv('cfg_llm_model_memory', stored.llm_model_memory ? eff.llm_model_memory : '');
+        const policyEl = document.getElementById('cfg_retrieval_ranking_policy');
+        if (policyEl) {
+          const p = eff.retrieval_ranking_policy;
+          if (p && typeof p === 'object') {
+            policyEl.value = JSON.stringify(p, null, 2);
+          } else if (stored.retrieval_ranking_policy && p != null) {
+            policyEl.value = String(p);
+          } else {
+            policyEl.value = '';
+          }
+        }
         setv(
           'cfg_rag_embedding_provider',
           stored.rag_embedding_provider ? eff.rag_embedding_provider : (eff.rag_embedding_provider || ''),
@@ -3632,11 +4345,54 @@
         setv('cfg_gog_keyring_password', '');
         setv('cfg_xdg_config_home', eff.xdg_config_home != null ? String(eff.xdg_config_home) : '');
         setv('cfg_gog_credentials_path', eff.gog_credentials_path != null ? String(eff.gog_credentials_path) : '');
-        setv('cfg_guardrail_include_sender_domains', eff.guardrail_include_sender_domains != null ? String(eff.guardrail_include_sender_domains) : '');
-        setv('cfg_guardrail_exclude_sender_domains', eff.guardrail_exclude_sender_domains != null ? String(eff.guardrail_exclude_sender_domains) : '');
-        setv('cfg_guardrail_exclude_subject_keywords', eff.guardrail_exclude_subject_keywords != null ? String(eff.guardrail_exclude_subject_keywords) : '');
+        setv('cfg_scheduler_timezone', eff.scheduler_timezone != null ? String(eff.scheduler_timezone) : 'Asia/Seoul');
+        setv('cfg_langsmith_tracing', eff.langsmith_tracing != null ? String(eff.langsmith_tracing) : 'false');
+        setv('cfg_langsmith_project', eff.langsmith_project != null ? String(eff.langsmith_project) : 'email_draft_agent');
+        setv('cfg_langsmith_api_key', '');
+        setvCfgGuardrail(
+          'cfg_guardrail_include_sender_domains',
+          'guardrail_include_sender_domains',
+          eff.guardrail_include_sender_domains,
+        );
+        setvCfgGuardrail(
+          'cfg_guardrail_exclude_sender_domains',
+          'guardrail_exclude_sender_domains',
+          eff.guardrail_exclude_sender_domains,
+        );
+        setvCfgGuardrail(
+          'cfg_guardrail_include_intent_keywords',
+          'guardrail_include_intent_keywords',
+          eff.guardrail_include_intent_keywords,
+        );
+        setvCfgGuardrail(
+          'cfg_guardrail_exclude_intent_keywords',
+          'guardrail_exclude_intent_keywords',
+          eff.guardrail_exclude_intent_keywords,
+        );
+        setvCfgGuardrail('cfg_guardrail_team_guidance', 'guardrail_team_guidance', eff.guardrail_team_guidance);
         setv('cfg_guardrail_strictness', eff.guardrail_strictness != null ? String(eff.guardrail_strictness) : 'balanced');
-        syncSchedulerTimezoneSelect(data, eff, stored);
+        setv('cfg_probe_inbox_max_results', eff.probe_inbox_max_results != null ? String(eff.probe_inbox_max_results) : '10');
+        setv(
+          'cfg_probe_inbox_gmail_search',
+          eff.probe_inbox_gmail_search != null ? String(eff.probe_inbox_gmail_search) : '',
+        );
+        setv(
+          'cfg_user_inbox_peek_max_results',
+          eff.user_inbox_peek_max_results != null ? String(eff.user_inbox_peek_max_results) : '5'
+        );
+        const rcModeEl = document.getElementById('rcWebRetrievalMode');
+        if (rcModeEl) rcModeEl.value = eff.rc_web_retrieval_mode === 'always_augment' ? 'always_augment' : 'kb_first';
+        setv('cfg_prompt_email_agent_system_template', String(eff.prompt_email_agent_system_template || ''));
+        setv('cfg_prompt_probe_user_message', String(eff.prompt_probe_user_message || ''));
+        setv('cfg_prompt_probe_mode_append', String(eff.prompt_probe_mode_append || ''));
+        setv('cfg_prompt_action_review_append', String(eff.prompt_action_review_append || ''));
+        updatePromptFieldSyncLabels(data);
+        const encN = document.getElementById('cfg_guardrail_encryption_note');
+        if (encN) {
+          encN.textContent = data.configure_encryption_enabled
+            ? 'At-rest encryption for intent phrases & team guidance: ON (CONFIGURE_ENCRYPTION_KEY set).'
+            : 'At-rest encryption: OFF — set CONFIGURE_ENCRYPTION_KEY (Fernet) on the server to store guardrail text encrypted in the database.';
+        }
         const gogKr = document.getElementById('cfg_env_gog_keyring');
         if (gogKr) {
           gogKr.textContent = data.gog_keyring_password_set_in_database
@@ -3649,16 +4405,32 @@
             ? configureUiText('configureGogKeyringDb')
             : configureUiText('configureGogKeyringMissingDb');
         }
-        _setConfigureEnvSpans(_mergeRecommendedHints(data), stored);
-        refreshPresetDatalists();
-        onConfigurePresetChange();
+        const lsKs = document.getElementById('cfg_langsmith_key_status');
+        if (lsKs) {
+          lsKs.textContent = data.langsmith_api_key_set_in_database
+            ? 'LangSmith API key stored in app database'
+            : (data.langsmith_api_key_set_in_env ? 'LangSmith API key set in server environment' : '');
+        }
+        _configuredTimeZone = String(eff.scheduler_timezone || '').trim() || DEFAULT_DISPLAY_TIMEZONE;
+        void loadThreads();
+        void loadThreadMessages();
+        updateConfigureProviderDependentUi();
         renderConfigureEnvTable(data);
         renderGogSetupStatus(data);
+        renderPromptEffectiveByMode(data.prompt_effective_by_mode);
         const ks = document.getElementById('cfg_key_status');
         if (ks) {
-          ks.textContent = data.openrouter_api_key_set_in_database
-            ? configureUiText('configureKeyDb')
-            : configureUiText('configureKeyMissingDb');
+          const preset = eff.llm_provider_preset || 'openrouter';
+          if (preset === 'openai') {
+            const parts = [];
+            if (data.openai_api_key_set_in_database) parts.push(configureUiText('configureKeyDbOpenAI'));
+            if (data.openai_api_key_set_in_env) parts.push('OPENAI_API_KEY in server environment');
+            ks.textContent = parts.length ? parts.join(' · ') : '';
+          } else {
+            ks.textContent = data.openrouter_api_key_set_in_database
+              ? configureUiText('configureKeyDbOpenRouter')
+              : '';
+          }
         }
         if (st) st.textContent = '';
       } catch (e) {
@@ -3692,19 +4464,25 @@
     async function saveRuntimeSettings() {
       const st = document.getElementById('configureSaveStatus');
       const gv = (id) => (document.getElementById(id)?.value || '').trim();
+      const preset = gv('cfg_llm_provider_preset') || 'openrouter';
       const payload = {
-        llm_provider_preset: gv('cfg_llm_provider_preset'),
+        llm_provider_preset: preset,
         llm_model: gv('cfg_llm_model'),
         llm_model_main: gv('cfg_llm_model_main'),
         llm_model_search_json: gv('cfg_llm_model_search_json'),
+        llm_model_kb_web_gate: gv('cfg_llm_model_kb_web_gate'),
         llm_model_search_rerank: gv('cfg_llm_model_search_rerank'),
         llm_model_memory: gv('cfg_llm_model_memory'),
+        retrieval_ranking_policy: gv('cfg_retrieval_ranking_policy'),
         rag_embedding_provider: gv('cfg_rag_embedding_provider'),
         rag_embedding_model: gv('cfg_rag_embedding_model'),
-        openrouter_base_url: gv('cfg_openrouter_base_url'),
       };
+      if (preset !== 'openai') payload.openrouter_base_url = gv('cfg_openrouter_base_url');
       const nkey = gv('cfg_openrouter_api_key');
-      if (nkey) payload.openrouter_api_key = nkey;
+      if (nkey) {
+        if (preset === 'openai') payload.openai_api_key = nkey;
+        else payload.openrouter_api_key = nkey;
+      }
       payload.gog_home = gv('cfg_gog_home');
       payload.gog_account = gv('cfg_gog_account');
       payload.gog_keyring_backend = gv('cfg_gog_keyring_backend');
@@ -3712,14 +4490,24 @@
       if (gkp) payload.gog_keyring_password = gkp;
       payload.xdg_config_home = gv('cfg_xdg_config_home');
       payload.gog_credentials_path = gv('cfg_gog_credentials_path');
+      payload.scheduler_timezone = gv('cfg_scheduler_timezone') || 'Asia/Seoul';
+      payload.langsmith_tracing = gv('cfg_langsmith_tracing') || 'false';
+      payload.langsmith_project = gv('cfg_langsmith_project') || 'email_draft_agent';
+      const lsk = gv('cfg_langsmith_api_key');
+      if (lsk) payload.langsmith_api_key = lsk;
       payload.guardrail_include_sender_domains = gv('cfg_guardrail_include_sender_domains');
       payload.guardrail_exclude_sender_domains = gv('cfg_guardrail_exclude_sender_domains');
-      payload.guardrail_exclude_subject_keywords = gv('cfg_guardrail_exclude_subject_keywords');
-      payload.guardrail_strictness = gv('cfg_guardrail_strictness');
-      {
-        const selTz = document.getElementById('cfg_scheduler_timezone');
-        payload.scheduler_timezone = selTz ? String(selTz.value || '').trim() : '';
-      }
+      payload.guardrail_include_intent_keywords = gv('cfg_guardrail_include_intent_keywords');
+      payload.guardrail_exclude_intent_keywords = gv('cfg_guardrail_exclude_intent_keywords');
+      payload.guardrail_team_guidance = gv('cfg_guardrail_team_guidance');
+      payload.guardrail_strictness = gv('cfg_guardrail_strictness') || 'balanced';
+      payload.probe_inbox_max_results = gv('cfg_probe_inbox_max_results') || '10';
+      payload.probe_inbox_gmail_search = gv('cfg_probe_inbox_gmail_search');
+      payload.user_inbox_peek_max_results = gv('cfg_user_inbox_peek_max_results') || '5';
+      payload.prompt_email_agent_system_template = gv('cfg_prompt_email_agent_system_template');
+      payload.prompt_probe_user_message = gv('cfg_prompt_probe_user_message');
+      payload.prompt_probe_mode_append = gv('cfg_prompt_probe_mode_append');
+      payload.prompt_action_review_append = gv('cfg_prompt_action_review_append');
       try {
         if (st) st.textContent = configureUiText('configureSaving');
         await fetchJson('/settings/runtime', {
@@ -3731,6 +4519,46 @@
         await loadRuntimeSettings();
       } catch (e) {
         if (st) st.textContent = configureUiText('configureSaveFail') + ': ' + e.message;
+      }
+    }
+
+    async function saveWorkbenchInboxRangeSettings() {
+      const st = document.getElementById('workbenchSetupSaveStatus');
+      const gv = (id) => (document.getElementById(id)?.value || '').trim();
+      const payload = {
+        probe_inbox_max_results: gv('cfg_probe_inbox_max_results') || '10',
+        probe_inbox_gmail_search: gv('cfg_probe_inbox_gmail_search'),
+        user_inbox_peek_max_results: gv('cfg_user_inbox_peek_max_results') || '5',
+      };
+      try {
+        if (st) st.textContent = 'Saving…';
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (st) st.textContent = 'Saved.';
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = `Save failed: ${e.message}`;
+      }
+    }
+
+    async function saveRcWebRetrievalSettings() {
+      const st = document.getElementById('rcWebModeSaveStatus');
+      const sel = document.getElementById('rcWebRetrievalMode');
+      const mode = (sel?.value || 'kb_first').trim();
+      try {
+        if (st) st.textContent = uiText('rcWebModeSaving');
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rc_web_retrieval_mode: mode }),
+        });
+        if (st) st.textContent = uiText('rcWebModeSaved');
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = `${uiText('rcWebModeSaveFail')}: ${e.message}`;
       }
     }
 
@@ -3817,11 +4645,165 @@
       }
     }
 
+    function formatDashboardTriggerType(tt) {
+      const t = String(tt || '').trim();
+      if (t === 'thread_probe') return uiText('dashboardSourceThread');
+      if (t === 'manual_probe' || t.startsWith('manual_probe')) return uiText('dashboardSourceManual');
+      if (t.startsWith('cron:')) {
+        const job = t.slice(5).trim();
+        return job ? `${uiText('dashboardSourceCron')} (${job})` : uiText('dashboardSourceCron');
+      }
+      return t;
+    }
+
+    function formatDashboardRunStatus(st) {
+      const s = String(st || '').trim().toLowerCase();
+      if (s === 'completed') return uiText('dashboardStatusCompleted');
+      if (s === 'error') return uiText('dashboardStatusError');
+      if (s === 'running') return uiText('dashboardRunStatusRunning');
+      if (s === 'queued') return uiText('dashboardRunStatusQueued');
+      return s ? titleCaseWordsFromSnake(s) : '';
+    }
+
     function dashboardProbeMetaLine(row) {
-      const when = new Date(row.created_at).toLocaleString();
-      const tt = String(row.trigger_type || '');
-      const st = String(row.status || '');
+      const when = _fmtTime(row.created_at);
+      const tt = formatDashboardTriggerType(row.trigger_type);
+      const st = formatDashboardRunStatus(row.status);
       return `${when} · ${tt} · ${st}`;
+    }
+
+    function titleCaseWordsFromSnake(s) {
+      return String(s || '')
+        .trim()
+        .split(/[_\s]+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' · ');
+    }
+
+    const _prioConfI18n = {
+      urgent: 'dashboardPriorityUrgent',
+      high: 'dashboardPriorityHigh',
+      medium: 'dashboardPriorityMedium',
+      low: 'dashboardPriorityLow',
+    };
+
+    function formatPriorityOrConfidenceLabel(raw) {
+      const v = String(raw || '').trim().toLowerCase();
+      const k = _prioConfI18n[v];
+      return k ? uiText(k) : String(raw || '').trim();
+    }
+
+    function formatActionCategoryLabel(raw) {
+      const c = String(raw || 'general').trim().toLowerCase();
+      const map = {
+        general: 'dashCatGeneral',
+        product_technical: 'dashCatProductTechnical',
+        account: 'dashCatAccount',
+      };
+      const key = map[c];
+      if (key) return uiText(key);
+      return titleCaseWordsFromSnake(c);
+    }
+
+    function formatRelevanceOutcomeHuman(outcome) {
+      const o = String(outcome || '').trim();
+      const map = {
+        requires_csm_action: 'relOutcomeRequiresCsm',
+        informational_only: 'relOutcomeInformational',
+        internal_non_csm: 'relOutcomeInternalNonCsm',
+        insufficient_context: 'relOutcomeInsufficientContext',
+      };
+      const key = map[o];
+      if (key) return uiText(key);
+      return o ? titleCaseWordsFromSnake(o) : '';
+    }
+
+    function formatRelevanceReasonHuman(reason) {
+      const r = String(reason || '').trim();
+      if (!r) return '';
+      if (r.startsWith('excluded_domain:')) {
+        const domain = r.slice('excluded_domain:'.length).trim();
+        return uiFmt('relReasonExcludedDomain', { domain });
+      }
+      if (r.startsWith('model_category:')) {
+        const tail = r.slice('model_category:'.length).trim();
+        const lab = formatActionCategoryLabel(tail);
+        return uiFmt('relReasonModelCategory', { category: lab });
+      }
+      const map = {
+        customer_ask_or_risk: 'relReasonCustomerAsk',
+        no_action_signal: 'relReasonNoAction',
+        strict_no_action_signal: 'relReasonStrictNoAction',
+        excluded_keyword: 'relReasonExcludedKeyword',
+        excluded_intent_phrase: 'relReasonExcludedNl',
+        user_include_intent_phrase: 'relReasonIncludeNl',
+        user_include_sender_domain: 'relReasonUserIncludeSenderDomain',
+        default_internal_signal: 'relReasonDefaultInternal',
+        empty_text: 'relReasonEmptyText',
+        model_include_dashboard: 'relReasonModelIncludeDashboard',
+        permissive_ambiguous_intent: 'relReasonPermissiveAmbiguous',
+        strict_ambiguous_intent: 'relReasonStrictAmbiguous',
+        model_intent_not_dashboard: 'relReasonModelIntentNotDashboard',
+      };
+      const key = map[r];
+      if (key) return uiText(key);
+      return titleCaseWordsFromSnake(r);
+    }
+
+    function formatRelevanceLineHuman(outcome, reason) {
+      const oh = formatRelevanceOutcomeHuman(outcome);
+      const rh = formatRelevanceReasonHuman(reason);
+      if (oh && rh) return `${oh} — ${rh}`;
+      return oh || rh || '';
+    }
+
+    function extractEmailDomainFrom(from) {
+      const m = String(from || '').match(/@([a-z0-9.-]+\.[a-z]{2,})/i);
+      return m ? m[1].toLowerCase() : '';
+    }
+    function extractEmailAddressFrom(text) {
+      const m = String(text || '').match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+      return m ? m[0].toLowerCase() : '';
+    }
+    function stripEmailFromHeader(text) {
+      const raw = String(text || '').trim();
+      if (!raw) return '';
+      // "Name <email@x.com>" -> "Name"
+      const m = raw.match(/^\s*"?([^"<]+?)"?\s*<[^>]+>\s*$/);
+      if (m) return m[1].trim();
+      return raw.replace(/\s*<[^>]+>\s*$/, '').trim();
+    }
+
+    function renderRetrievalEvidenceBlock(ev) {
+      if (!Array.isArray(ev) || !ev.length) return '';
+      const items = ev
+        .map((item) => {
+          if (item == null) return '';
+          if (typeof item === 'string') return `<li>${escapeHtml(item)}</li>`;
+          if (typeof item === 'object') {
+            const sn = String(item.snippet || item.text || item.quote || '').trim();
+            const src = String(item.url || item.path || item.file || item.title || '').trim();
+            const line = [src, sn].filter(Boolean).join(' — ');
+            return `<li>${escapeHtml(line || JSON.stringify(item).slice(0, 500))}</li>`;
+          }
+          return `<li>${escapeHtml(String(item))}</li>`;
+        })
+        .filter(Boolean)
+        .join('');
+      if (!items) return '';
+      return `<details class="csm-action-card__evidence" style="margin-top:0.5rem;"><summary>${escapeHtml(uiText('dashboardRetrievalEvidence'))}</summary><ul style="margin:0.35rem 0 0 1rem;">${items}</ul></details>`;
+    }
+
+    function renderReferenceItem(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const m = raw.match(/https?:\/\/[^\s)>\]"]+/i);
+      if (!m) return `<li>${escapeHtml(raw)}</li>`;
+      const url = m[0];
+      const label = raw.replace(url, '').replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '').trim();
+      const link = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+      return `<li>${label ? `${escapeHtml(label)} — ` : ''}${link}</li>`;
     }
 
     function dashboardCardFoot(row, md, opts) {
@@ -3860,8 +4842,11 @@
     }
 
     function renderCsmActionCard(row, action, md, actionIndex) {
-      const cat = escapeHtml(String(action.category || 'general'));
-      const title = escapeHtml(String(action.title || '—'));
+      const cat = escapeHtml(formatActionCategoryLabel(action.category));
+      const rawCardTitle = String(action.title || '').trim();
+      const threadTitle = String(action.thread_title || '').trim();
+      const displayTitleRaw = threadTitle || rawCardTitle || '—';
+      const title = escapeHtml(displayTitleRaw);
       const brief = String(action.brief || '').trim();
       const technicalRationale = String(action.technical_rationale || '').trim();
       const escalationGuidance = String(action.escalation_guidance || '').trim();
@@ -3886,7 +4871,7 @@
         ? `<div><strong>${escapeHtml(uiText('dashboardNextSteps'))}</strong><ul>${steps.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
         : '';
       const refsBlock = refs.length
-        ? `<div><strong>${escapeHtml(uiText('dashboardReferences'))}</strong><ul>${refs.map((s) => `<li>${escapeHtml(String(s))}</li>`).join('')}</ul></div>`
+        ? `<div><strong>${escapeHtml(uiText('dashboardReferences'))}</strong><ul>${refs.map((s) => renderReferenceItem(s)).join('')}</ul></div>`
         : '';
       const foot = dashboardCardFoot(row, md, { actionIndex });
       const actionStatus = normalizeActionStatus(action && action.status);
@@ -3899,44 +4884,126 @@
         ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionStatusLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionStatus(${iid}, ${Number(actionIndex)}, this.value)">${statusOptions}</select></div>`
         : '';
       const gmailTid = String(action.gmail_thread_id || '').trim();
-      const gmailLine = gmailTid
-        ? `<div class="csm-action-card__meta" title="Gmail thread id — used when discussing this action">Gmail thread · ${escapeHtml(gmailTid)}</div>`
-        : '';
       const subj = String(action.email_subject || '').trim();
       const from = String(action.email_from || '').trim();
-      const subjLine = subj ? `<div class="csm-action-card__meta" title="Email subject">${escapeHtml(subj)}</div>` : '';
-      const fromLine = from ? `<div class="csm-action-card__meta" title="Email from">${escapeHtml(from)}</div>` : '';
-      const metaLine = `${statusControl}${gmailLine}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      const customerEmail = String(action.customer_email || '').trim();
+      const metaLine = `${statusControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+
+      const clientId = String(action.customer_identifier || '').trim();
+      const clientDomain =
+        String(action.customer_domain || '').trim() || extractEmailDomainFrom(from);
+      const identityParts = [];
+      if (from) {
+        const fromName = stripEmailFromHeader(from);
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardEmailFrom'))}</strong> ${escapeHtml(fromName || from)}</span>`
+        );
+      }
+      if (customerEmail) {
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardClientEmail'))}</strong> ${escapeHtml(customerEmail)}</span>`
+        );
+      }
+      if (clientId) {
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardClientId'))}</strong> ${escapeHtml(clientId)}</span>`
+        );
+      }
+      if (clientDomain) {
+        identityParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardClientDomain'))}</strong> ${escapeHtml(clientDomain)}</span>`
+        );
+      }
+      if (gmailTid) {
+        identityParts.push(
+          `<span title="${escapeHtml(gmailTid)}"><strong>${escapeHtml(uiText('dashboardGmailThread'))}</strong> ${escapeHtml(gmailTid)}</span>`
+        );
+      }
+      const identityExpanded = identityParts.length
+        ? `<div class="csm-action-card__identity csm-action-card__meta-expanded">${identityParts.join('')}</div>`
+        : '';
+      const prio = String(action.priority || '').trim().toLowerCase();
+      const conf = String(action.confidence_label || '').trim().toLowerCase();
+      const relOut = String(action.relevance_outcome || '').trim();
+      const relWhy = String(action.relevance_reason || '').trim();
+      const relevanceHuman = formatRelevanceLineHuman(relOut, relWhy);
+
+      const factsParts = [];
+      if (prio && conf && prio === conf) {
+        const pcLabel = formatPriorityOrConfidenceLabel(prio);
+        factsParts.push(
+          `<span class="csm-action-card__pill" title="${escapeHtml(uiText('relPrioConfCombinedTitle'))}: ${escapeHtml(pcLabel)}">${escapeHtml(pcLabel)}</span>`
+        );
+      } else {
+        if (prio) {
+          const pl = formatPriorityOrConfidenceLabel(prio);
+          factsParts.push(
+            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardPriority'))}">${escapeHtml(pl)}</span>`
+          );
+        }
+        if (conf) {
+          const cl = formatPriorityOrConfidenceLabel(conf);
+          factsParts.push(
+            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardConfidence'))}">${escapeHtml(cl)}</span>`
+          );
+        }
+      }
+      if (relevanceHuman) {
+        factsParts.push(
+          `<span><strong>${escapeHtml(uiText('dashboardRelevance'))}:</strong> ${escapeHtml(relevanceHuman)}</span>`
+        );
+      }
+      const factsBlock = factsParts.length ? `<div class="csm-action-card__facts">${factsParts.join('')}</div>` : '';
+      const evidenceBlock = renderRetrievalEvidenceBlock(
+        Array.isArray(action.retrieval_evidence) ? action.retrieval_evidence : []
+      );
+
       /* Order: header → summary (title) → brief (overview) → answers → rationale / steps / … */
       const briefBlock = brief
         ? `<p class="csm-action-card__brief">${escapeHtml(brief)}</p>`
+        : '';
+      const cb =
+        Number.isFinite(iid) && Number.isFinite(Number(actionIndex))
+          ? `<label class="csm-action-card__cbwrap"><input type="checkbox" class="dashboard-action-cb" data-iid="${iid}" data-aidx="${Number(actionIndex)}" onclick="event.stopPropagation()" onchange="updateDashboardBulkHint()" /></label>`
+          : '';
+      const feedbackBlock = Number.isFinite(iid)
+        ? `<div class="csm-action-card__feedback">
+            <details class="csm-action-card__feedback-details">
+              <summary><span class="csm-action-card__feedback-caret">▸</span>${escapeHtml(uiText('dashboardFeedbackLabel'))}</summary>
+              <textarea id="daf_${iid}_${Number(actionIndex)}" class="csm-action-card__feedback-ta" placeholder="${escapeHtml(uiText('dashboardFeedbackPlaceholder'))}"></textarea>
+              <button type="button" class="ghost btn-compact" onclick="submitDashboardActionFeedback(${iid}, ${Number(actionIndex)})">${escapeHtml(uiText('dashboardFeedbackSend'))}</button>
+            </details>
+          </div>`
         : '';
       const bodyRest = `
         ${rationaleBlock}
         ${escalationBlock}
         ${stepsBlock}
         ${refsBlock}
-        ${subjLine}
-        ${fromLine}
-        ${metaLine}`;
-      const pick = Number.isFinite(iid)
-        ? `<label class="csm-action-card__pick"><input type="checkbox" class="csm-action-pick" data-iid="${iid}" data-idx="${Number(actionIndex)}" /><span class="visually-hidden">${escapeHtml(uiText('bulkSelectRow'))}</span></label>`
-        : '';
-      return `<article class="csm-action-card">
-        ${pick}
-        <div class="csm-action-card__body-col">
-          <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
-          <details class="csm-action-card__main">
-            <summary>
-              <h3 class="csm-action-card__title">${title}</h3>
-              <span class="csm-action-card__chev" aria-hidden="true">▸</span>
-            </summary>
-            ${briefBlock}
-            ${queriesBlock}
-            <div class="csm-action-card__main-inner">${bodyRest}</div>
-          </details>
-        </div>
+        ${evidenceBlock}
+        ${feedbackBlock}
         ${foot}
+        ${metaLine}`;
+      return `<article class="csm-action-card">
+        <div class="csm-action-card__head">
+          ${cb}
+          <div class="csm-action-card__head-body">
+            <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
+          </div>
+        </div>
+        <details class="csm-action-card__main">
+          <summary>
+            <div class="csm-action-card__summary-main">
+              <h3 class="csm-action-card__title">${title}</h3>
+            </div>
+            <span class="csm-action-card__chev" aria-hidden="true">▸</span>
+          </summary>
+          ${identityExpanded}
+          ${factsBlock}
+          ${briefBlock}
+          ${queriesBlock}
+          <div class="csm-action-card__main-inner">${bodyRest}</div>
+        </details>
       </article>`;
     }
 
@@ -3953,6 +5020,31 @@
       return 3;
     }
 
+    function normalizeDashboardPriority(v) {
+      const s = String(v || '').trim().toLowerCase();
+      if (['urgent', 'high', 'medium', 'low'].includes(s)) return s;
+      return 'medium';
+    }
+
+    function prioritySortRank(p) {
+      const n = normalizeDashboardPriority(p);
+      if (n === 'urgent') return 0;
+      if (n === 'high') return 1;
+      if (n === 'low') return 3;
+      return 2;
+    }
+
+    function getDashboardPriorityFilter() {
+      const el = document.getElementById('dashboardPriorityFilter');
+      const v = (el && el.value) || 'all';
+      return ['all', 'urgent', 'high', 'medium', 'low'].includes(v) ? v : 'all';
+    }
+
+    function getDashboardDomainFilter() {
+      const el = document.getElementById('dashboardDomainFilter');
+      return (el && el.value ? String(el.value) : '').trim().toLowerCase();
+    }
+
     function getDashboardActionStatusFilter() {
       const el = document.getElementById('dashboardActionStatusFilter');
       const v = (el && el.value) || 'all';
@@ -3962,7 +5054,9 @@
     function getDashboardActionSortMode() {
       const el = document.getElementById('dashboardActionSort');
       const v = (el && el.value) || 'updated_desc';
-      return ['updated_desc', 'updated_asc', 'status'].includes(v) ? v : 'updated_desc';
+      return ['updated_desc', 'updated_asc', 'status', 'priority_desc', 'priority_asc'].includes(v)
+        ? v
+        : 'updated_desc';
     }
 
     function flattenDedupDashboardActions(rows) {
@@ -3985,22 +5079,47 @@
             byThread.set(key, item);
             continue;
           }
-          const tPrev = Date.parse(prev.row.created_at || '') || 0;
-          const tNow = Date.parse(row.created_at || '') || 0;
+          const tPrev = _parseUtcMs(prev.row.created_at || '');
+          const tNow = _parseUtcMs(row.created_at || '');
           if (tNow >= tPrev) byThread.set(key, item);
         }
       }
       out.push(...Array.from(byThread.values()));
       const stFilter = getDashboardActionStatusFilter();
-      const filtered = out.filter((x) => stFilter === 'all' || normalizeActionStatus(x.action.status) === stFilter);
+      let filtered = out.filter((x) => stFilter === 'all' || normalizeActionStatus(x.action.status) === stFilter);
+      const pr = getDashboardPriorityFilter();
+      if (pr !== 'all') {
+        filtered = filtered.filter(
+          (x) => normalizeDashboardPriority(x.action && x.action.priority) === pr
+        );
+      }
+      const domQ = getDashboardDomainFilter();
+      if (domQ) {
+        filtered = filtered.filter((x) => {
+          const a = x.action || {};
+          const cd = String(a.customer_domain || '').toLowerCase();
+          const em = String(a.email_from || '').toLowerCase();
+          const dom2 = extractEmailDomainFrom(em);
+          return (
+            cd.includes(domQ) || em.includes(domQ) || (dom2 && dom2.includes(domQ))
+          );
+        });
+      }
       const sortMode = getDashboardActionSortMode();
       filtered.sort((a, b) => {
-        const ta = Date.parse(a.row.created_at || '') || 0;
-        const tb = Date.parse(b.row.created_at || '') || 0;
+        const ta = _parseUtcMs(a.row.created_at || '');
+        const tb = _parseUtcMs(b.row.created_at || '');
         if (sortMode === 'updated_asc') return ta - tb;
         if (sortMode === 'status') {
           const rs = statusSortRank(a.action.status) - statusSortRank(b.action.status);
           if (rs !== 0) return rs;
+          return tb - ta;
+        }
+        if (sortMode === 'priority_desc' || sortMode === 'priority_asc') {
+          const ra = prioritySortRank(a.action && a.action.priority);
+          const rb = prioritySortRank(b.action && b.action.priority);
+          const cmp = ra - rb;
+          if (cmp !== 0) return sortMode === 'priority_desc' ? cmp : -cmp;
           return tb - ta;
         }
         return tb - ta;
@@ -4149,52 +5268,93 @@
       }
     }
 
-    function dashboardSelectAllActions(selected) {
-      document.querySelectorAll('#actionBoardFeed .csm-action-pick').forEach((cb) => {
-        cb.checked = !!selected;
-      });
+    function updateDashboardBulkHint() {
+      const n = document.querySelectorAll('#actionBoardFeed .dashboard-action-cb:checked').length;
+      const el = document.getElementById('dashboardBulkSelectionHint');
+      if (el) el.textContent = n ? uiFmt('dashboardBulkSelectedCount', { count: n }) : '';
     }
 
-    async function dashboardBulkDismissActions() {
-      const pairs = [...document.querySelectorAll('#actionBoardFeed .csm-action-pick:checked')].map((cb) => ({
-        iid: Number(cb.dataset.iid),
-        idx: Number(cb.dataset.idx),
-      })).filter((p) => p.iid && Number.isFinite(p.idx) && p.idx >= 0);
-      if (!pairs.length) {
-        alert(uiText('kbNothingSelected'));
+    function dashboardSelectAllCards() {
+      document.querySelectorAll('#actionBoardFeed .dashboard-action-cb').forEach((c) => {
+        c.checked = true;
+      });
+      updateDashboardBulkHint();
+    }
+
+    function dashboardClearCardSelection() {
+      document.querySelectorAll('#actionBoardFeed .dashboard-action-cb').forEach((c) => {
+        c.checked = false;
+      });
+      updateDashboardBulkHint();
+    }
+
+    async function dashboardBulkDismissSelected() {
+      const boxes = Array.from(document.querySelectorAll('#actionBoardFeed .dashboard-action-cb:checked'));
+      if (!boxes.length) return;
+      const n = boxes.length;
+      if (!confirm(uiFmt('dashboardDismissBulkConfirm', { count: n }))) return;
+      try {
+        // Delete per interaction in descending action index order to avoid index-shift failures.
+        const byInteraction = new Map();
+        for (const c of boxes) {
+          const id = Number(c.getAttribute('data-iid'));
+          const idx = Number(c.getAttribute('data-aidx'));
+          if (!id || !Number.isFinite(idx) || idx < 0) continue;
+          if (!byInteraction.has(id)) byInteraction.set(id, new Set());
+          byInteraction.get(id).add(idx);
+        }
+        for (const [id, idxSet] of byInteraction.entries()) {
+          const ordered = Array.from(idxSet).sort((a, b) => b - a);
+          for (const idx of ordered) {
+            const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}`, { method: 'DELETE' });
+            // Selection can go stale after prior deletes or auto-refresh; treat 404 as already removed.
+            if (!r.ok && r.status !== 404) throw new Error(await r.text());
+          }
+        }
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardDismissFail')}: ${e.message}`);
+      }
+    }
+
+    function scheduleRerenderActionBoard() {
+      clearTimeout(_dashboardDomainFilterTimer);
+      _dashboardDomainFilterTimer = setTimeout(() => rerenderActionBoardFromCache(), 240);
+    }
+
+    function rerenderActionBoardFromCache() {
+      const el = document.getElementById('actionBoardFeed');
+      if (!el || !_dashboardProbeRows) return;
+      applyDashboardFeedLayoutClass();
+      syncDashboardLayoutButtons();
+      el.innerHTML = renderDashboardFeedHtml(_dashboardProbeRows);
+      updateDashboardBulkHint();
+    }
+
+    async function submitDashboardActionFeedback(interactionId, actionIndex) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      const ta = document.getElementById(`daf_${id}_${idx}`);
+      const text = (ta && ta.value ? String(ta.value) : '').trim();
+      if (!text) {
+        alert(uiText('dashboardFeedbackEmpty'));
         return;
       }
-      if (!confirm(uiFmt('dashboardBulkDismissConfirm', { n: String(pairs.length) }))) return;
-      const uniq = [];
-      const seenPair = new Set();
-      for (const p of pairs) {
-        const key = `${p.iid}:${p.idx}`;
-        if (seenPair.has(key)) continue;
-        seenPair.add(key);
-        uniq.push(p);
-      }
-      // Delete in descending index order per interaction, otherwise earlier deletes
-      // shift later action indices and the API returns "invalid action index".
-      const byRun = new Map();
-      for (const p of uniq) {
-        if (!byRun.has(p.iid)) byRun.set(p.iid, []);
-        byRun.get(p.iid).push(p.idx);
-      }
-      const failed = [];
-      for (const [iid, idxs] of byRun.entries()) {
-        idxs.sort((a, b) => b - a);
-        for (const idx of idxs) {
-        try {
-          const r = await fetch(`/dashboard/probe-runs/${iid}/actions/${idx}`, { method: 'DELETE' });
-          if (!r.ok) throw new Error(await r.text());
-        } catch (e) {
-          failed.push(`#${iid}/${idx}: ${e.message}`);
-        }
-        }
-      }
-      await loadActionBoard(true);
-      if (failed.length) {
-        alert(`${uiText('dashboardDismissFail')}: ${failed.length} failed.\n` + failed.slice(0, 3).join('\n'));
+      try {
+        await fetchJson('/memory/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            interaction_id: id,
+            verdict: 'useful',
+            note: text,
+            action_index: idx,
+          }),
+        });
+        if (ta) ta.value = '';
+        alert(uiText('dashboardFeedbackSaved'));
+      } catch (e) {
+        alert(`${uiText('dashboardFeedbackFail')}: ${e.message}`);
       }
     }
 
@@ -4231,6 +5391,7 @@
         if (reset && !items.length) {
           el.innerHTML = `<div class="empty">${escapeHtml(uiText('actionBoardEmpty'))}</div>`;
           if (moreBtn) moreBtn.style.display = 'none';
+          updateDashboardBulkHint();
           return;
         }
         if (!reset && !items.length) {
@@ -4238,11 +5399,13 @@
           return;
         }
         el.innerHTML = renderDashboardFeedHtml(_dashboardProbeRows);
+        updateDashboardBulkHint();
         _dashboardOffset += items.length;
         if (moreBtn) moreBtn.style.display = pack.has_more ? 'inline-block' : 'none';
       } catch (e) {
         if (reset) el.innerHTML = `<div class="empty">${escapeHtml(uiText('actionBoardFail'))}: ${escapeHtml(e.message)}</div>`;
         if (moreBtn) moreBtn.style.display = 'none';
+        updateDashboardBulkHint();
       }
     }
 
@@ -4255,17 +5418,45 @@
       });
     }
     async function pollRun(runId) {
+      const startedAtMs = Date.now();
+      const _ensureMinVisible = async () => {
+        const minMs = 900;
+        const remain = minMs - (Date.now() - startedAtMs);
+        if (remain > 0) await new Promise(r => setTimeout(r, remain));
+      };
+      let transientFails = 0;
       while (true) {
-        const run = await fetchJson(`/agent/runs/${encodeURIComponent(runId)}`);
+        let run = null;
+        try {
+          run = await fetchJson(`/agent/runs/${encodeURIComponent(runId)}`);
+          transientFails = 0;
+        } catch (e) {
+          transientFails += 1;
+          setProcessingUI(true, _uiLang === 'ko' ? '연결 재시도 중…' : 'Connection retry…');
+          if (transientFails >= 40) {
+            throw e;
+          }
+          await new Promise(r => setTimeout(r, 700));
+          continue;
+        }
         const events = run.events || [];
+        const st = String(run.status || '').toLowerCase();
+        const live = st === 'running' || st === 'queued';
+
         if (events.length > _traceLen) {
           for (let i = _traceLen; i < events.length; i++) {
             _traceAll.push(events[i]);
+            if (String(events[i]?.type || '').startsWith('tool_')) {
+              const td = document.getElementById('traceDetails');
+              if (td) td.open = true;
+            }
           }
           _traceLen = events.length;
           rerenderTraceFiltered();
-          // Live spinner text based on most recent event.
-          const latest = events[events.length - 1];
+        }
+        // Keep spinner + label fresh for long probes even between trace events (e.g. long LLM calls).
+        const latest = events.length ? events[events.length - 1] : null;
+        if (live) {
           setProcessingUI(true, processingTextFromEvent(latest));
         }
 
@@ -4281,23 +5472,38 @@
         if (run.status === 'completed') {
           if (runResultEl) runResultEl.textContent = run.output || 'Done.';
           setRunStatus('completed');
+          await _ensureMinVisible();
+          setProcessingUI(false);
+          return run;
+        }
+        if (run.status === 'cancelled') {
+          setRunStatus('cancelled');
+          await _ensureMinVisible();
           setProcessingUI(false);
           return run;
         }
         if (run.status === 'error') {
           setRunStatus('error');
+          await _ensureMinVisible();
           setProcessingUI(false);
           throw new Error(run.error || 'Run failed');
         }
         if (lastEnd && runResultEl) runResultEl.textContent = lastEnd;
-        await new Promise(r => setTimeout(r, 700));
+        await new Promise(r => setTimeout(r, 250));
       }
     }
     async function loadInteractions() {
       const data = await fetchJson('/interactions');
       const el = document.getElementById('interactions');
-      if (!data.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRunHistory'))}</div>`; return; }
-      el.innerHTML = data.map(i => {
+      const tf = String(document.getElementById('historyTriggerFilter')?.value || 'all');
+      const rows = (Array.isArray(data) ? data : []).filter((i) => {
+        if (tf === 'all') return true;
+        const trig = String(i.trigger_type || '');
+        if (tf === 'cron:') return trig.startsWith('cron:');
+        return trig === tf;
+      });
+      if (!rows.length) { el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRunHistory'))}</div>`; return; }
+      el.innerHTML = rows.map(i => {
         const md = parseInteractionMetadata(i.metadata);
         const tools = Array.isArray(md.tools_used) ? md.tools_used : [];
         const toolChips = tools.length
@@ -4314,7 +5520,7 @@
               <div style="display:flex;align-items:center;gap:0.35rem;color:var(--muted);font-size:0.78rem;font-weight:900;margin-bottom:0.25rem;">
                 <span class="section-caret">▸</span><span>${escapeHtml(uiText('expandDetails'))}</span>
               </div>
-              <div class="interaction-meta">${new Date(i.created_at).toLocaleString()} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
+              <div class="interaction-meta">${_fmtTime(i.created_at)} · ${escapeHtml(i.trigger_type || '')} · ${escapeHtml(i.status || '')}</div>
               <div style="font-size:0.84rem;font-family:var(--mono);white-space:pre-wrap;line-height:1.35;">${promptPreview || ep}</div>
               <div style="margin-top:0.35rem;">${toolChips}</div>
             </summary>
@@ -4390,7 +5596,7 @@
     applyUiLang();
     syncDashboardLayoutButtons();
     applyDashboardFeedLayoutClass();
-    initKnowledgeAndRcDelegation();
+    startRunQueuePolling();
 
     loadAgentProfile();
     loadThreads();
@@ -4430,6 +5636,8 @@
     loadCronSummary();
     loadInteractions();
     loadMaintenanceStats();
+
+    void loadRuntimeSettings();
 
     window.addEventListener('popstate', () => {
       const t = tabIdFromHash();

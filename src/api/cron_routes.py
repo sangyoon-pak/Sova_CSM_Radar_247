@@ -2,6 +2,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from src.scheduler import cron_manager
 from src.scheduler.cron_manager import add_job, remove_job, toggle_job
 from src.db import database
 
@@ -20,7 +21,16 @@ class CronJobToggle(BaseModel):
 
 @router.get("/cron")
 def list_cron_jobs():
-    return database.get_cron_jobs()
+    jobs = database.get_cron_jobs()
+    out: list[dict] = []
+    for j in jobs:
+        row = dict(j)
+        expr = str(row.get("cron_expression") or "").strip()
+        tz = str(row.get("timezone") or "Asia/Seoul").strip() or "Asia/Seoul"
+        row["human_schedule"] = cron_manager.describe_cron_expression(expr)
+        row["next_runs"] = cron_manager.preview_next_runs(expr, tz, count=3)
+        out.append(row)
+    return out
 
 
 @router.post("/cron")
