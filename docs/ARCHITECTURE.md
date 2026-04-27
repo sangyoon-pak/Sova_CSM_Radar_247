@@ -12,7 +12,7 @@ End-to-end view of **Sova - CSM Radar Agent 24/7**: how the UI, API, agent, retr
 | Search orchestration | `src/agent/tools/search_agent.py` |
 | Retrieval engines | `src/agent/tools/doc_search.py`, `src/agent/search_terms_extractor.py` |
 | Gmail | `src/agent/tools/gmail_tool.py` → subprocess `scripts/gmail-get-decoded.py` + local `gog` |
-| RC web | `src/agent/tools/rc_web_search.py` (KB + optional LLM gate -> hosted web on enabled RC URLs) |
+| RC web | `src/agent/tools/rc_web_search.py` (hosted web only on enabled RC URLs; no local KB retrieval in this tool) |
 | Cron | `src/scheduler/`, `src/api/cron_routes.py` |
 | DB + settings | `src/db/database.py`, `src/runtime_config.py`, `src/config.py` |
 | Learning / memory | `src/agent/memory.py` + `/memory/*` routes |
@@ -30,8 +30,10 @@ flowchart TD
   ui --> api[FastAPI_routes]
   api --> runAgent[run_agent]
   runAgent --> gmail[GmailTools_fetch_inbox_thread]
-  runAgent --> retrieve[search_product_docs_search_rc_web]
-  retrieve --> rag[doc_search_RAG_FTS_ripgrep]
+  runAgent --> kbTool[search_product_docs_KB]
+  kbTool --> kbPipeline[doc_search_RAG_FTS_ripgrep]
+  runAgent --> webTool[search_rc_web_hosted_web]
+  webTool --> hostedWeb[provider_web_search_enabled_RC_URLs]
   runAgent --> llmJson[LLM_probe_or_chat_output]
   llmJson --> merge[probe_actions_merge_metadata]
   merge --> db[SQLite_app_DB]
@@ -83,9 +85,10 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 
 ## Tools vs retrieval orchestration
 
-- **`search_product_docs`** -> `search_with_agent` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns string context only.
-- **`search_rc_web`** -> `search_with_agent_structured` (same pipeline, returns formatted text + final `all_matches`) -> optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) when retrieval mode is `kb_first` -> hosted web per enabled RC URL host.
-- **`always_augment`** retrieval mode skips the gate and always runs hosted web after KB (higher cost).
+- **`search_product_docs`** -> `search_with_agent_structured` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns KB context and mode-aware web follow-up rules.
+- **`search_rc_web`** -> hosted web only (`run_web_search`) per enabled RC URL host; no local KB rerank/subquery loop in this tool.
+- **`always_augment`**: after KB tool, orchestrator instructs explicit second tool call to `search_rc_web` (separate traces).
+- **`kb_first`**: after KB tool, optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) decides whether web follow-up is needed.
 - **Gmail** reads via **`gmail-get-decoded.py`**; never sends mail.
 - Retrieval ranking policy is operator-configurable via `RETRIEVAL_RANKING_POLICY` (Configure), not hardcoded vendor boosts.
 
@@ -99,21 +102,22 @@ Retrieval stays inside one LangChain agent process; "subagents" here are staged 
 %%{init: {"themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
 flowchart TB
   Q[User query]
-  SD[search_documents<br/>RAG + grep + FTS]
-  SA[search_with_agent_structured<br/>policy-aware rerank + sufficiency + diversify]
+  KB[search_product_docs<br/>KB retrieval pipeline]
   MODE{rc_web_retrieval_mode}
-  GATE[kb_web_gate JSON]
-  KBONLY[Return KB only]
-  WEB[run_web_search<br/>enabled RC domains]
-  OUT[Return merged<br/>KB + web + citations]
+  RCURL{enabled_RC_URLs_exist}
+  GATE[kb_web_gate_JSON_on_KB_evidence]
+  WEB[search_rc_web<br/>provider_web_search_only]
+  OUTKB[Finalize with KB evidence]
+  OUTBOTH[Finalize with KB + web evidence]
 
-  Q --> SD --> SA --> MODE
-  SA -->|No docs / empty KB| WEB
-  MODE -->|always_augment| WEB
+  Q --> KB --> MODE
+  MODE -->|always_augment| RCURL
   MODE -->|kb_first| GATE
-  GATE -->|proceed_web false| KBONLY
-  GATE -->|proceed_web true or parse-fail default| WEB
-  WEB --> OUT
+  RCURL -->|yes| WEB
+  RCURL -->|no| OUTKB
+  GATE -->|proceed_web true or parse-fail default| RCURL
+  GATE -->|proceed_web false| OUTKB
+  WEB --> OUTBOTH
 ```
 
 - **Gate model separation:** `effective_llm_model_kb_web_gate()` / `LLM_MODEL_KB_WEB_GATE` is dedicated to KB->web gating, separate from `LLM_MODEL_SEARCH_JSON`.

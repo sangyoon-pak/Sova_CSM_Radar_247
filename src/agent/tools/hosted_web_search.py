@@ -28,7 +28,13 @@ from src.runtime_config import (
 class WebSearchResult:
     text: str
     citations: list[str]
-    raw: dict
+    provider: str
+    raw_meta: dict
+
+    @property
+    def raw(self) -> dict:
+        """Backward-compat shim for older call sites expecting `raw`."""
+        return self.raw_meta
 
 
 def _model_id_for_openai_direct(model: str) -> str:
@@ -148,7 +154,12 @@ def _web_search_openrouter(
         raise ValueError(resp.text[:2000])
     data = resp.json()
     text, citations = _extract_output_text_and_citations(data)
-    return WebSearchResult(text=text, citations=citations, raw=data)
+    return WebSearchResult(
+        text=text,
+        citations=citations,
+        provider="openrouter",
+        raw_meta=data,
+    )
 
 
 def _web_search_openai(
@@ -188,7 +199,12 @@ def _web_search_openai(
         raise ValueError(resp.text[:2000])
     data = resp.json()
     text, citations = _extract_output_text_and_citations(data)
-    return WebSearchResult(text=text, citations=citations, raw=data)
+    return WebSearchResult(
+        text=text,
+        citations=citations,
+        provider="openai",
+        raw_meta=data,
+    )
 
 
 def run_web_search(
