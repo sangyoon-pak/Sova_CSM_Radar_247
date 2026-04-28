@@ -1692,7 +1692,7 @@
         </div>
         <div class="landing-panel">
           <div class="landing-title" data-i18n="landingKnowledgeTitle">Product docs &amp; RC URLs</div>
-          <p class="landing-copy" data-i18n-html="landingKnowledgeBody">Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code> / <code>.txt</code> product or internal documents, then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.</p>
+          <p class="landing-copy" data-i18n-html="landingKnowledgeBody">Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code>, <code>.txt</code>, <code>.pdf</code>, or <code>.docx</code> (product or internal docs), then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.</p>
           <div class="landing-cta">
             <button type="button" class="ghost" onclick="showTab('tab-knowledge')" data-i18n="landingCtaKnowledge">Open Knowledge</button>
           </div>
@@ -2085,10 +2085,16 @@
       <section>
         <h2 data-i18n="docUpload">Document upload</h2>
         <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-          <input id="uploadFile" type="file" accept=".md,.markdown,.txt,.text" multiple />
+          <input
+            id="uploadFile"
+            type="file"
+            accept=".md,.markdown,.txt,.text,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/markdown,text/plain"
+            multiple
+          />
           <button type="button" onclick="uploadDoc()" data-i18n="uploadSelected">Upload</button>
           <button type="button" class="ghost" onclick="reindexKb()" data-i18n="reindexDocs">Reindex</button>
         </div>
+        <p style="margin-top:0.35rem;color:var(--muted);font-size:0.78rem;line-height:1.4;" data-i18n="uploadAcceptHint"></p>
         <p class="reindex-help" style="margin-top:0.55rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="reindexHelpHtml">
           <strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.
         </p>
@@ -2202,7 +2208,7 @@
         landingNextStepsLead: 'You already cloned the repo and started the server—continue in the UI:',
         landingNextStepsLi1: '<strong>Configure</strong> — Provider preset, models, API keys, embeddings, Gmail / <code>gog</code> paths. Saving stores values in the app database; grey hints show recommended defaults.',
         landingNextStepsLi2: '<strong>Workbench</strong> — Set vendor, role, and product scope (agent profile) before probes and chat.',
-        landingNextStepsLi3: '<strong>Knowledge</strong> — Upload <code>.md</code> / <code>.txt</code> and <strong>Reindex</strong> for RAG; add RC URLs if you use web search.',
+        landingNextStepsLi3: '<strong>Knowledge</strong> — Upload <code>.md</code>, <code>.txt</code>, <code>.pdf</code>, or <code>.docx</code> and <strong>Reindex</strong> for RAG; add RC URLs if you use web search.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Review probes, action cards, and traces after runs.',
         landingNextStepsLi5: '<strong>Cron</strong> — Schedule automated inbox probes from the Cron tab (presets + cron expression), or manage jobs in natural language from Workbench when the thread is about cron.',
         landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, optional Gmail): see ',
@@ -2224,7 +2230,7 @@
         landingFeedbackTitle: 'Feedback & self-evolution',
         landingFeedbackBody: 'Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.',
         landingKnowledgeTitle: 'Product docs & RC URLs',
-        landingKnowledgeBody: 'Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code> / <code>.txt</code> product or internal documents, then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.',
+        landingKnowledgeBody: 'Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code>, <code>.txt</code>, <code>.pdf</code>, or <code>.docx</code> (product or internal docs), then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.',
         landingCtaRunHistory: 'Open Run history',
         landingCtaKnowledge: 'Open Knowledge',
         configureTitle: 'Configure',
@@ -2394,6 +2400,7 @@
         noCronJobs: 'No cron jobs.',
         noCronRuns: 'No cron runs yet.',
         docUpload: 'Document upload',
+        uploadAcceptHint: 'Accepted types: Markdown, plain text, PDF, Word (.docx). Max 5 MB per file.',
         uploadSelected: 'Upload',
         reindexDocs: 'Reindex',
         reindexHelpHtml: '<strong>Reindex</strong> rebuilds search indexes for all uploaded files. Use if indexing failed or answers miss sources.',
@@ -2617,7 +2624,7 @@
         landingNextStepsLead: '저장소를 클론하고 서버를 띄운 상태입니다. UI에서 이어서 진행하세요:',
         landingNextStepsLi1: '<strong>설정</strong> — 프리셋·모델·API 키·임베딩·Gmail/<code>gog</code> 경로. 저장 시 앱 DB에 반영되며, 필드 아래 회색 안내는 권장 기본값입니다.',
         landingNextStepsLi2: '<strong>Workbench</strong> — Probe·채팅 전 Vendor·Role·Product scope(에이전트 프로필) 설정.',
-        landingNextStepsLi3: '<strong>Knowledge</strong> — RAG용 <code>.md</code>/<code>.txt</code> 업로드 후 <strong>Reindex</strong>; 웹 검색 시 RC URL.',
+        landingNextStepsLi3: '<strong>Knowledge</strong> — RAG용 <code>.md</code>·<code>.txt</code>·<code>.pdf</code>·<code>.docx</code> 업로드 후 <strong>Reindex</strong>; 웹 검색 시 RC URL.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Probe·액션 카드·트레이스 확인.',
         landingNextStepsLi5: '<strong>Cron</strong> — Cron 탭에서 자동 인박스 Probe 예약(프리셋·크론식), Workbench에서는 스레드가 크론 관리일 때 자연어로 잡 생성/수정.',
         landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, 선택 Gmail): ',
@@ -2638,7 +2645,7 @@
         landingFeedbackTitle: '피드백과 자기 진화',
         landingFeedbackBody: '<strong>Run history</strong>에서 Run을 펼친 뒤 <strong>OK</strong> / <strong>NG</strong> / <strong>Good</strong> / <strong>Noise</strong> 중 하나를 눌러 피드백을 남기세요. 피드백은 <strong>learning memory</strong>에 저장되고 이후 Run에 반영되는 운영 규칙으로 정리됩니다.',
         landingKnowledgeTitle: '제품 문서·RC URL',
-        landingKnowledgeBody: '<strong>Knowledge</strong> 탭 → <strong>Upload</strong>에서 제품·내부 문서(<code>.md</code>/<code>.txt</code>)를 올리고 <strong>Reindex</strong>로 검색 색인을 갱신하세요. <strong>RC URLs</strong>에서 문서·포털 base URL을 등록하고 필요한 도메인을 <strong>enabled</strong>로 두면 Run 중 해당 도메인 web search를 사용할 수 있습니다.',
+        landingKnowledgeBody: '<strong>Knowledge</strong> 탭 → <strong>Upload</strong>에서 제품·내부 문서(<code>.md</code>·<code>.txt</code>·<code>.pdf</code>·<code>.docx</code>)를 올리고 <strong>Reindex</strong>로 검색 색인을 갱신하세요. <strong>RC URLs</strong>에서 문서·포털 base URL을 등록하고 필요한 도메인을 <strong>enabled</strong>로 두면 Run 중 해당 도메인 web search를 사용할 수 있습니다.',
         landingCtaRunHistory: 'Run history 열기',
         landingCtaKnowledge: 'Knowledge 열기',
         landingSetupTitle: '1) 환경 변수·API 키',
@@ -2734,6 +2741,7 @@
         noCronJobs: 'Cron Job 없음',
         noCronRuns: 'Cron 실행 기록 없음',
         docUpload: '문서 Upload',
+        uploadAcceptHint: '지원 형식: Markdown, 텍스트, PDF, Word(.docx). 파일당 최대 5MB.',
         uploadSelected: 'Upload',
         reindexDocs: 'Reindex',
         reindexHelpHtml: '<strong>Reindex</strong>로 업로드 파일 전체의 search index를 다시 만듭니다. 색인 실패·출처 누락 시.',

@@ -628,6 +628,19 @@ def upsert_kb_document(
         return dict(row) if row else {}
 
 
+def list_kb_document_local_paths() -> list[str]:
+    """
+    Paths stored on kb_documents rows (for reconciling FTS/FAISS with the registry).
+    Order is undefined; callers should dedupe and resolve under the KB root.
+    """
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT path FROM kb_documents WHERE path IS NOT NULL AND TRIM(path) != ''"
+    ).fetchall()
+    conn.close()
+    return [str(r[0]) for r in rows if r and r[0]]
+
+
 def list_kb_documents(limit: int = 200, offset: int = 0) -> list[dict]:
     conn = _conn()
     conn.row_factory = sqlite3.Row
@@ -769,20 +782,29 @@ def delete_kb_document(doc_id: int) -> dict:
         conn.commit()
         conn.close()
 
-    # Best-effort: update derived stores after deletion (runs outside DB lock).
+    # Best-effort: tombstone + full FTS/FAISS rebuild from current registry (runs outside DB lock).
     try:
         from threading import Thread
+
         from src.agent.tools import doc_search
+
         kb_root = getattr(settings, "kb_path_resolved", None)
         if kb_root and removed_path:
-            Thread(target=lambda: doc_search.tombstone_files([Path(removed_path)]), daemon=True).start()
+
+            def _purge_search_after_delete() -> None:
+                p = Path(removed_path)
+                doc_search.tombstone_files([p])
+                doc_search.reindex_kb(Path(kb_root))
+
+            Thread(target=_purge_search_after_delete, daemon=True).start()
     except Exception:
         pass
-        return {
-            "deleted": 1,
-            "removed_path": removed_path,
-            "source_type": row["source_type"],
-        }
+
+    return {
+        "deleted": 1,
+        "removed_path": removed_path,
+        "source_type": row["source_type"],
+    }
 
 
 def upsert_rc_url(

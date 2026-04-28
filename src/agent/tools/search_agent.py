@@ -492,6 +492,9 @@ def search_with_agent_structured(
     all_matches: list[dict] = []
     fallback_candidates: list[dict] = []
     seen = set()
+    # When rerank yields no evidential matches, do not substitute raw retrieval (would leak
+    # irrelevant chunks and `[Source: …]` tags into the main agent / citation pass).
+    last_evidential_matches: list[dict] = []
 
     scope_hints, exclusive_scope = _infer_scope(query)
 
@@ -540,17 +543,21 @@ def search_with_agent_structured(
             break
 
         # Re-rank and filter (cap candidates to keep cost bounded).
-        all_matches = _rerank_matches(
+        ranked = _rerank_matches(
             query,
             all_matches[:30],
             threshold=rerank_threshold,
             exclusive_scope=exclusive_scope,
         )
-        if not all_matches:
-            all_matches = matches[:15]  # Fallback
-        elif _distinct_doc_count(all_matches) < 2:
+        if not ranked:
+            all_matches = list(last_evidential_matches)
+            break
+        all_matches = ranked
+        last_evidential_matches = list(ranked)
+        if _distinct_doc_count(all_matches) < 2:
             # Recover source diversity when rerank over-focuses on one large document.
             all_matches = _augment_with_unseen_docs(all_matches, fallback_candidates, target_docs=3)
+            last_evidential_matches = list(all_matches)
 
     all_matches = _diversify_matches(all_matches, max_per_doc=4, keep_limit=30)
 

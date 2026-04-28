@@ -19,9 +19,9 @@
 2) Internal 
 - ?? 
 
-- [ ] investigate the web search engine. only giving one landing RC url, openai/openrouter web search is not able to go deeper but comes back without relevant data at all. 
-- [ ] FAISS purge on user UI delete. 
 
+- [x] FAISS purge on user UI delete. also clean then all the archived data files from fiass that are not referenced by the current document. 
+- [ ] investigate the web search engine. only giving one landing RC url, openai/openrouter web search is not able to go deeper but comes back without relevant data at all. 
 - [ ] verify how action cards changed to completed works when the next probe comes. is it updated or agent only uppend it when it considers it updated thread by thread id and fingerprint ?  
 - [ ] verify and test the agent feedback memory part and do fine tuning ? Since this will be also part of the system prompt for agents, we are now collecting user's feedback from each of the action cards and run history for each agent run. We should be able to curate all the feedbacks for agent to understand by LLM first and let users also see the curated feedback on the UI, ideally on configure ? 
 - [ ] how do we change the current agent prompt finetune feature for users to understand from multi-agentic perspective ? currently it only shows what are the prompts for what but users can hardly understand which is for what agent or subagent. 
@@ -38,7 +38,7 @@
 
 ### Pre-distribution
 - [ ] Final UI touch. both light and dark mode not too good for readability. Text and wordings is worth being refined. UI design could look better more with the enterprise feel. Run Trace part looks quite dev look and tacky. This requires UI enhancement. Also on the UI run trace part, still it says 'assistant'. this should change to 'Sova Agent' 
-- [ ] No Appier-internal-only documents in the public repo
+- [ ] ensure there is no Appier-internal-only documents in the public repo
 - [ ] Remove irrelevant scratch/test artifacts from the tree where appropriate
 - [ ] **Knowledge base** content not pushed to public GitHub (`.gitignore` / policy); verify
 - [ ] No secrets/tokens committed

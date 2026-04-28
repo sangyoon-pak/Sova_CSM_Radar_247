@@ -2,6 +2,9 @@
 """
 Destructive local reset: application SQLite, KB FTS, FAISS/RAG artifacts, and uploaded KB files.
 
+To wipe **only** KB uploads + search indexes while keeping threads and settings, use
+`scripts/reset_kb_uploads.py` instead.
+
 Stop the server before running (otherwise DB files may be locked).
 
 Usage:

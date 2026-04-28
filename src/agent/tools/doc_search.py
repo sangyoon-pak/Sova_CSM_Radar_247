@@ -5,8 +5,10 @@ import os
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
-import re
+import hashlib
 import json
+import re
+import shutil
 import sqlite3
 import subprocess
 from collections.abc import Callable
@@ -117,10 +119,81 @@ def _kb_fingerprint(base_path: Path) -> str:
     return f"{count}:{latest}:{provider}:{model}"
 
 
+def _registry_rag_paths(base_path: Path) -> list[Path]:
+    """
+    Local .md files that are both on disk and registered in kb_documents.
+    Excludes orphan markdown under the KB folder (not referenced by the registry).
+    """
+    from src.db import database as db
+
+    kb_root = base_path.resolve()
+    out: list[Path] = []
+    for s in db.list_kb_document_local_paths():
+        s = (s or "").strip()
+        if not s:
+            continue
+        try:
+            p = Path(s).resolve()
+        except Exception:
+            continue
+        if not p.is_file() or p.suffix.lower() != ".md":
+            continue
+        try:
+            if p != kb_root and kb_root not in p.parents:
+                continue
+        except Exception:
+            continue
+        out.append(p)
+    return sorted(set(out))
+
+
+def _registry_index_state(base_path: Path) -> tuple[int, int]:
+    paths = _registry_rag_paths(base_path)
+    if not paths:
+        return (0, 0)
+    latest_mtime = 0
+    for p in paths:
+        try:
+            latest_mtime = max(latest_mtime, int(p.stat().st_mtime))
+        except Exception:
+            pass
+    return (len(paths), latest_mtime)
+
+
+def _registry_rag_fingerprint(base_path: Path) -> str:
+    paths = _registry_rag_paths(base_path)
+    provider = (effective_rag_embedding_provider() or "openrouter").strip().lower()
+    model = (effective_rag_embedding_model() or "").strip()
+    parts: list[str] = []
+    for p in paths:
+        try:
+            m = int(p.stat().st_mtime)
+        except Exception:
+            m = 0
+        parts.append(f"{p}|{m}")
+    digest = hashlib.sha256("\n".join(sorted(parts)).encode("utf-8")).hexdigest()[:16]
+    count, latest = _registry_index_state(base_path)
+    return f"registry:{count}:{digest}:{latest}:{provider}:{model}"
+
+
 def _parse_fingerprint(fp: str) -> dict[str, str]:
-    parts = str(fp or "").split(":", 3)
+    s = str(fp or "")
+    empty = {"count": "", "latest_mtime": "", "provider": "", "model": ""}
+    # New format: registry:{count}:{digest16}:{latest_mtime}:{provider}:{model}
+    if s.startswith("registry:"):
+        rest = s[len("registry:") :]
+        segs = rest.split(":")
+        if len(segs) >= 5:
+            return {
+                "count": segs[0],
+                "latest_mtime": segs[2],
+                "provider": segs[3],
+                "model": ":".join(segs[4:]) if len(segs) > 5 else segs[4],
+            }
+        return empty
+    parts = s.split(":", 3)
     if len(parts) != 4:
-        return {"count": "", "latest_mtime": "", "provider": "", "model": ""}
+        return empty
     return {
         "count": parts[0],
         "latest_mtime": parts[1],
@@ -218,23 +291,26 @@ def _get_embeddings():
 def _ensure_rag_index(base_path: Path, *, force_rebuild_when_stale: bool = False):
     if FAISS is None:
         return
+    global _VECTORSTORE, _VECTORSTORE_FP
     _RAG_DIR.mkdir(parents=True, exist_ok=True)
-    fingerprint = _kb_fingerprint(base_path)
+    fingerprint = _registry_rag_fingerprint(base_path)
     old = _RAG_STATE_PATH.read_text(encoding="utf-8").strip() if _RAG_STATE_PATH.exists() else ""
+    legacy_state = bool(old) and not old.startswith("registry:")
     if old == fingerprint and _RAG_INDEX_DIR.exists():
         return
-    if _RAG_INDEX_DIR.exists() and not force_rebuild_when_stale:
+    if _RAG_INDEX_DIR.exists() and not force_rebuild_when_stale and not legacy_state:
         _log_rag_rebuild_event(base_path, old, fingerprint, phase="skip_stale_index_reuse")
         return
     _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_candidate")
 
     with _RAG_REINDEX_LOCK:
-        fingerprint = _kb_fingerprint(base_path)
+        fingerprint = _registry_rag_fingerprint(base_path)
         old = _RAG_STATE_PATH.read_text(encoding="utf-8").strip() if _RAG_STATE_PATH.exists() else ""
+        legacy_state = bool(old) and not old.startswith("registry:")
         if old == fingerprint and _RAG_INDEX_DIR.exists():
             _log_rag_rebuild_event(base_path, old, fingerprint, phase="skip_after_lock")
             return
-        if _RAG_INDEX_DIR.exists() and not force_rebuild_when_stale:
+        if _RAG_INDEX_DIR.exists() and not force_rebuild_when_stale and not legacy_state:
             _log_rag_rebuild_event(base_path, old, fingerprint, phase="skip_stale_index_reuse_after_lock")
             return
         _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_start")
@@ -245,7 +321,7 @@ def _ensure_rag_index(base_path: Path, *, force_rebuild_when_stale: bool = False
 
         texts: list[str] = []
         metadatas: list[dict[str, Any]] = []
-        for p in _kb_files(base_path):
+        for p in _registry_rag_paths(base_path):
             try:
                 content = p.read_text(encoding="utf-8", errors="replace")
             except Exception:
@@ -263,16 +339,29 @@ def _ensure_rag_index(base_path: Path, *, force_rebuild_when_stale: bool = False
                     }
                 )
         if not texts:
+            try:
+                if _RAG_INDEX_DIR.exists():
+                    shutil.rmtree(_RAG_INDEX_DIR, ignore_errors=True)
+                _VECTORSTORE = None
+                _VECTORSTORE_FP = None
+            except Exception:
+                pass
+            _RAG_STATE_PATH.write_text(fingerprint, encoding="utf-8")
+            _save_tombstones(set())
+            _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_done_empty")
             return
         vs = FAISS.from_texts(texts=texts, embedding=embeddings, metadatas=metadatas)
         vs.save_local(str(_RAG_INDEX_DIR))
         _RAG_STATE_PATH.write_text(fingerprint, encoding="utf-8")
+        _VECTORSTORE = None
+        _VECTORSTORE_FP = None
+        _save_tombstones(set())
         _log_rag_rebuild_event(base_path, old, fingerprint, phase="rebuild_done")
 
 
 def _ensure_fts_index(base_path: Path):
     global _LAST_FTS_STATE
-    state = _kb_state(base_path)
+    state = _registry_index_state(base_path)
     if _LAST_FTS_STATE == state:
         return
     _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -281,7 +370,7 @@ def _ensure_fts_index(base_path: Path):
         "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"
     )
     conn.execute("DELETE FROM fts_docs")
-    for p in _kb_files(base_path):
+    for p in _registry_rag_paths(base_path):
         try:
             content = p.read_text(encoding="utf-8", errors="replace")
         except Exception:
@@ -401,7 +490,7 @@ def run_rag_search(query: str, base_path: Path, max_results: int = 20) -> list[d
     embeddings = _get_embeddings()
     if embeddings is None:
         return []
-    current_fp = _kb_fingerprint(base_path)
+    current_fp = _registry_rag_fingerprint(base_path)
     if _VECTORSTORE is None or _VECTORSTORE_FP != current_fp:
         try:
             _VECTORSTORE = FAISS.load_local(
@@ -534,7 +623,7 @@ def index_files(paths: list[Path]) -> dict:
     # Without this, the next retrieval can incorrectly trigger full rebuild.
     try:
         kb_root = settings.kb_path_resolved
-        fp = _kb_fingerprint(kb_root)
+        fp = _registry_rag_fingerprint(kb_root)
         _RAG_DIR.mkdir(parents=True, exist_ok=True)
         _RAG_STATE_PATH.write_text(fp, encoding="utf-8")
         _VECTORSTORE_FP = fp
