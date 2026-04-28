@@ -15,10 +15,10 @@ Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not
 | `LLM_MODEL` | Default chat model for every role | Required baseline (set in Configure or env; see `.env.example`) |
 | `LLM_MODEL_MAIN` | Main email agent (`create_agent` + tools) | `LLM_MODEL` |
 | `LLM_MODEL_SEARCH_JSON` | Search: subquery split, term extraction, sufficiency, refine **and** small JSON “intent routers” in the main agent (see below) | `LLM_MODEL` |
-| `LLM_MODEL_KB_WEB_GATE` | **RC path only:** JSON gate before hosted web in `search_rc_web` (`proceed_web` / `reason`). **Separate** from `LLM_MODEL_SEARCH_JSON` — does **not** affect intent routers or retrieval sufficiency JSON. | `LLM_MODEL` (via `effective_llm_model()` when unset — see `effective_llm_model_kb_web_gate()`) |
+| `LLM_MODEL_KB_WEB_GATE` | **RC path only:** JSON gate used after KB retrieval to decide web follow-up in `kb_first` mode (`proceed_web` / `reason`). **Separate** from `LLM_MODEL_SEARCH_JSON` — does **not** affect intent routers or retrieval sufficiency JSON. | `LLM_MODEL` (via `effective_llm_model()` when unset — see `effective_llm_model_kb_web_gate()`) |
 | `LLM_MODEL_SEARCH_RERANK` | Search: snippet rerank (1–5 scores) | `LLM_MODEL` |
 | `LLM_MODEL_MEMORY` | Memory compaction (summarize old interactions) | `LLM_MODEL` |
-| `RC_WEB_RETRIEVAL_MODE` | `kb_first` (default) or `always_augment` — controls whether `search_rc_web` always runs hosted web after KB; **not** an LLM model (stored like other runtime keys / Knowledge UI). | `kb_first` |
+| `RC_WEB_RETRIEVAL_MODE` | `kb_first` (default) or `always_augment` — controls whether orchestration adds hosted web follow-up after KB; **not** an LLM model (stored like other runtime keys / Knowledge UI). | `kb_first` |
 | `RETRIEVAL_RANKING_POLICY` | Vendor-agnostic retrieval policy JSON consumed by policy-aware reranker (source order, glossary, constraints, actionable definition). | Built-in default policy JSON |
 
 Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDING_MODEL` (Configure, env, or defaults — see `src/agent/tools/doc_search.py`).
@@ -28,8 +28,10 @@ Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDIN
 Web search is enabled **only** when the user has saved and enabled RC URLs in the dashboard.
 
 - RC URLs are managed via the UI and stored in the local DB.
-- The agent can call `search_rc_web()` to combine **local KB** (`search_with_agent_structured`) with optional **hosted web** (`run_web_search` in `hosted_web_search.py`) per enabled domain. Provider behavior follows **Configure** preset (OpenRouter web plugin vs OpenAI Responses + `web_search` tool — same entrypoint).
-- **KB→web gate:** In **`kb_first`** mode, a dedicated JSON step (`kb_web_gate.evaluate_kb_web_gate`, LangSmith name `search_rc_web.kb_web_gate`) decides whether to call hosted web after non-empty KB. Use **`LLM_MODEL_KB_WEB_GATE`** / Configure to tune it independently of **`LLM_MODEL_SEARCH_JSON`**. **`always_augment`** (Knowledge → RC URLs) skips the gate and always runs web after KB (higher token cost).
+- `search_product_docs()` is KB retrieval (local RAG pipeline), and `search_rc_web()` is hosted-web retrieval only (no KB chunks merged into that tool output).
+- In `always_augment`, orchestration emits a rule to call `search_rc_web` after `search_product_docs` so traces show two explicit tool calls.
+- **KB→web gate:** In **`kb_first`** mode, a dedicated JSON step (`kb_web_gate.evaluate_kb_web_gate`, LangSmith name `search_rc_web.kb_web_gate`) runs on KB evidence from `search_product_docs` and decides whether web follow-up is needed.
+- Provider behavior follows Configure preset via hosted adapter (`hosted_web_search.py`): OpenRouter web plugin vs OpenAI Responses `web_search`, normalized to one internal output contract.
 
 ## JSON intent routers (`LLM_MODEL_SEARCH_JSON`)
 

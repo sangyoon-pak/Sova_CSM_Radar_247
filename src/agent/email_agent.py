@@ -23,6 +23,7 @@ from src.runtime_config import (
     effective_llm_model_search_json,
     effective_probe_inbox_gmail_search,
     effective_probe_inbox_max_results,
+    effective_rc_web_retrieval_mode,
     effective_user_inbox_peek_max_results,
 )
 from src.agent.prompts import (
@@ -532,7 +533,12 @@ def is_inbox_probe_chat_intent(text: str) -> bool:
     # This pre-run classifier executes before the main Workbench trace exists.
     # Keep it out of LangSmith to avoid a separate top-level trace thread.
     with tracing_context(enabled=False):
-        return bool(_classify_full_inbox_probe_intent_llm(raw[:2000]))
+        try:
+            return bool(_classify_full_inbox_probe_intent_llm(raw[:2000]))
+        except Exception:
+            # Never fail /threads/send due to pre-route classifier issues
+            # (for example missing provider API keys).
+            return False
 
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
@@ -691,9 +697,52 @@ def fetch_gmail_thread(thread_id: str) -> str:
 
 @tool
 def search_product_docs(query: str) -> str:
-    """Search product documentation for relevant context."""
-    from src.agent.tools.search_agent import search_with_agent
-    return search_with_agent(query=query, max_context_chars=20000)
+    """Search local product documentation (KB only) for relevant context."""
+    from src.agent.tools.search_agent import search_with_agent_structured
+
+    out, final_matches = search_with_agent_structured(query=query, max_context_chars=20000)
+    out = (out or "").strip()
+
+    # Enforce mode-specific explicit web follow-up as a separate tool call.
+    try:
+        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+        mode = effective_rc_web_retrieval_mode()
+        should_force_web_followup = (
+            mode == "always_augment"
+            and has_enabled_rc
+        )
+        should_gate_web_followup = (
+            mode == "kb_first"
+            and has_enabled_rc
+            and bool(final_matches)
+        )
+    except Exception:
+        should_force_web_followup = False
+        should_gate_web_followup = False
+
+    if should_force_web_followup:
+        return (
+            out.rstrip()
+            + "\n\n[TOOL RULE] RC web retrieval mode is always_augment and enabled RC URLs exist. "
+            "Before finalizing your answer, call tool `search_rc_web` with the same query."
+        )
+    if should_gate_web_followup:
+        try:
+            from src.agent.tools.kb_web_gate import evaluate_kb_web_gate
+
+            proceed_web, reason = evaluate_kb_web_gate(query, final_matches)
+            if proceed_web:
+                reason_text = f" Reason: {reason}" if reason else ""
+                return (
+                    out.rstrip()
+                    + "\n\n[TOOL RULE] RC web retrieval mode is kb_first and the KB→web gate decided web follow-up is needed."
+                    + reason_text
+                    + " Before finalizing your answer, call tool `search_rc_web` with the same query."
+                )
+        except Exception:
+            # Fail-open in kb_first: if gate call fails, keep KB-only output.
+            pass
+    return out
 
 
 @tool

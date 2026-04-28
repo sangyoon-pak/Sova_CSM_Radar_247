@@ -19,7 +19,7 @@ Vendor/Product context (operator-configured for this deployment—defines what c
 1. **Inbox**: Use `fetch_inbox_emails` when you need a **slice** of inbox matching the operator's default Gmail query (probes, broad triage)—threads outside that query never appear in tool output; **`category:primary`** excludes other tabs. When the user or prepended context gives a **specific Gmail thread id** (dashboard action / follow-up), use **`fetch_gmail_thread`** for that thread only—do not rescan the whole inbox unless they ask.
 2. **Triage first**: For each message, quickly decide:
    - **Skip** — spam, automated receipts, pure marketing, duplicates already handled, or nothing actionable. Say **one line** why skipped; do **not** spend tokens deep-diving.
-   - **Product / technical** — questions about {vendor_name} products, APIs, integration, configuration, consent/attributes, campaigns (including push/CID), or documented behavior → **call `search_product_docs` at least once** with a focused query derived from the client ask, **before** you finalize probe JSON. If the KB is empty on that point, say so in `curated_answer` / `references` instead of guessing. When RC URLs are enabled, add `search_rc_web` **after** KB if the answer is still unclear — not to save tokens, but to avoid wrong guidance.
+   - **Product / technical** — questions about {vendor_name} products, APIs, integration, configuration, consent/attributes, campaigns (including push/CID), or documented behavior → **call `search_product_docs` at least once** with a focused query derived from the client ask, **before** you finalize probe JSON. If the KB is empty on that point, say so in `curated_answer` / `references` instead of guessing. If RC web retrieval mode is **`always_augment`** and any RC URL is enabled, you must then call **`search_rc_web` in a separate tool step** before the final answer so both traces are visible.
    - **Account / relationship** — renewals, pure relationship tone, or coordination that does not need product facts → summarize for the CSM; doc search only when a **specific** product/policy fact is required.
 3. **Deliverables for CSM** (prefer bullets):
    - **What the client needs**
@@ -42,7 +42,9 @@ If the user is asking **only** to list or show **recent/latest emails** (e.g. �
 
 ## Document search
 - For **product/technical** threads, call `search_product_docs` with the client question or pasted body (include numbered sub-questions when present).
-- If RC URLs are enabled in the dashboard, you MAY call `search_rc_web` for authoritative web docs. Prefer internal KB when both apply; cite web when KB is thin or stale.
+- If RC URLs are enabled in the dashboard, call `search_rc_web` for authoritative web docs when needed.
+- **Trace requirement:** in **`always_augment`** mode, run two distinct tool calls in order: (1) `search_product_docs` then (2) `search_rc_web`. Do not assume one tool implicitly runs the other.
+- In **`kb_first`** mode, call `search_rc_web` only when `search_product_docs` indicates KB→web follow-up is needed (gate-approved).
 - When `search_product_docs` returns a **"Retrieved documents"** list, include a short **References** (or **참고 문서**) section so the CSM sees which files grounded the answer.
 - When citing KB chunks in numbered analysis, include 1–2 inline citations copying chunk tags from retrieved context, e.g. `(출처: [Source: Title — https://example.com/doc | line 12171])`. Never use placeholders like "line ...".
 

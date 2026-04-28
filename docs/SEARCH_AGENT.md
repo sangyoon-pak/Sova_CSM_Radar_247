@@ -8,8 +8,8 @@
 ---
 
 ## File Map
-- Tool entry: `src/agent/email_agent.py` (`search_product_docs` → `search_with_agent`)
-- Orchestrator + LLM loop: `src/agent/tools/search_agent.py` (`search_with_agent` / `search_with_agent_structured` for RC callers)
+- Tool entry: `src/agent/email_agent.py` (`search_product_docs` → `search_with_agent_structured`)
+- Orchestrator + LLM loop: `src/agent/tools/search_agent.py` (`search_with_agent` / `search_with_agent_structured` for KB callers)
 - Retrieval + candidate ranking: `src/agent/tools/doc_search.py` (`search_documents`)
 
 Related behavior docs:
@@ -109,7 +109,7 @@ For each term variant and each focus sub-query:
 ### Step 6. Return context for the main email agent
 - `format_matches_for_context()` truncates to `max_context_chars` and returns a string like:
   `[From <file> line <line_num>] ...`
-- **`search_with_agent_structured`** returns `(that_string, final_matches)` for RC tooling (`search_rc_web` + gate); **`search_product_docs`** keeps calling **`search_with_agent`** (string only).
+- **`search_with_agent_structured`** returns `(that_string, final_matches)` for KB tooling that also needs gate decisions; `search_product_docs` uses this structured output to append mode-specific web follow-up instructions.
 
 ### Step 7. Contract with action-card creation
 
@@ -123,12 +123,16 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 
 ## 3) RC web tool (`search_rc_web`)
 
-`search_rc_web` is **not** another orchestrator: it calls **`search_with_agent_structured`** to reuse the full KB pipeline, then applies RC-only policy:
+`search_rc_web` is a **web-native tool**:
 
-1. **Structured KB result** — `(formatted_context, final_matches)` after the same diversify step as `search_with_agent` (see `search_agent.py`).
-2. **`rc_web_retrieval_mode`** — `kb_first` (default): run **`evaluate_kb_web_gate`** on `(query, final_matches)` when KB text is non-empty and not the “no relevant documents” sentinel; if `proceed_web` is false, return KB only. `always_augment`: skip the gate and always invoke hosted web after KB (merge sections; higher cost). Persisted via **Knowledge → RC URLs** and `effective_rc_web_retrieval_mode()`.
-3. **Hosted web** — `run_web_search` per enabled RC URL host; merged with KB using clear `## Local KB` / web headings (when web runs after a weak KB signal, the KB block is labeled as below-confidence — see `rc_web_search.py`).
-4. **Gate JSON failure** — treated as **`proceed_web: true`** so web is not silently skipped.
+1. Resolve enabled RC URL hosts from Knowledge settings.
+2. Call provider-hosted web search (`run_web_search`) per enabled host.
+3. Return web findings + citations only (no local KB chunk merge in this tool output).
+
+Mode policy is orchestrated by `search_product_docs` in `email_agent.py`:
+- **`always_augment`**: after KB retrieval, emit a tool rule to call `search_rc_web` as a second explicit tool call.
+- **`kb_first`**: run `evaluate_kb_web_gate(query, final_matches)` on KB evidence from the same KB retrieval call; only emit web follow-up rule if gate says proceed.
+- **Gate JSON failure** remains fail-open (`proceed_web: true`) to avoid silently skipping web fallback.
 
 Details and operator controls: [ARCHITECTURE.md](ARCHITECTURE.md) (retrieval section), [LLM_MODELS.md](LLM_MODELS.md) (`LLM_MODEL_KB_WEB_GATE`).
 
