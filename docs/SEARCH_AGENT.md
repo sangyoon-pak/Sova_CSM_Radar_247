@@ -126,9 +126,12 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 
 `search_rc_web` is a **web-native tool**:
 
-1. Resolve enabled RC URL hosts from Knowledge settings.
-2. Call provider-hosted web search (`run_web_search`) per enabled host.
-3. Return web findings + citations only (no local KB chunk merge in this tool output).
+1. Resolve **enabled** RC URLs from Knowledge settings and **group by host** (multiple enabled URLs on the same domain are all kept — not collapsed to a single landing URL).
+2. Call provider-hosted web search (`run_web_search`) **once per host** (domain filter still comes from the host’s primary URL).
+3. **Hybrid depth:** providers only receive a **domain** filter from `url=` — not a full path. The tool therefore injects **seed URLs** (enabled paths for that host, **deeper paths first**) into the hosted-web **prompt** so retrieval is steered past generic home pages.
+4. **Quality gate (medium budget):** if the first pass looks weak (very short text, **no citations**, or explicit “not found” phrasing), the tool runs **one retry** per host with a stricter “API / reference / citations required” prompt. If the retry is still weak, it merges the two passes for transparency.
+5. Return web findings + citations only (no local KB chunk merge in this tool output).
+6. **Diagnostics:** every invocation appends a compact line `_RC web meta:_ host:…` (attempt counts, final citation count, retry/weak flags). Set env **`RC_WEB_DIAGNOSTICS=1`** for a verbose per-attempt breakdown.
 
 Mode policy is orchestrated by `search_product_docs` in `email_agent.py`:
 - **`always_augment`**: after KB retrieval, emit a tool rule to call `search_rc_web` as a second explicit tool call.

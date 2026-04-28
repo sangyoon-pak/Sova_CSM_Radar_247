@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.tools import tool
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain.agents import create_agent
 from langsmith import Client as LangSmithClient
 from langsmith.run_helpers import trace, tracing_context
@@ -731,7 +731,9 @@ def search_product_docs(query: str) -> str:
         return (
             out.rstrip()
             + "\n\n[TOOL RULE] RC web retrieval mode is always_augment and enabled RC URLs exist. "
-            "Before finalizing your answer, call tool `search_rc_web` with the same query."
+            "Before finalizing your answer, call tool `search_rc_web` with a web query that preserves the user's context: "
+            "include the endpoint/path, key parameters/constraints mentioned by the user, and any numbered sub-questions. "
+            "Do NOT pass only a generic short keyword query if the user's message was long."
         )
     if should_gate_web_followup:
         try:
@@ -744,7 +746,8 @@ def search_product_docs(query: str) -> str:
                     out.rstrip()
                     + "\n\n[TOOL RULE] RC web retrieval mode is kb_first and the KB→web gate decided web follow-up is needed."
                     + reason_text
-                    + " Before finalizing your answer, call tool `search_rc_web` with the same query."
+                    + " Before finalizing your answer, call tool `search_rc_web` with a web query that preserves the user's context "
+                    "(endpoint/path + key constraints + any numbered sub-questions), not just a short keyword."
                 )
         except Exception:
             # Fail-open in kb_first: if gate call fails, keep KB-only output.
@@ -842,6 +845,29 @@ def create_agent_executor(
     if extra:
         system_prompt = system_prompt.rstrip() + "\n\n" + extra
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
+
+
+def _message_has_tool_call(messages: list, tool_name: str) -> bool:
+    """Best-effort detection for tool execution across LangChain message variants."""
+    target = (tool_name or "").strip()
+    if not target:
+        return False
+    for m in messages or []:
+        if isinstance(m, ToolMessage):
+            if str(getattr(m, "name", "") or "").strip() == target:
+                return True
+        if isinstance(m, AIMessage):
+            calls = getattr(m, "tool_calls", None) or []
+            for c in calls:
+                if str((c or {}).get("name") or "").strip() == target:
+                    return True
+            # Some providers place tool calls under additional_kwargs
+            ak = getattr(m, "additional_kwargs", {}) or {}
+            for c in ak.get("tool_calls") or []:
+                fn = (c or {}).get("function") or {}
+                if str(fn.get("name") or "").strip() == target:
+                    return True
+    return False
 
 
 def run_agent(
@@ -988,6 +1014,56 @@ def _run_agent_impl(
             break
     if not draft:
         return str(result)
+
+    # Backstop for always_augment: if the model ignored the explicit tool rule, force one RC web pass.
+    try:
+        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+        force_web = (
+            effective_rc_web_retrieval_mode() == "always_augment"
+            and has_enabled_rc
+            and _message_has_tool_call(messages, "search_product_docs")
+            and not _message_has_tool_call(messages, "search_rc_web")
+        )
+    except Exception:
+        force_web = False
+    if force_web:
+        from src.agent.tools.rc_web_search import search_rc_web as _search_rc_web
+        # Prefer full user context for web retrieval (the hosted web tool needs direction).
+        raw_ctx = (route_text or input_text or "").strip()
+        # Keep bounded so provider web tools don't get swamped; preserve top context + any endpoint-like lines.
+        head = raw_ctx[:1800].strip()
+        tail = raw_ctx[-600:].strip() if len(raw_ctx) > 2400 else ""
+        if tail and tail not in head:
+            q = (head + "\n\n---\n\n(Additional context)\n" + tail).strip()
+        else:
+            q = head
+        web_out = ""
+        # Emit synthetic tool callbacks so traces still show this enforced web step.
+        for cb in cbs:
+            try:
+                cb.on_tool_start({"name": "search_rc_web"}, f"query={q[:200]}")  # type: ignore[attr-defined]
+            except AgentRunCancelled:
+                raise
+            except Exception:
+                pass
+        if cancel_check and cancel_check():
+            raise AgentRunCancelled()
+        try:
+            web_out = _search_rc_web(query=q)
+        finally:
+            for cb in cbs:
+                try:
+                    cb.on_tool_end(web_out)  # type: ignore[attr-defined]
+                except AgentRunCancelled:
+                    raise
+                except Exception:
+                    pass
+        if web_out.strip():
+            draft = (
+                draft.rstrip()
+                + "\n\n[Enforced RC web follow-up in always_augment mode]\n"
+                + web_out.strip()
+            )
 
     # Probe output should stay bullet-oriented; citation pass encourages formal numbered replies.
     if probe:

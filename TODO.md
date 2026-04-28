@@ -10,18 +10,15 @@
 
 ### Agent utility / RAG
 
-- [x] **Less-refined uploads** (PDF, noisy docs): expected behavior, limits, and UX messaging
-- [x] literally every action card is generated as prodct/technical. I don't think we should redifine the types of cards. brainstorming is needed. We are triggering search agent based on the action card category. I think agent should trigger the search agent as long as it is product-related. 
+- [ ] literally every action card is generated as prodct/technical. I don't think we should redifine the types of cards. brainstorming is needed. We are triggering search agent based on the action card category. I think agent should trigger the search agent as long as it is product-related.
 1) external
 - product-related technical issues/troubleshoot
 - product-related queries 
 
 2) Internal 
-- ?? 
 
-
-- [x] FAISS purge on user UI delete. also clean then all the archived data files from fiass that are not referenced by the current document. 
-- [ ] investigate the web search engine. only giving one landing RC url, openai/openrouter web search is not able to go deeper but comes back without relevant data at all. 
+- [ ] now the agent only shows the current reasoning step with the traces below. can we switch to the most popular tracing way like cursor, chatgpt, gemini and etc where they show both real-time reasoning and the thoughts behind it each step with the dropdown ? I think we might have to review how the reasoning process works. we do not need to expose the internal system prompts or agent parsed input as 'users' but at least users need to know how the agent's reasoning process (output of each agent call) like cursor agent when interating on the chat. we should consider then the whole UI change to implement that. 
+- [ ] still to verify the web search capability also verify openrouter web search. 
 - [ ] verify how action cards changed to completed works when the next probe comes. is it updated or agent only uppend it when it considers it updated thread by thread id and fingerprint ?  
 - [ ] verify and test the agent feedback memory part and do fine tuning ? Since this will be also part of the system prompt for agents, we are now collecting user's feedback from each of the action cards and run history for each agent run. We should be able to curate all the feedbacks for agent to understand by LLM first and let users also see the curated feedback on the UI, ideally on configure ? 
 - [ ] how do we change the current agent prompt finetune feature for users to understand from multi-agentic perspective ? currently it only shows what are the prompts for what but users can hardly understand which is for what agent or subagent. 

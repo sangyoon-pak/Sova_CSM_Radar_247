@@ -86,7 +86,7 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 ## Tools vs retrieval orchestration
 
 - **`search_product_docs`** -> `search_with_agent_structured` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns KB context and mode-aware web follow-up rules.
-- **`search_rc_web`** -> hosted web only (`run_web_search`) per enabled RC URL host; no local KB rerank/subquery loop in this tool.
+- **`search_rc_web`** -> hosted web only (`run_web_search`) per enabled RC URL **host**; prompts include **all enabled URLs on that host** as path seeds plus a **weak-result retry**; no local KB rerank/subquery loop in this tool.
 - **`always_augment`**: after KB tool, orchestrator instructs explicit second tool call to `search_rc_web` (separate traces).
 - **`kb_first`**: after KB tool, optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) decides whether web follow-up is needed.
 - **Gmail** reads via **`gmail-get-decoded.py`**; never sends mail.
