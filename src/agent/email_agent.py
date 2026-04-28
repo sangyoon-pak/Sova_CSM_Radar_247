@@ -650,7 +650,9 @@ def _add_citations_pass(
     cancel_check: Callable[[], bool] | None = None,
 ) -> str:
     """
-    Second-pass enforcement: append citations to each numbered item.
+    Optional second pass: add (출처: …) only where a numbered line is clearly
+    supported by a provided ``[Source: … | line …]`` tag; skip lines that disclaim
+    KB/web evidence or lack grounding (see prompt rules).
     """
     if not draft or not source_tags:
         return draft

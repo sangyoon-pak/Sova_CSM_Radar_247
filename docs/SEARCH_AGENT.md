@@ -99,6 +99,7 @@ For each term variant and each focus sub-query:
 - Output contract is strict JSON with `ranked_indices` + `scores`.
 - Tracing metadata includes policy name/version (`search_agent.policy_rerank`).
 - **Neutral fallback:** if rerank fails (timeout/error/invalid JSON/invalid permutation), the system uses deterministic policy-order sorting (no hardcoded vendor heuristics).
+- **Empty evidential set (valid rerank, all scores below threshold):** `_rerank_matches` can return **no** matches (for example every snippet scored `1` against the query). In that case the orchestrator **must not** re-inject raw `search_documents` hits: unfiltered chunks would still get `[Source: … | line …]` lines from `format_matches_for_context`, which misleads the main agent and the Workbench **citation pass** (`_extract_source_tags_from_messages` / `_add_citations_pass` in `email_agent.py`). Instead, `search_with_agent_structured` keeps **`last_evidential_matches`** (the last non-empty reranked pool), restores it when a later rerank returns empty, and **stops** the refinement loop—so the first iteration with zero evidential matches yields **no** `[Source: …]` tags and “No relevant documents found.” when appropriate.
 
 ### Step 5. Sufficiency check + optional refinement
 - `_check_sufficient(query, all_matches)`
@@ -107,8 +108,8 @@ For each term variant and each focus sub-query:
   - run another retrieval iteration
 
 ### Step 6. Return context for the main email agent
-- `format_matches_for_context()` truncates to `max_context_chars` and returns a string like:
-  `[From <file> line <line_num>] ...`
+- `format_matches_for_context()` truncates to `max_context_chars` and emits blocks like:
+  `[Source: <title> — <url or path> | line <n>]\n<snippet>` (joined with `---`), or the sentence `No relevant documents found.` when the match list is empty.
 - **`search_with_agent_structured`** returns `(that_string, final_matches)` for KB tooling that also needs gate decisions; `search_product_docs` uses this structured output to append mode-specific web follow-up instructions.
 
 ### Step 7. Contract with action-card creation
