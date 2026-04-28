@@ -294,14 +294,18 @@ Scoring guidance:
 
 Output STRICT JSON only:
 {{
-  "ranked_indices": [3, 1, 2],
-  "scores": [5, 4, 2],
+  "ranked_indices": [1, 2, 3, "..."],
+  "scores": [1, 1, 1, "..."],
   "reason": "short reason"
 }}
 
 Rules:
-- `ranked_indices` and `scores` must have same length as snippet count.
-- Indices are 1-based and must be a permutation of all snippet indices.
+- Let `N` be the snippet count provided below.
+- `ranked_indices` length must be exactly `N`.
+- `scores` length must be exactly `N`.
+- Indices are 1-based and must be a full permutation of `1..N` (each index appears once).
+- `scores[i]` is the score for `ranked_indices[i]` in that ranked order.
+- If uncertain, still return all `N` items (use lower scores). Never return top-k only.
 - No markdown fences, no extra keys."""
 
 SUFFICIENCY_PROMPT = """Given the user's question and the retrieved document snippets, is there enough relevant information to answer the question?
@@ -377,7 +381,7 @@ def _rerank_matches(
         query=query,
         product_scope=scope,
         retrieval_policy_json=json.dumps(retrieval_policy, ensure_ascii=True),
-    ) + "\n\nSnippets:\n" + snippet_text
+    ) + f"\n\nN = {len(matches)}\n\nSnippets:\n" + snippet_text
 
     def _neutral_sorted(items: list[dict]) -> list[dict]:
         order = retrieval_policy.get("source_order") if isinstance(retrieval_policy, dict) else None
