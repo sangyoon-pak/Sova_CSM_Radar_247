@@ -16,6 +16,10 @@ import os
 import re
 from urllib.parse import urlparse
 
+import requests
+from langchain_core.messages import HumanMessage
+
+from src.agent.chat_llm import get_chat_llm
 from src.agent.tools.hosted_web_search import run_web_search
 from src.runtime_config import effective_llm_model_main
 from src.db import database
@@ -26,6 +30,8 @@ _MAX_RETRIES_PER_HOST = 1
 _WEAK_TEXT_LEN = 140
 _MAX_AGENTIC_STEPS_PER_HOST = 3
 _MAX_NEW_SEEDS_FROM_CITATIONS = 8
+_MAX_FETCHED_CITATIONS_PER_HOST = 6
+_MAX_FETCH_CHARS_PER_URL = 4000
 
 
 def _path_depth(url: str) -> int:
@@ -153,6 +159,83 @@ def _agentic_answer_prompt(*, host: str, user_query: str, seed_urls: list[str]) 
         f"Seed URLs:\n{seed_block}\n\n"
         f"User query:\n{user_query}\n"
     )
+
+
+def _strip_html_to_text(raw: str) -> str:
+    text = re.sub(r"(?is)<script.*?>.*?</script>", " ", raw)
+    text = re.sub(r"(?is)<style.*?>.*?</style>", " ", text)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _fetch_citation_snippets(host: str, citations: list[str]) -> list[tuple[str, str]]:
+    """
+    Fetch top citation URLs and extract plain text snippets.
+    This makes citations actionable evidence for a second-pass synthesis.
+    """
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for u in citations:
+        url = (u or "").strip()
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        pu = urlparse(url)
+        if pu.netloc != host:
+            continue
+        try:
+            resp = requests.get(
+                url,
+                timeout=12,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; SovaRCWeb/1.0)"},
+            )
+            if resp.status_code >= 400:
+                continue
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            body = resp.text or ""
+            if "text/html" in ctype:
+                text = _strip_html_to_text(body)
+            elif "text/plain" in ctype or "application/json" in ctype or not ctype:
+                text = re.sub(r"\s+", " ", body).strip()
+            else:
+                continue
+            if not text:
+                continue
+            out.append((url, text[:_MAX_FETCH_CHARS_PER_URL]))
+            if len(out) >= _MAX_FETCHED_CITATIONS_PER_HOST:
+                break
+        except Exception:
+            continue
+    return out
+
+
+def _synthesize_from_cited_pages(host: str, user_query: str, fetched: list[tuple[str, str]]) -> str:
+    if not fetched:
+        return ""
+    blocks = []
+    for i, (u, t) in enumerate(fetched, start=1):
+        blocks.append(f"[Doc {i}] URL: {u}\nExcerpt:\n{t}\n")
+    prompt = (
+        "You are synthesizing an answer from fetched documentation excerpts.\n"
+        "Return concise, evidence-grounded findings only.\n"
+        "- Do not ask the user for more information.\n"
+        "- If the excerpts do not answer a point, explicitly say 'Not found in cited pages'.\n"
+        "- Keep references by URL inline where used.\n\n"
+        f"Host: {host}\n"
+        f"User query:\n{(user_query or '').strip()[:2200]}\n\n"
+        "Fetched citation pages:\n"
+        f"{''.join(blocks)[:18000]}\n"
+    )
+    try:
+        llm = get_chat_llm(model=effective_llm_model_main(), temperature=0.0)
+        resp = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={"run_name": "search_rc_web.citation_followup_synthesis", "tags": ["search_rc_web", "citation_followup"]},
+        )
+        return str(resp.content or "").strip()
+    except Exception:
+        return ""
 
 
 def _base_web_prompt(*, user_query: str, host: str, seed_urls: list[str]) -> str:
@@ -305,6 +388,18 @@ def _run_hosted_web_for_host(
             for u in c:
                 if u not in citations:
                     citations.append(u)
+
+    # Citation URL follow-up: fetch cited pages directly and synthesize from page contents.
+    fetched = _fetch_citation_snippets(host, citations)
+    diag["fetched_citation_pages"] = len(fetched)
+    if fetched:
+        synth = _synthesize_from_cited_pages(host, user_query, fetched)
+        if synth:
+            text = (
+                (text or "").strip()
+                + "\n\n### Citation URL follow-up\n"
+                + synth.strip()
+            ).strip()
 
     # Back-compat: single additional retry flag for meta line (true when >1 step).
     diag["retry_used"] = bool(step > 1)
