@@ -1,5 +1,6 @@
 """LLM-based extraction of search terms from an email/query."""
 import json
+import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -29,6 +30,41 @@ Guidance:
 Output ONLY a valid JSON array of strings, e.g. ["product_x", "user schema formula", "create user schema"]. No other text."""
 
 
+def _deterministic_fallback_terms(query: str, limit: int = 8) -> list[str]:
+    """
+    Deterministic extraction for robustness when LLM JSON parse fails.
+    Same input -> same terms.
+    """
+    q = (query or "").strip()
+    if not q:
+        return []
+    candidates: list[str] = []
+    # Keep exact literals first.
+    candidates.extend(re.findall(r"https?://\S+", q))
+    candidates.extend(re.findall(r"/[A-Za-z0-9_./-]{2,}", q))
+    candidates.extend(re.findall(r"\b[a-z][a-z0-9]+(?:_[a-z0-9]+)+\b", q))
+    candidates.extend(re.findall(r"\b[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+\b", q))
+    # Menu path style text.
+    candidates.extend(re.findall(r"[A-Za-z가-힣][^:\n]{0,40}\s>\s[^:\n]{1,40}", q))
+    # Upper acronyms / API-family tokens.
+    candidates.extend(re.findall(r"\b[A-Z]{2,}[A-Z0-9_-]*\b", q))
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in candidates:
+        s = " ".join(str(raw).split()).strip(" ,.;:")
+        if not s:
+            continue
+        lk = s.lower()
+        if lk in seen:
+            continue
+        seen.add(lk)
+        out.append(s)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def extract_search_terms(query: str) -> list[str]:
     llm = get_chat_llm(model=effective_llm_model_search_json(), temperature=0)
     msg = HumanMessage(content=query[:2000])
@@ -42,7 +78,17 @@ def extract_search_terms(query: str) -> list[str]:
     try:
         terms = json.loads(text)
         if isinstance(terms, list):
-            return [str(t) for t in terms if t]
+            cleaned = [" ".join(str(t).split()).strip() for t in terms if str(t).strip()]
+            dedup: list[str] = []
+            seen: set[str] = set()
+            for t in cleaned:
+                lk = t.lower()
+                if lk in seen:
+                    continue
+                seen.add(lk)
+                dedup.append(t)
+            if dedup:
+                return dedup[:8]
     except json.JSONDecodeError:
         pass
-    return []
+    return _deterministic_fallback_terms(query, limit=8)

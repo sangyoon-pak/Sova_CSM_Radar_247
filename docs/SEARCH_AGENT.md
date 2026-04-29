@@ -183,6 +183,16 @@ When inspecting retrieval (logs, traces, or temporary prints in `doc_search.py` 
 - `| fts` (or similar) → SQLite FTS search (ranked by BM25 internally)
 - no `| rag |` marker → typically grep-based hits (ripgrep exact match)
 
+### Retrieval miss diagnostics
+
+When `enable_retrieval_logging()` is on, each retrieval record now includes:
+- `rerank_debug`: per-iteration pre/post counts and whether balanced fallback (`score>=2`) was used.
+- `top_doc_keys`: top document ids after final diversify.
+- `indexing_summary`: current KB indexing state counts (`pending`, `indexing`, `failed`).
+
+At runtime, if uploads are still indexing, `search_with_agent_structured` prepends:
+- `[Indexing note] ...` to explain that very recent uploads may not be retrievable yet.
+
 ---
 
 ## References
