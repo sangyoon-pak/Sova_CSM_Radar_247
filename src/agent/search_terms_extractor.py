@@ -13,18 +13,18 @@ Given an email body or question, output a JSON array of 3-8 search terms or shor
 
 Include:
 - Product names if present in the question
-- Technical terms (for example): API, SDK, integration, data warehouse, recommendation
+- Technical terms (for example): API, SDK, integration, schema, authentication, webhook, troubleshooting
 - Feature names, acronyms, or specific phrases from the question (e.g. "user schema formula", "create user schema")
 
 Guidance:
 - Prefer combinations of product + feature (e.g. "<product> user schema", "<product> event schema") when possible.
 - Avoid generic single words like "work", "create", "how" by themselves.
-- Expand shorthand when obvious (e.g. product acronyms, "RC" -> "reference card").
+- Expand shorthand only when unambiguous from context (e.g. a product acronym defined in the same message).
 - If the query includes any of the following, ALWAYS include them as exact search terms:
-  - URLs / endpoint paths (e.g. "/qga/clients-data/", "https://...")
-  - event names (e.g. "tier_price_dropped")
-  - parameter / field names (e.g. "appId", "appSecret", "identifier_value")
-  - UI menu paths mentioned by the user (e.g. "설정 > 최근 활동", "Trigger rule dropdown")
+  - URLs / endpoint paths (e.g. "/v1/events", "https://docs.example.com/api")
+  - event or action names (e.g. "price_drop_event")
+  - parameter / field names (e.g. "client_id", "identifier_value", "auth_token")
+  - UI menu paths mentioned by the user (e.g. "Settings > Activity", "Trigger rule dropdown")
 
 Output ONLY a valid JSON array of strings, e.g. ["product_x", "user schema formula", "create user schema"]. No other text."""
 

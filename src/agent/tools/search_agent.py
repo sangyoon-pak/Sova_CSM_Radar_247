@@ -341,6 +341,22 @@ Output a JSON object with 2-3 alternative term lists:
 - Prefer including at least one variant that is more "how-to/actionable" (contains verbs like configure/install/integrate/click/set) and one variant that is more "entity-focused" (product + feature name).
 - Output ONLY the JSON object."""
 
+KB_RELEVANCE_PROMPT = """Decide whether retrieved KB snippets are relevant for answering the user query.
+
+User query:
+{query}
+
+Retrieved snippet previews:
+{snippet_preview}
+
+Return STRICT JSON only:
+{{"kb_relevant": true or false, "reason": "<short reason>"}}
+
+Rules:
+- Set kb_relevant=true only when snippets are on-topic and materially support answering the query.
+- Set kb_relevant=false when snippets are off-topic/wrong-domain/noisy, or too weak to ground an answer safely.
+"""
+
 
 def _rerank_product_scope_note(query: str, exclusive_scope: str | None = None) -> str:
     if exclusive_scope:
@@ -482,14 +498,52 @@ def _refine_search_terms(query: str, reason: str) -> list[list[str]]:
         return []
 
 
+def _assess_kb_relevance(query: str, matches: list[dict]) -> tuple[bool, str]:
+    """
+    LLM-based relevance gate for final KB evidence.
+    Returns (kb_relevant, reason).
+    """
+    if not matches:
+        return False, "no_matches"
+    llm = _llm_search_json()
+    preview_lines: list[str] = []
+    for m in matches[:12]:
+        meta = m.get("meta") or {}
+        title = str(meta.get("title") or m.get("file") or "").strip()
+        snippet = str(m.get("snippet") or m.get("line") or "").strip()[:240]
+        preview_lines.append(f"- {title}: {snippet}")
+    prompt = KB_RELEVANCE_PROMPT.format(
+        query=(query or "").strip()[:2500],
+        snippet_preview="\n".join(preview_lines)[:3500],
+    )
+    response = llm.invoke(
+        [HumanMessage(content=prompt)],
+        config={"run_name": "search_agent.kb_relevance_gate", "tags": ["search_agent", "kb_relevance_gate"]},
+    )
+    text = response.content.strip()
+    if "```" in text:
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text.strip())
+        relevant = bool(data.get("kb_relevant", False))
+        reason = str(data.get("reason", "")).strip() or ("relevant" if relevant else "irrelevant")
+        return relevant, reason
+    except json.JSONDecodeError:
+        # Fail-open to avoid suppressing potentially useful KB on parser glitches.
+        return True, "kb_relevance_parse_failed"
+
+
 def search_with_agent_structured(
     query: str,
     max_iterations: int = 2,
     rerank_threshold: int = 3,
     max_context_chars: int = 20000,
-) -> tuple[str, list[dict]]:
+) -> tuple[str, list[dict], dict]:
     """
-    Same pipeline as ``search_with_agent`` but returns ``(formatted_context, final_matches)``
+    Same pipeline as ``search_with_agent`` but returns
+    ``(formatted_context, final_matches, kb_meta)``
     after diversify, for RC / KB→web gate callers. ``search_product_docs`` keeps using
     ``search_with_agent`` (string-only).
     """
@@ -564,6 +618,7 @@ def search_with_agent_structured(
             last_evidential_matches = list(all_matches)
 
     all_matches = _diversify_matches(all_matches, max_per_doc=4, keep_limit=30)
+    kb_relevant, kb_reason = _assess_kb_relevance(query, all_matches)
 
     formatted = format_matches_for_context(all_matches, max_chars=max_context_chars)
 
@@ -601,6 +656,11 @@ def search_with_agent_structured(
     retrieved_docs = _format_retrieved_documents(all_matches)
     if retrieved_docs and formatted and formatted != "No relevant documents found.":
         formatted = f"{formatted}\n\n---\n\n{retrieved_docs}"
+    kb_meta = {
+        "kb_relevant": bool(kb_relevant),
+        "kb_reason": str(kb_reason or "").strip(),
+        "match_count": len(all_matches),
+    }
     if _retrieval_log is not None:
         _retrieval_log.append(
             {
@@ -609,9 +669,11 @@ def search_with_agent_structured(
                 "match_count": len(all_matches),
                 "matches": [copy.deepcopy(m) for m in all_matches],
                 "context_passed_to_llm": formatted,
+                "kb_relevant": kb_meta["kb_relevant"],
+                "kb_reason": kb_meta["kb_reason"],
             }
         )
-    return formatted, all_matches
+    return formatted, all_matches, kb_meta
 
 
 def search_with_agent(
@@ -624,7 +686,7 @@ def search_with_agent(
     Orchestrated search: grep → re-rank → sufficiency check → optional refined search.
     Returns formatted context for the main agent.
     """
-    formatted, _matches = search_with_agent_structured(
+    formatted, _matches, _kb_meta = search_with_agent_structured(
         query=query,
         max_iterations=max_iterations,
         rerank_threshold=rerank_threshold,

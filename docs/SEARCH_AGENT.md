@@ -119,6 +119,15 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 - If evidence is strong, the downstream draft/card builder should include citations and grounded next steps.
 - If evidence is weak or insufficient, the agent should explicitly mark a knowledge gap and avoid confident speculation.
 - Card metadata should retain retrieval evidence references for downstream follow-up.
+- **KB citation safety contract:** before `search_product_docs` returns to the main agent, a KB relevance gate classifies the final KB match set as relevant/irrelevant for the query. When irrelevant, KB `[Source: ...]` tags are not exposed to the final citation pass, so the assistant cannot emit false KB citations.
+
+### KB relevance safety (irrelevant KB drop)
+
+`search_with_agent_structured` now returns KB metadata (`kb_relevant`, `kb_reason`) in addition to formatted context + matches.
+
+- If `kb_relevant=true`, behavior is unchanged: KB snippets and source tags flow through as normal.
+- If `kb_relevant=false`, `search_product_docs` emits a KB gap marker (`KB relevance: false | reason: ...`) and does **not** pass KB source-tag blocks to the final synthesis/citation stage.
+- This rule is mode-agnostic: it applies in both `kb_first` and `always_augment`. Web follow-up policy still follows mode settings.
 
 ---
 

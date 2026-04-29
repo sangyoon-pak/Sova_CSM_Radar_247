@@ -2,6 +2,7 @@
 import os
 import re
 import json
+from contextvars import ContextVar
 from contextlib import nullcontext
 from collections.abc import Callable, Sequence
 
@@ -542,6 +543,27 @@ def is_inbox_probe_chat_intent(text: str) -> bool:
 
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
+_KB_RELEVANCE_FALSE_MARKER = "KB relevance: false"
+_SEARCH_PRODUCT_DOCS_CONTEXT: ContextVar[str] = ContextVar("search_product_docs_context", default="")
+
+_KB_QUERY_PLAN_PROMPT = """Expand a focused retrieval query into coverage-oriented subqueries.
+
+Return STRICT JSON only:
+{{"subqueries": ["...", "..."]}}  // 1 to 6 items
+
+Rules:
+- Cover all distinct user asks/constraints from Full user context.
+- Keep each item concise and retrieval-oriented.
+- Preserve exact paths/URLs/field names when present.
+- Preserve original language when possible.
+- Avoid generic broad terms.
+
+Focused tool query:
+{focused}
+
+Full user context:
+{full}
+"""
 
 
 def _flatten_ai_content(content) -> str:
@@ -564,6 +586,78 @@ def _flatten_ai_content(content) -> str:
                 parts.append(str(block))
         return "".join(parts)
     return str(content)
+
+
+def _parse_json_object_from_text(raw: str) -> dict | None:
+    s = (raw or "").strip()
+    if not s:
+        return None
+    if "```" in s:
+        s = s.split("```")[1]
+        if s.lstrip().startswith("json"):
+            s = s[4:].lstrip()
+    try:
+        data = json.loads(s.strip())
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _expand_kb_query_with_context(focused_query: str) -> str:
+    """
+    Planner-backed query expansion so `search_product_docs` doesn't lose non-endpoint asks.
+    Uses latest user context captured in `_run_agent_impl`.
+    """
+    focused = (focused_query or "").strip()
+    full_ctx = (_SEARCH_PRODUCT_DOCS_CONTEXT.get() or "").strip()
+    if not focused:
+        return full_ctx[:2600] if full_ctx else focused
+    if not full_ctx or len(full_ctx) <= len(focused) + 20:
+        return focused
+
+    llm = _llm_intent_router()
+    prompt = _KB_QUERY_PLAN_PROMPT.format(
+        focused=focused[:1200],
+        full=full_ctx[:4000],
+    )
+    try:
+        resp = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={
+                "run_name": "search_product_docs.query_planner",
+                "tags": ["search_product_docs", "query_planner"],
+            },
+        )
+        data = _parse_json_object_from_text(str(resp.content or ""))
+        subq = data.get("subqueries") if isinstance(data, dict) else None
+        items: list[str] = []
+        if isinstance(subq, list):
+            seen: set[str] = set()
+            for x in subq:
+                s = " ".join(str(x).split()).strip()
+                if not s:
+                    continue
+                lk = s.lower()
+                if lk in seen:
+                    continue
+                seen.add(lk)
+                items.append(s)
+                if len(items) >= 6:
+                    break
+        if items:
+            if focused.lower() not in {i.lower() for i in items}:
+                items.insert(0, focused)
+            lines = [f"{i+1}. {q}" for i, q in enumerate(items[:6])]
+            return "Focused retrieval intents:\n" + "\n".join(lines)
+    except Exception:
+        pass
+
+    # Fallback: keep focused query plus bounded full context for coverage.
+    return (
+        f"Focused query: {focused}\n\n"
+        "Full user context (bounded):\n"
+        f"{full_ctx[:1800]}"
+    )
 
 
 def db_conversation_to_langchain(rows: list[dict]) -> list:
@@ -612,10 +706,16 @@ def _extract_source_tags_from_messages(messages: list) -> list[str]:
     tags: list[str] = []
     seen: set[str] = set()
     for m in messages or []:
+        # Only trust tool outputs for citation tags; avoid picking up transformed AI text.
+        if not isinstance(m, ToolMessage):
+            continue
         content = getattr(m, "content", None)
         if not content:
             continue
         text = str(content)
+        # If KB was judged irrelevant for this turn, never allow KB source tags through.
+        if _KB_RELEVANCE_FALSE_MARKER in text:
+            continue
         for match in _SOURCE_TAG_RE.finditer(text):
             # Keep the full tag including the numeric line (do not replace with "line ...").
             tag = match.group(0).strip()
@@ -707,8 +807,17 @@ def search_product_docs(query: str) -> str:
     """Search local product documentation (KB only) for relevant context."""
     from src.agent.tools.search_agent import search_with_agent_structured
 
-    out, final_matches = search_with_agent_structured(query=query, max_context_chars=20000)
+    retrieval_query = _expand_kb_query_with_context(query)
+    out, final_matches, kb_meta = search_with_agent_structured(query=retrieval_query, max_context_chars=20000)
     out = (out or "").strip()
+    kb_relevant = bool((kb_meta or {}).get("kb_relevant", True))
+    kb_reason = str((kb_meta or {}).get("kb_reason") or "").strip() or "unspecified"
+
+    if not kb_relevant:
+        out = (
+            "No relevant KB documents found for this query.\n"
+            f"[{_KB_RELEVANCE_FALSE_MARKER} | reason: {kb_reason}]"
+        )
 
     # Enforce mode-specific explicit web follow-up as a separate tool call.
     try:
@@ -739,7 +848,7 @@ def search_product_docs(query: str) -> str:
         try:
             from src.agent.tools.kb_web_gate import evaluate_kb_web_gate
 
-            proceed_web, reason = evaluate_kb_web_gate(query, final_matches)
+            proceed_web, reason = evaluate_kb_web_gate(retrieval_query, final_matches)
             if proceed_web:
                 reason_text = f" Reason: {reason}" if reason else ""
                 return (
@@ -997,6 +1106,10 @@ def _run_agent_impl(
         invoke_messages = lc_messages
     else:
         invoke_messages = [HumanMessage(content=input_text)]
+    retrieval_ctx = (input_text or "").strip()
+    if route_text and len(route_text) > len(retrieval_ctx):
+        retrieval_ctx = route_text
+    ctx_token = _SEARCH_PRODUCT_DOCS_CONTEXT.set(retrieval_ctx)
     try:
         result = agent.invoke({"messages": invoke_messages}, config=config)
     except Exception as e:
@@ -1006,6 +1119,8 @@ def _run_agent_impl(
                 raise ex
             ex = ex.__cause__
         raise
+    finally:
+        _SEARCH_PRODUCT_DOCS_CONTEXT.reset(ctx_token)
     messages = result.get("messages", [])
     draft = None
     for m in reversed(messages):
