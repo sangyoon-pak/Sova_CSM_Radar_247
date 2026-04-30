@@ -14,23 +14,24 @@ from __future__ import annotations
 import json
 import os
 import re
-from urllib.parse import urlparse
+from html import unescape
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import requests
 from langchain_core.messages import HumanMessage
 
 from src.agent.chat_llm import get_chat_llm
 from src.agent.tools.hosted_web_search import run_web_search
-from src.runtime_config import effective_llm_model_main
+from src.runtime_config import effective_llm_model_main, effective_llm_provider_preset
 from src.db import database
 
 # Medium budget defaults (per search_rc_web invocation).
 _MAX_SEEDS_PER_HOST = 12
-_MAX_RETRIES_PER_HOST = 1
-_WEAK_TEXT_LEN = 140
 _MAX_AGENTIC_STEPS_PER_HOST = 3
-_MAX_NEW_SEEDS_FROM_CITATIONS = 8
 _MAX_FETCHED_CITATIONS_PER_HOST = 6
+_MAX_DISCOVERED_URLS_PER_HOST = 16
+_MAX_DISCOVERY_FETCHES_PER_HOST = 6
+_MAX_DISCOVERY_SITEMAP_URLS = 120
 _MAX_FETCH_CHARS_PER_URL = 4000
 
 
@@ -91,6 +92,172 @@ def _extract_path_like_terms(user_query: str) -> list[str]:
         if len(out) >= 8:
             break
     return out
+
+
+def _query_terms(user_query: str) -> list[str]:
+    """Small deterministic term set used to rank discovered URLs before any LLM sees them."""
+    q = (user_query or "").lower()
+    terms = re.findall(r"[a-z0-9][a-z0-9_-]{2,}", q)
+    path_bits: list[str] = []
+    for path in _extract_path_like_terms(q):
+        path_bits.extend([x for x in re.split(r"[/._-]+", path) if len(x) >= 3])
+    out: list[str] = []
+    seen: set[str] = set()
+    for t in path_bits + terms:
+        if t in seen:
+            continue
+        seen.add(t)
+        out.append(t)
+        if len(out) >= 32:
+            break
+    return out
+
+
+def _same_host_url(raw: str, *, base_url: str, host: str) -> str | None:
+    href = (raw or "").strip()
+    if not href or href.startswith(("#", "mailto:", "tel:", "javascript:")):
+        return None
+    try:
+        joined = urljoin(base_url, unescape(href))
+        no_frag, _frag = urldefrag(joined)
+        pu = urlparse(no_frag)
+        if pu.scheme not in {"http", "https"} or pu.netloc != host:
+            return None
+        # Skip obviously non-document assets.
+        path_l = (pu.path or "").lower()
+        if re.search(r"\.(?:png|jpe?g|gif|webp|svg|ico|css|js|map|zip|tar|gz|mp4|mov|avi|woff2?|ttf)$", path_l):
+            return None
+        return no_frag.rstrip("/")
+    except Exception:
+        return None
+
+
+def _extract_links_from_html(base_url: str, host: str, raw: str) -> list[str]:
+    urls: list[str] = []
+    seen: set[str] = set()
+    for m in re.finditer(r"""(?is)<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["']""", raw or ""):
+        u = _same_host_url(m.group(1), base_url=base_url, host=host)
+        if not u or u in seen:
+            continue
+        seen.add(u)
+        urls.append(u)
+    return urls
+
+
+def _sitemap_urls(host: str, seed_urls: list[str]) -> list[str]:
+    scheme = "https"
+    for u in seed_urls:
+        pu = urlparse(u)
+        if pu.scheme in {"http", "https"} and pu.netloc == host:
+            scheme = pu.scheme
+            break
+    candidates = [f"{scheme}://{host}/sitemap.xml", f"{scheme}://{host}/sitemap_index.xml"]
+    urls: list[str] = []
+    seen: set[str] = set()
+    for sm in candidates:
+        try:
+            resp = requests.get(
+                sm,
+                timeout=10,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; SovaRCWeb/1.0)"},
+            )
+            if resp.status_code >= 400:
+                continue
+            for loc in re.findall(r"(?is)<loc>\s*(.*?)\s*</loc>", resp.text or ""):
+                u = _same_host_url(loc, base_url=sm, host=host)
+                if not u or u in seen:
+                    continue
+                seen.add(u)
+                urls.append(u)
+                if len(urls) >= _MAX_DISCOVERY_SITEMAP_URLS:
+                    return urls
+        except Exception:
+            continue
+    return urls
+
+
+def _score_discovered_url(url: str, user_query: str, seed_urls: list[str]) -> int:
+    pu = urlparse(url)
+    hay = f"{pu.path} {pu.query}".lower()
+    terms = _query_terms(user_query)
+    score = 0
+    if url in seed_urls:
+        score += 40
+    score += min(_path_depth(url), 6) * 3
+    for term in terms:
+        if term in hay:
+            score += 8
+    for path_term in _extract_path_like_terms(user_query):
+        if path_term.strip("/").lower() in hay:
+            score += 20
+    if any(x in hay for x in ("api", "reference", "docs", "guide", "integration", "developer", "webhook", "endpoint")):
+        score += 6
+    if pu.query:
+        score -= 4
+    if re.search(r"/(?:blog|news|press|careers|legal|privacy|terms)(?:/|$)", pu.path.lower()):
+        score -= 10
+    return score
+
+
+def _discover_same_host_candidate_urls(host: str, seed_urls: list[str], user_query: str) -> list[str]:
+    """
+    Deterministically shrink a large site/link surface into a small same-host shortlist.
+
+    Some hosted web plugins follow useful child pages from a base URL. OpenAI's
+    hosted web_search can be less reliable for that traversal, so we provide concrete
+    candidate URLs from sitemaps and first-hop links rather than asking a model to sort
+    hundreds of raw crawler URLs.
+    """
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def add(url: str | None) -> None:
+        if not url or url in seen:
+            return
+        seen.add(url)
+        candidates.append(url)
+
+    for u in seed_urls:
+        add(_same_host_url(u, base_url=u, host=host))
+    for u in _sitemap_urls(host, seed_urls):
+        add(u)
+
+    fetches = 0
+    for seed in seed_urls[: _MAX_DISCOVERY_FETCHES_PER_HOST]:
+        if fetches >= _MAX_DISCOVERY_FETCHES_PER_HOST:
+            break
+        try:
+            resp = requests.get(
+                seed,
+                timeout=10,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; SovaRCWeb/1.0)"},
+            )
+            fetches += 1
+            if resp.status_code >= 400:
+                continue
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+            if "text/html" not in ctype and ctype:
+                continue
+            for u in _extract_links_from_html(seed, host, resp.text or ""):
+                add(u)
+        except Exception:
+            continue
+
+    candidates.sort(key=lambda u: (-_score_discovered_url(u, user_query, seed_urls), -_path_depth(u), u))
+    return candidates[:_MAX_DISCOVERED_URLS_PER_HOST]
+
+
+def discover_same_host_candidate_urls(base_url: str, user_query: str = "", max_urls: int = 10) -> list[str]:
+    """Public helper for RC URL discovery without relying on provider-hosted traversal."""
+    base = (base_url or "").strip()
+    limit = max(1, int(max_urls or 10))
+    pu = urlparse(base)
+    if pu.scheme not in {"http", "https"} or not pu.netloc:
+        return []
+    candidates = _discover_same_host_candidate_urls(pu.netloc, [base], user_query or base)
+    if base.rstrip("/") not in candidates:
+        candidates.insert(0, base.rstrip("/"))
+    return candidates[:limit]
 
 
 def _parse_json_object(raw: str) -> dict | None:
@@ -169,14 +336,14 @@ def _strip_html_to_text(raw: str) -> str:
     return text
 
 
-def _fetch_citation_snippets(host: str, citations: list[str]) -> list[tuple[str, str]]:
+def _fetch_same_host_snippets(host: str, urls: list[str], *, max_pages: int) -> list[tuple[str, str]]:
     """
-    Fetch top citation URLs and extract plain text snippets.
-    This makes citations actionable evidence for a second-pass synthesis.
+    Fetch top same-host URLs and extract plain text snippets.
+    This makes citations/candidate URLs actionable evidence for second-pass synthesis.
     """
     out: list[tuple[str, str]] = []
     seen: set[str] = set()
-    for u in citations:
+    for u in urls:
         url = (u or "").strip()
         if not url or url in seen:
             continue
@@ -203,11 +370,16 @@ def _fetch_citation_snippets(host: str, citations: list[str]) -> list[tuple[str,
             if not text:
                 continue
             out.append((url, text[:_MAX_FETCH_CHARS_PER_URL]))
-            if len(out) >= _MAX_FETCHED_CITATIONS_PER_HOST:
+            if len(out) >= max_pages:
                 break
         except Exception:
             continue
     return out
+
+
+def _fetch_citation_snippets(host: str, citations: list[str]) -> list[tuple[str, str]]:
+    """Fetch top citation URLs and extract plain text snippets."""
+    return _fetch_same_host_snippets(host, citations, max_pages=_MAX_FETCHED_CITATIONS_PER_HOST)
 
 
 def _synthesize_from_cited_pages(host: str, user_query: str, fetched: list[tuple[str, str]]) -> str:
@@ -298,10 +470,20 @@ def _run_hosted_web_for_host(
     max_output_tokens: int,
 ) -> tuple[str, list[str], dict]:
     seeds = _seeds_for_prompt(all_urls_on_host, _MAX_SEEDS_PER_HOST)
+    provider_preset = effective_llm_provider_preset()
+    discovered_urls: list[str] = []
+    if provider_preset == "openai":
+        discovered_urls = _discover_same_host_candidate_urls(host, seeds or [primary_url], user_query)
+        # Promote deterministic candidates to seed URLs so hosted search has exact child pages to consider.
+        for u in discovered_urls:
+            if u not in seeds:
+                seeds.append(u)
+        seeds = _seeds_for_prompt(seeds, _MAX_SEEDS_PER_HOST)
     diag: dict = {
         "host": host,
         "primary_url": primary_url,
         "seed_count": len(seeds),
+        "deterministic_discovered_count": len(discovered_urls),
         "attempts": [],
     }
 
@@ -400,6 +582,32 @@ def _run_hosted_web_for_host(
                 + "\n\n### Citation URL follow-up\n"
                 + synth.strip()
             ).strip()
+
+    # OpenAI mitigation: if hosted search did not traverse to the right child pages, use the
+    # deterministic same-host shortlist directly. This avoids handing 300+ URLs to an LLM.
+    deterministic_fetched: list[tuple[str, str]] = []
+    if provider_preset == "openai" and discovered_urls:
+        already = set(citations)
+        candidate_urls = [u for u in discovered_urls if u not in already]
+        deterministic_fetched = _fetch_same_host_snippets(
+            host,
+            candidate_urls,
+            max_pages=_MAX_FETCHED_CITATIONS_PER_HOST,
+        )
+        diag["fetched_deterministic_pages"] = len(deterministic_fetched)
+        if deterministic_fetched:
+            synth = _synthesize_from_cited_pages(host, user_query, deterministic_fetched)
+            if synth:
+                text = (
+                    (text or "").strip()
+                    + "\n\n### Deterministic URL follow-up\n"
+                    + synth.strip()
+                ).strip()
+            for u, _snippet in deterministic_fetched:
+                if u not in citations:
+                    citations.append(u)
+    else:
+        diag["fetched_deterministic_pages"] = 0
 
     # Back-compat: single additional retry flag for meta line (true when >1 step).
     diag["retry_used"] = bool(step > 1)

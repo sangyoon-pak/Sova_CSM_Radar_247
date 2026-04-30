@@ -26,6 +26,7 @@ from src.agent.prompts import get_action_review_append, get_probe_trigger_messag
 from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
 from src.agent.tools.hosted_web_search import run_web_search
+from src.agent.tools.rc_web_search import discover_same_host_candidate_urls
 from src.config import settings
 from src.runtime_config import (
     clear_gog_local_oauth_files,
@@ -501,39 +502,43 @@ class RCDiscoverRequest(BaseModel):
 @router.post("/rc/discover")
 def discover_rc_urls(req: RCDiscoverRequest):
     """
-    Discover up to N sub-URLs under the same domain using OpenRouter web search.
-    This is a best-effort approximation (not a full crawler).
+    Discover up to N sub-URLs under the same domain.
+
+    Prefer deterministic sitemap/first-hop discovery so OpenAI direct gets
+    concrete child-page seeds. Fall back to hosted web search when no local
+    candidates are available.
     """
     try:
         base = (req.base_url or "").strip()
         if not base.startswith(("http://", "https://")):
             raise ValueError("base_url must start with http:// or https://")
         n = max(1, min(int(req.max_urls or 10), 10))
-        prompt = (
-            "Find up to {n} important child documentation pages under this base URL. "
-            "Return ONLY a JSON object: {{\"urls\": [\"https://...\", ...]}}. "
-            "Prefer URLs on the same domain and within the same docs section/path.\n"
-            "Base URL: {base}"
-        ).format(n=n, base=base)
-        res = run_web_search(query=prompt, model=effective_llm_model_main(), url=base, max_output_tokens=1200)
-        import json as _json
-        import re as _re
-        raw = (res.text or "").strip()
-        if "```" in raw:
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        urls: list[str] = []
-        try:
-            data = _json.loads(raw)
-            cand = data.get("urls") or []
-            if isinstance(cand, list):
-                urls = [str(u).strip() for u in cand if str(u).strip().startswith(("http://", "https://"))]
-        except Exception:
-            # fallback: extract urls from text/citations
-            urls = _re.findall(r"https?://\\S+", raw)
-        # Include citations as additional candidates
-        urls.extend(res.citations or [])
+        urls = discover_same_host_candidate_urls(base, max_urls=n)
+        if not urls:
+            prompt = (
+                "Find up to {n} important child documentation pages under this base URL. "
+                "Return ONLY a JSON object: {{\"urls\": [\"https://...\", ...]}}. "
+                "Prefer URLs on the same domain and within the same docs section/path.\n"
+                "Base URL: {base}"
+            ).format(n=n, base=base)
+            res = run_web_search(query=prompt, model=effective_llm_model_main(), url=base, max_output_tokens=1200)
+            import json as _json
+            import re as _re
+            raw = (res.text or "").strip()
+            if "```" in raw:
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            try:
+                data = _json.loads(raw)
+                cand = data.get("urls") or []
+                if isinstance(cand, list):
+                    urls = [str(u).strip() for u in cand if str(u).strip().startswith(("http://", "https://"))]
+            except Exception:
+                # fallback: extract urls from text/citations
+                urls = _re.findall(r"https?://\\S+", raw)
+            # Include citations as additional candidates
+            urls.extend(res.citations or [])
         # Dedup + keep under same host
         from urllib.parse import urlparse
         host = urlparse(base).netloc
