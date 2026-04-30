@@ -808,10 +808,41 @@ def search_product_docs(query: str) -> str:
     from src.agent.tools.search_agent import search_with_agent_structured
 
     retrieval_query = _expand_kb_query_with_context(query)
+    out = ""
+    final_matches: list[dict] = []
+    kb_meta: dict = {}
+    kb_relevant = True
+    mode = "kb_first"
+    has_enabled_rc = False
+    try:
+        mode = effective_rc_web_retrieval_mode()
+        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+    except Exception:
+        mode = "kb_first"
+        has_enabled_rc = False
+
+    # Strict web_only mode: skip KB retrieval entirely.
+    if mode == "web_only":
+        if not has_enabled_rc:
+            return (
+                "RC web retrieval mode is web_only, but no enabled RC URLs exist. "
+                "Enable at least one RC URL in Knowledge > RC URLs."
+            )
+        return (
+            "[TOOL RULE] RC web retrieval mode is web_only. Skip KB evidence and call tool `search_rc_web` "
+            "before finalizing your answer. Use a web query that preserves user context (endpoint/path + key "
+            "constraints + numbered sub-questions), not a short generic keyword."
+        )
+
+    # KB-backed modes (kb_only / kb_first / always_augment).
     out, final_matches, kb_meta = search_with_agent_structured(query=retrieval_query, max_context_chars=20000)
     out = (out or "").strip()
     kb_relevant = bool((kb_meta or {}).get("kb_relevant", True))
     kb_reason = str((kb_meta or {}).get("kb_reason") or "").strip() or "unspecified"
+    focus_n = int((kb_meta or {}).get("focus_subquery_count") or 0)
+    focus_cov = int((kb_meta or {}).get("covered_focus_subquery_count") or 0)
+    cov_ratio = float((kb_meta or {}).get("coverage_ratio") or 0.0)
+    candidate_cap_hit = bool((kb_meta or {}).get("candidate_cap_hit", False))
 
     if not kb_relevant:
         out = (
@@ -819,23 +850,20 @@ def search_product_docs(query: str) -> str:
             f"[{_KB_RELEVANCE_FALSE_MARKER} | reason: {kb_reason}]"
         )
 
-    # Enforce mode-specific explicit web follow-up as a separate tool call.
-    try:
-        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
-        mode = effective_rc_web_retrieval_mode()
-        should_force_web_followup = (
-            mode == "always_augment"
-            and has_enabled_rc
-        )
-        should_gate_web_followup = (
-            mode == "kb_first"
-            and has_enabled_rc
-            and bool(final_matches)
-        )
-    except Exception:
-        should_force_web_followup = False
-        should_gate_web_followup = False
+    # Always emit compact retrieval diagnostics for traceability.
+    out = (
+        out.rstrip()
+        + f"\n\n_Retrieval diagnostics:_ kb_relevant={str(kb_relevant).lower()}, "
+        + f"focus_coverage={focus_cov}/{focus_n} ({cov_ratio:.2f}), "
+        + f"candidate_cap_hit={str(candidate_cap_hit).lower()}"
+    )
 
+    if mode == "kb_only":
+        return out
+
+    # Enforce mode-specific explicit web follow-up as a separate tool call.
+    should_force_web_followup = mode == "always_augment" and has_enabled_rc
+    should_gate_web_followup = mode == "kb_first" and has_enabled_rc and bool(final_matches)
     if should_force_web_followup:
         return (
             out.rstrip()
@@ -851,10 +879,17 @@ def search_product_docs(query: str) -> str:
             proceed_web, reason = evaluate_kb_web_gate(retrieval_query, final_matches)
             if proceed_web:
                 reason_text = f" Reason: {reason}" if reason else ""
+                disagree = kb_relevant
+                disagree_note = (
+                    " [Gate diagnostics: kb_relevant=true but kb_web_gate requires web follow-up.]"
+                    if disagree
+                    else ""
+                )
                 return (
                     out.rstrip()
                     + "\n\n[TOOL RULE] RC web retrieval mode is kb_first and the KB→web gate decided web follow-up is needed."
                     + reason_text
+                    + disagree_note
                     + " Before finalizing your answer, call tool `search_rc_web` with a web query that preserves the user's context "
                     "(endpoint/path + key constraints + any numbered sub-questions), not just a short keyword."
                 )
@@ -1130,11 +1165,12 @@ def _run_agent_impl(
     if not draft:
         return str(result)
 
-    # Backstop for always_augment: if the model ignored the explicit tool rule, force one RC web pass.
+    # Backstop for web-forcing modes: if the model ignored the explicit tool rule, force one RC web pass.
     try:
         has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+        mode = effective_rc_web_retrieval_mode()
         force_web = (
-            effective_rc_web_retrieval_mode() == "always_augment"
+            mode in ("always_augment", "web_only")
             and has_enabled_rc
             and _message_has_tool_call(messages, "search_product_docs")
             and not _message_has_tool_call(messages, "search_rc_web")
@@ -1174,9 +1210,10 @@ def _run_agent_impl(
                 except Exception:
                     pass
         if web_out.strip():
+            mode_label = "web_only" if mode == "web_only" else "always_augment"
             draft = (
                 draft.rstrip()
-                + "\n\n[Enforced RC web follow-up in always_augment mode]\n"
+                + f"\n\n[Enforced RC web follow-up in {mode_label} mode]\n"
                 + web_out.strip()
             )
 

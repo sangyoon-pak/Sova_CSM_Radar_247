@@ -63,6 +63,23 @@ CREATE TABLE IF NOT EXISTS rc_urls (
     enabled INTEGER DEFAULT 1
 );
 
+-- Discovered URL tree nodes for each main RC URL.
+CREATE TABLE IF NOT EXISTS rc_url_tree (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    main_rc_url TEXT NOT NULL,
+    url TEXT NOT NULL,
+    depth INTEGER DEFAULT 0,
+    parent_url TEXT,
+    title TEXT,
+    metadata JSON,
+    UNIQUE(main_rc_url, url)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rc_url_tree_main_depth
+ON rc_url_tree(main_rc_url, depth, id);
+
 -- Lightweight key/value settings used by UI-configurable prompt profile.
 CREATE TABLE IF NOT EXISTS app_settings (
     key TEXT PRIMARY KEY,

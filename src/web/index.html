@@ -2076,6 +2076,23 @@
   </div>
 
   <div class="tab-pane" id="tab-knowledge">
+    <section style="margin-bottom:0.75rem;">
+      <div style="padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
+        <label for="rcWebRetrievalMode" style="display:block;font-size:0.88rem;margin-bottom:0.35rem;font-weight:600;" data-i18n="rcWebModeLabel">RC web retrieval mode</label>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+          <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+            <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
+            <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
+            <option value="kb_only" data-i18n="rcWebModeKbOnly">KB only</option>
+            <option value="web_only" data-i18n="rcWebModeWebOnly">Web only</option>
+          </select>
+          <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
+          <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+        </div>
+        <p style="margin:0.5rem 0 0 0;font-size:0.78rem;color:var(--muted);line-height:1.4;" data-i18n-html="rcWebModeWarnHtml"></p>
+      </div>
+    </section>
+
     <div class="subnav">
       <button type="button" class="subnav-btn active" data-subtab="subtab-upload" onclick="showSubtab('subtab-upload')" data-i18n="subtabUpload">Upload</button>
       <button type="button" class="subnav-btn" data-subtab="subtab-rc" onclick="showSubtab('subtab-rc')" data-i18n="subtabRc">RC URLs</button>
@@ -2109,25 +2126,33 @@
     <div id="subtab-rc" class="subtab-pane">
       <section>
         <h2 data-i18n="rcTitle">RC URLs (web sources)</h2>
+        <p style="margin:0 0 0.55rem 0;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcTreeMethodHelpHtml">
+          URL-tree discovery prebuilds same-domain docs URLs (depth-structured) so retrieval can select the best pages directly, instead of relying only on provider web-search citation recall.
+        </p>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.55rem;">
+          <label style="font-size:0.8rem;color:var(--muted);" for="rcTreeMaxDepth" data-i18n="rcTreeMaxDepthLabel">Max depth</label>
+          <input id="rcTreeMaxDepth" type="number" min="0" max="8" value="2" style="width:90px;">
+          <label style="font-size:0.8rem;color:var(--muted);" for="rcTreeMaxUrls" data-i18n="rcTreeMaxUrlsLabel">Max URLs</label>
+          <input id="rcTreeMaxUrls" type="number" min="10" max="5000" value="300" style="width:110px;">
+          <label style="font-size:0.8rem;color:var(--muted);" for="rcWebVisitLimit" data-i18n="rcWebVisitLimitLabel">Visit limit</label>
+          <input id="rcWebVisitLimit" type="number" min="1" max="50" value="5" style="width:90px;">
+          <button type="button" class="ghost" onclick="saveRcTreeSettings()" data-i18n="rcTreeSettingsSave">Save limits</button>
+          <span id="rcTreeSettingsSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+        </div>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
           <input id="rcUrlInput" type="text" data-i18n-placeholder="rcUrlPh" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
           <button type="button" onclick="addRcUrl()" data-i18n="rcAdd">Add</button>
-          <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Discover subpages (≤10)</button>
+          <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Rebuild selected tree</button>
         </div>
         <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-        <div id="rcUrlList" style="margin-top:0.75rem;"></div>
-        <div style="margin-top:1rem;padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
-          <label for="rcWebRetrievalMode" style="display:block;font-size:0.88rem;margin-bottom:0.35rem;font-weight:600;" data-i18n="rcWebModeLabel">RC web retrieval mode</label>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-            <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
-              <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
-              <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
-            </select>
-            <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
-            <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
-          </div>
-          <p style="margin:0.5rem 0 0 0;font-size:0.78rem;color:var(--muted);line-height:1.4;" data-i18n-html="rcWebModeWarnHtml"></p>
+        <div style="margin-top:0.55rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <label for="rcTreeMainUrlSelect" style="font-size:0.8rem;color:var(--muted);" data-i18n="rcTreeMainUrlLabel">Tree main URL</label>
+          <select id="rcTreeMainUrlSelect" onchange="loadRcTreePanel()" style="min-width:360px;"></select>
+          <span id="rcTreeStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+          <button type="button" class="ghost btn-compact" onclick="loadRcTreePanel()" data-i18n="rcTreeRefresh">Refresh tree</button>
         </div>
+        <div id="rcTreeViewer" class="result-box" style="display:block; max-height:260px; overflow:auto; margin-top:0.45rem;"></div>
+        <div id="rcUrlList" style="margin-top:0.75rem;"></div>
         <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcHintHtml">
           When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.
         </p>
@@ -2409,16 +2434,30 @@
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web sources)',
+        rcTreeMethodHelpHtml: 'Purpose: improve web retrieval stability. We crawl one main docs URL to build a full same-domain URL tree, then the agent selects and visits the best-matching pages directly. This avoids weak provider-only citation recall.',
+        rcTreeMaxDepthLabel: 'Max depth',
+        rcTreeMaxUrlsLabel: 'Max URLs',
+        rcWebVisitLimitLabel: 'Visit limit',
+        rcTreeSettingsSave: 'Save limits',
+        rcTreeMainUrlLabel: 'Tree main URL',
+        rcTreeRefresh: 'Refresh tree',
+        rcTreeIdle: 'Tree status: idle',
+        rcTreeRunning: 'Tree status: building…',
+        rcTreeReady: 'Tree ready: {count} urls, max depth {depth}',
+        rcTreeError: 'Tree error: {msg}',
+        rcTreeNoData: 'No discovered URL tree yet.',
         rcUrlPh: 'https://docs.example.com/…',
         rcAdd: 'Add',
-        rcDiscover: 'Discover subpages (≤10)',
+        rcDiscover: 'Rebuild selected tree',
         rcHintHtml: 'When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.',
         rcWebModeLabel: 'RC web retrieval mode',
         rcWebModeKbFirst: 'KB first (LLM gate may skip web)',
         rcWebModeAugment: 'Always augment with web',
+        rcWebModeKbOnly: 'KB only',
+        rcWebModeWebOnly: 'Web only',
         rcWebModeSave: 'Save',
         rcWebModeWarnHtml:
-          '<strong>Always augment</strong> runs hosted web after KB on every call → <strong>higher token and inference cost</strong> (provider billing). <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
+          '<strong>KB only</strong> never runs hosted web. <strong>Web only</strong> skips KB and requires enabled RC URLs. <strong>Always augment</strong> runs hosted web after KB on every call → higher token and inference cost. <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
         rcWebModeSaving: 'Saving…',
         rcWebModeSaved: 'Saved.',
         rcWebModeSaveFail: 'Save failed',
@@ -2754,16 +2793,30 @@
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web)',
+        rcTreeMethodHelpHtml: '목적: 웹 검색 안정성 향상. 메인 문서 URL 1개를 기준으로 동일 도메인 URL 트리를 미리 수집하고, 에이전트가 질의와 가장 맞는 페이지를 직접 선택/방문합니다. 제공자 citation 품질 저하에 덜 의존하게 됩니다.',
+        rcTreeMaxDepthLabel: '최대 depth',
+        rcTreeMaxUrlsLabel: '최대 URL 수',
+        rcWebVisitLimitLabel: '방문 URL 제한',
+        rcTreeSettingsSave: '제한 저장',
+        rcTreeMainUrlLabel: '트리 기준 URL',
+        rcTreeRefresh: '트리 새로고침',
+        rcTreeIdle: '트리 상태: 대기',
+        rcTreeRunning: '트리 상태: 생성 중…',
+        rcTreeReady: '트리 준비됨: URL {count}개, 최대 depth {depth}',
+        rcTreeError: '트리 오류: {msg}',
+        rcTreeNoData: '아직 생성된 URL 트리가 없습니다.',
         rcUrlPh: 'https://docs.example.com/…',
         rcAdd: 'Add',
-        rcDiscover: 'Discover subpages (≤10)',
+        rcDiscover: '선택 트리 재생성',
         rcHintHtml: 'RC URL이 <strong>enabled</strong>면 Run 중 해당 도메인 web search를 쓸 수 있어요.',
         rcWebModeLabel: 'RC 웹 검색 모드',
         rcWebModeKbFirst: 'KB 우선 (게이트가 web 생략 가능)',
         rcWebModeAugment: '항상 web으로 보강',
+        rcWebModeKbOnly: 'KB만 사용',
+        rcWebModeWebOnly: 'Web만 사용',
         rcWebModeSave: '저장',
         rcWebModeWarnHtml:
-          '<strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 <strong>토큰·추론 비용이 커집니다</strong>(과금). <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
+          '<strong>KB만 사용</strong>은 hosted web을 실행하지 않습니다. <strong>Web만 사용</strong>은 KB를 건너뛰며 활성화된 RC URL이 필요합니다. <strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 토큰·추론 비용이 커집니다. <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
         rcWebModeSaving: '저장 중…',
         rcWebModeSaved: '저장됨.',
         rcWebModeSaveFail: '저장 실패',
@@ -3456,81 +3509,6 @@
     }
     // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
     let _selectedKbDocIds = new Set();
-    /** RC URL strings (decoded) selected for bulk delete only — not the same as "enabled" toggles. */
-    let _selectedRcUrls = new Set();
-
-    function rcUrlUpdateBulkDeleteBtn() {
-      const bulkBtn = document.getElementById('rcBulkDeleteBtn');
-      if (!bulkBtn) return;
-      const n = _selectedRcUrls.size;
-      bulkBtn.disabled = n === 0;
-      bulkBtn.textContent = n > 0 ? `${uiText('rcDeleteSelected')} (${n})` : uiText('rcDeleteSelected');
-    }
-
-    function syncRcSelectAllMaster() {
-      const root = document.getElementById('rcUrlList');
-      const master = document.getElementById('rcSelectAllMaster');
-      if (!root || !master) return;
-      const boxes = root.querySelectorAll('.rc-url-select');
-      const n = boxes.length;
-      const c = Array.from(boxes).filter((b) => b.checked).length;
-      master.checked = n > 0 && c === n;
-      master.indeterminate = c > 0 && c < n;
-    }
-
-    function onRcUrlSelectChange(cb) {
-      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
-      if (!url) return;
-      if (cb.checked) _selectedRcUrls.add(url);
-      else _selectedRcUrls.delete(url);
-      rcUrlUpdateBulkDeleteBtn();
-      syncRcSelectAllMaster();
-    }
-
-    function rcUrlToggleSelectAll(checked) {
-      const root = document.getElementById('rcUrlList');
-      if (!root) return;
-      const boxes = root.querySelectorAll('.rc-url-select');
-      _selectedRcUrls = new Set();
-      boxes.forEach((el) => {
-        el.checked = !!checked;
-        const u = decodeURIComponent(el.getAttribute('data-rc') || '');
-        if (checked && u) _selectedRcUrls.add(u);
-      });
-      rcUrlUpdateBulkDeleteBtn();
-      syncRcSelectAllMaster();
-    }
-
-    async function onRcUrlEnabledToggle(cb) {
-      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
-      if (!url) return;
-      const enabled = cb.checked;
-      try {
-        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
-      } catch (e) {
-        alert('Error: ' + e.message);
-        cb.checked = !enabled;
-      }
-    }
-
-    async function deleteSelectedRcUrls() {
-      const urls = Array.from(_selectedRcUrls);
-      if (!urls.length) {
-        alert(uiText('rcNoneSelected'));
-        return;
-      }
-      if (!confirm(uiFmt('rcBulkDeleteConfirm', { n: String(urls.length) }))) return;
-      try {
-        for (const url of urls) {
-          await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
-        }
-        _selectedRcUrls = new Set();
-        await loadRcUrls();
-      } catch (e) {
-        alert('Error: ' + e.message);
-        await loadRcUrls();
-      }
-    }
 
     function toggleKbDocSelected(docId, checked) {
       const id = Number(docId);
@@ -3620,59 +3598,57 @@
       }
     }
     async function loadRcUrls() {
-      const data = await fetchJson('/rc/urls?limit=200');
+      const data = await fetchJson('/rc/urls?limit=200&enabled_only=true');
       const el = document.getElementById('rcUrlList');
+      const treeSel = document.getElementById('rcTreeMainUrlSelect');
+      if (treeSel) {
+        const options = (data || []).map((r) => String(r.url || '').trim()).filter(Boolean);
+        treeSel.innerHTML = options.length
+          ? options.map((u) => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('')
+          : '';
+      }
       if (!data.length) {
-        _selectedRcUrls = new Set();
         el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRcUrls'))}</div>`;
-        rcUrlUpdateBulkDeleteBtn();
+        const treeView = document.getElementById('rcTreeViewer');
+        if (treeView) treeView.textContent = uiText('rcTreeNoData');
+        const treeSt = document.getElementById('rcTreeStatus');
+        if (treeSt) treeSt.textContent = uiText('rcTreeIdle');
         return;
       }
-      const valid = new Set(data.map((r) => String(r.url || '').trim()).filter(Boolean));
-      _selectedRcUrls = new Set(Array.from(_selectedRcUrls).filter((u) => valid.has(u)));
-      const selAria = escapeHtml(uiText('rcSelectRowAria'));
       const rows = data.map((r) => {
         const url = String(r.url || '').trim();
         const enc = encodeURIComponent(url);
-        const enChecked = r.enabled ? 'checked' : '';
-        const rowSel = _selectedRcUrls.has(url) ? 'checked' : '';
-        return `<div class="cron-item rc-url-row" style="display:grid;grid-template-columns:auto auto 1fr auto;gap:0.55rem;align-items:center;">
-          <input type="checkbox" class="rc-url-select" data-rc="${enc}" aria-label="${selAria}" ${rowSel}
-            onclick="event.stopPropagation()" onchange="onRcUrlSelectChange(this)" />
-          <label style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;margin:0;font-size:0.8rem;color:var(--muted);cursor:pointer;">
-            <input type="checkbox" class="rc-url-enabled" data-rc="${enc}" ${enChecked}
-              onclick="event.stopPropagation()" onchange="onRcUrlEnabledToggle(this)" />
-            <span>${escapeHtml(uiText('enabled'))}</span>
-          </label>
+        return `<div class="cron-item rc-url-row" style="display:grid;grid-template-columns:1fr auto;gap:0.55rem;align-items:center;">
           <code style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(url)}</code>
           <button type="button" class="danger btn-compact" style="padding:0.2rem 0.42rem;border-radius:7px;line-height:1;"
             onclick="deleteRcUrlEncoded('${enc}')">${escapeHtml(uiText('remove'))}</button>
         </div>`;
       }).join('');
-      const controls = `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.35rem;margin:0 0 0.45rem 0;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--muted);cursor:pointer;">
-          <input type="checkbox" id="rcSelectAllMaster" onchange="rcUrlToggleSelectAll(this.checked)" />
-          ${escapeHtml(uiText('rcSelectAll'))}
-        </label>
-        <button id="rcBulkDeleteBtn" type="button" class="danger btn-compact" style="padding:0.25rem 0.5rem;border-radius:7px;" onclick="deleteSelectedRcUrls()" ${_selectedRcUrls.size ? '' : 'disabled'}>
-          ${_selectedRcUrls.size ? `${escapeHtml(uiText('rcDeleteSelected'))} (${_selectedRcUrls.size})` : escapeHtml(uiText('rcDeleteSelected'))}
-        </button>
-      </div>`;
-      el.innerHTML = controls + rows;
-      syncRcSelectAllMaster();
-      rcUrlUpdateBulkDeleteBtn();
+      el.innerHTML = rows;
+      loadRcTreePanel();
     }
     async function addRcUrl() {
       const url = document.getElementById('rcUrlInput').value.trim();
       if (!url) { alert(uiText('enterUrl')); return; }
       const el = document.getElementById('rcUrlResult');
       el.style.display = 'block';
-      el.textContent = uiText('saving');
+      el.textContent = `${uiText('saving')} / ${uiText('rcTreeRunning')}`;
       try {
         await fetchJson('/rc/urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled: true }) });
+        const max_urls = Number(document.getElementById('rcTreeMaxUrls')?.value || 300);
+        const max_depth = Number(document.getElementById('rcTreeMaxDepth')?.value || 2);
+        await fetchJson('/rc/tree/discover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_url: url, max_urls, max_depth }),
+        });
         document.getElementById('rcUrlInput').value = '';
-        el.textContent = uiText('saved');
-        loadRcUrls();
+        el.textContent = uiText('rcTreeRunning');
+        await loadRcUrls();
+        for (let i = 0; i < 10; i += 1) {
+          await new Promise((r) => setTimeout(r, 1000));
+          await loadRcTreePanel();
+        }
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
       }
@@ -3682,24 +3658,75 @@
       if (!confirm(uiText('removeUrlConfirm'))) return;
       try {
         await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
-        _selectedRcUrls.delete(url);
       } catch (e) {
         alert('Error: ' + e.message);
       }
       loadRcUrls();
     }
     async function discoverRcUrls() {
-      const base_url = document.getElementById('rcUrlInput').value.trim();
+      const base_url = document.getElementById('rcUrlInput').value.trim() || (document.getElementById('rcTreeMainUrlSelect')?.value || '').trim();
       if (!base_url) { alert(uiText('enterBaseUrl')); return; }
       const el = document.getElementById('rcUrlResult');
       el.style.display = 'block';
       el.textContent = uiText('discoverShort');
       try {
-        const res = await fetchJson('/rc/discover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base_url, max_urls: 10 }) });
-        el.textContent = uiFmt('discoveredUrls', { n: String((res.discovered || []).length) }) + '\n' + (res.discovered || []).join('\n');
+        const max_urls = Number(document.getElementById('rcTreeMaxUrls')?.value || 300);
+        const max_depth = Number(document.getElementById('rcTreeMaxDepth')?.value || 2);
+        await fetchJson('/rc/tree/discover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_url, max_urls, max_depth }),
+        });
+        el.textContent = uiText('rcTreeRunning');
         loadRcUrls();
+        // Poll readiness a few times for quick UX.
+        for (let i = 0; i < 8; i += 1) {
+          await new Promise((r) => setTimeout(r, 1000));
+          await loadRcTreePanel();
+        }
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function loadRcTreePanel() {
+      const sel = document.getElementById('rcTreeMainUrlSelect');
+      const base_url = (sel?.value || '').trim();
+      const treeView = document.getElementById('rcTreeViewer');
+      const treeSt = document.getElementById('rcTreeStatus');
+      if (!base_url) {
+        if (treeView) treeView.textContent = uiText('rcTreeNoData');
+        if (treeSt) treeSt.textContent = uiText('rcTreeIdle');
+        return;
+      }
+      try {
+        const st = await fetchJson('/rc/tree/status?base_url=' + encodeURIComponent(base_url));
+        if (treeSt) {
+          if (st.status === 'running') treeSt.textContent = uiText('rcTreeRunning');
+          else if (st.status === 'ready') treeSt.textContent = uiFmt('rcTreeReady', { count: String(st.tree_count || 0), depth: String(st.tree_max_depth || 0) });
+          else if (st.status === 'error') treeSt.textContent = uiFmt('rcTreeError', { msg: String(st.error || '') });
+          else treeSt.textContent = uiText('rcTreeIdle');
+        }
+        const res = await fetchJson('/rc/tree?base_url=' + encodeURIComponent(base_url) + '&limit=5000');
+        const items = Array.isArray(res.items) ? res.items : [];
+        if (!items.length) {
+          if (treeView) treeView.textContent = uiText('rcTreeNoData');
+          return;
+        }
+        const lines = [];
+        let curDepth = -1;
+        for (const it of items) {
+          const d = Number(it.depth || 0);
+          const u = String(it.url || '');
+          if (d !== curDepth) {
+            curDepth = d;
+            lines.push(`\n## Depth ${d}`);
+          }
+          lines.push(u);
+        }
+        if (treeView) treeView.textContent = lines.join('\n').trim();
+      } catch (e) {
+        if (treeSt) treeSt.textContent = uiFmt('rcTreeError', { msg: String(e.message || e) });
       }
     }
     async function addCron() {
@@ -4389,7 +4416,14 @@
           eff.user_inbox_peek_max_results != null ? String(eff.user_inbox_peek_max_results) : '5'
         );
         const rcModeEl = document.getElementById('rcWebRetrievalMode');
-        if (rcModeEl) rcModeEl.value = eff.rc_web_retrieval_mode === 'always_augment' ? 'always_augment' : 'kb_first';
+        if (rcModeEl) {
+          const allowedModes = new Set(['kb_first', 'always_augment', 'kb_only', 'web_only']);
+          const rcMode = allowedModes.has(eff.rc_web_retrieval_mode) ? eff.rc_web_retrieval_mode : 'kb_first';
+          rcModeEl.value = rcMode;
+        }
+        setv('rcTreeMaxDepth', String(eff.rc_url_tree_max_depth || '2'));
+        setv('rcTreeMaxUrls', String(eff.rc_url_tree_max_urls || '300'));
+        setv('rcWebVisitLimit', String(eff.rc_web_visit_limit || '5'));
         setv('cfg_prompt_email_agent_system_template', String(eff.prompt_email_agent_system_template || ''));
         setv('cfg_prompt_probe_user_message', String(eff.prompt_probe_user_message || ''));
         setv('cfg_prompt_probe_mode_append', String(eff.prompt_probe_mode_append || ''));
@@ -4562,6 +4596,29 @@
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rc_web_retrieval_mode: mode }),
+        });
+        if (st) st.textContent = uiText('rcWebModeSaved');
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = `${uiText('rcWebModeSaveFail')}: ${e.message}`;
+      }
+    }
+
+    async function saveRcTreeSettings() {
+      const st = document.getElementById('rcTreeSettingsSaveStatus');
+      const depth = (document.getElementById('rcTreeMaxDepth')?.value || '2').trim();
+      const maxUrls = (document.getElementById('rcTreeMaxUrls')?.value || '300').trim();
+      const visit = (document.getElementById('rcWebVisitLimit')?.value || '5').trim();
+      try {
+        if (st) st.textContent = uiText('rcWebModeSaving');
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rc_url_tree_max_depth: depth,
+            rc_url_tree_max_urls: maxUrls,
+            rc_web_visit_limit: visit,
+          }),
         });
         if (st) st.textContent = uiText('rcWebModeSaved');
         await loadRuntimeSettings();

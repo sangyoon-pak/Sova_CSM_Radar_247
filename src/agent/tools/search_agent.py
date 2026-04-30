@@ -370,7 +370,8 @@ Return STRICT JSON only:
 {{"kb_relevant": true or false, "reason": "<short reason>"}}
 
 Rules:
-- Set kb_relevant=true only when snippets are on-topic and materially support answering the query.
+- Set kb_relevant=true only when snippets are on-topic and materially support the user's core asks.
+- For multi-intent questions, do NOT set true if snippets only cover a minor subset while major asks remain unsupported.
 - Set kb_relevant=false when snippets are off-topic/wrong-domain/noisy, or too weak to ground an answer safely.
 """
 
@@ -552,7 +553,8 @@ def _check_sufficient(query: str, matches: list[dict]) -> tuple[bool, str]:
         data = json.loads(text.strip())
         return bool(data.get("sufficient", False)), str(data.get("reason", ""))
     except json.JSONDecodeError:
-        return True, "Could not parse"  # Assume sufficient to avoid loop
+        # Conservative default: run one more refinement pass instead of exiting early.
+        return False, "sufficiency_json_parse_failed"
 
 
 def _refine_search_terms(query: str, reason: str) -> list[list[str]]:
@@ -612,8 +614,41 @@ def _assess_kb_relevance(query: str, matches: list[dict]) -> tuple[bool, str]:
         reason = str(data.get("reason", "")).strip() or ("relevant" if relevant else "irrelevant")
         return relevant, reason
     except json.JSONDecodeError:
-        # Fail-open to avoid suppressing potentially useful KB on parser glitches.
-        return True, "kb_relevance_parse_failed"
+        # Conservative default: avoid leaking unsupported KB citations.
+        return False, "kb_relevance_parse_failed"
+
+
+def _estimate_focus_coverage(focus_subqueries: list[str], matches: list[dict]) -> dict:
+    """
+    Lightweight multi-intent coverage signal for diagnostics.
+    A subquery is counted as covered when at least one hard token appears in retrieved text.
+    """
+    if not focus_subqueries:
+        return {"focus_subquery_count": 0, "covered_focus_subquery_count": 0, "coverage_ratio": 0.0}
+    covered = 0
+    for sq in focus_subqueries:
+        toks = _extract_hard_terms(sq)
+        if not toks:
+            # Fallback tokenization keeps this language-agnostic enough for basic diagnostics.
+            toks = [t for t in re.findall(r"\b\w{3,}\b", sq)[:4] if t]
+        if not toks:
+            continue
+        token_l = [t.lower() for t in toks]
+        found = False
+        for m in matches:
+            hay = f"{m.get('snippet') or ''}\n{m.get('line') or ''}".lower()
+            if any(t in hay for t in token_l):
+                found = True
+                break
+        if found:
+            covered += 1
+    total = len(focus_subqueries)
+    ratio = float(covered) / float(total) if total else 0.0
+    return {
+        "focus_subquery_count": total,
+        "covered_focus_subquery_count": covered,
+        "coverage_ratio": round(ratio, 3),
+    }
 
 
 def search_with_agent_structured(
@@ -754,6 +789,8 @@ def search_with_agent_structured(
         "match_count": len(all_matches),
         "indexing_summary": idx,
     }
+    kb_meta.update(_estimate_focus_coverage(focus_subqueries, all_matches))
+    kb_meta["candidate_cap_hit"] = any(int(d.get("candidate_cap") or 0) >= 30 for d in rerank_debug)
     if _retrieval_log is not None:
         _retrieval_log.append(
             {

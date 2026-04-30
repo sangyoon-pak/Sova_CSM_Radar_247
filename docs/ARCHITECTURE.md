@@ -12,7 +12,7 @@ End-to-end view of **Sova - CSM Radar Agent 24/7**: how the UI, API, agent, retr
 | Search orchestration | `src/agent/tools/search_agent.py` |
 | Retrieval engines | `src/agent/tools/doc_search.py`, `src/agent/search_terms_extractor.py` |
 | Gmail | `src/agent/tools/gmail_tool.py` → subprocess `scripts/gmail-get-decoded.py` + local `gog` |
-| RC web | `src/agent/tools/rc_web_search.py` (hosted web only on enabled RC URLs; no local KB retrieval in this tool) |
+| RC web | `src/agent/tools/rc_web_search.py` (URL-tree-first fetch/synthesis on enabled RC URLs; provider hosted web fallback only) |
 | Cron | `src/scheduler/`, `src/api/cron_routes.py` |
 | DB + settings | `src/db/database.py`, `src/runtime_config.py`, `src/config.py` |
 | Learning / memory | `src/agent/memory.py` + `/memory/*` routes |
@@ -86,9 +86,11 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 ## Tools vs retrieval orchestration
 
 - **`search_product_docs`** -> `search_with_agent_structured` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns KB context and mode-aware web follow-up rules.
-- **`search_rc_web`** -> hosted web only (`run_web_search`) per enabled RC URL **host**; prompts include **all enabled URLs on that host** as path seeds plus a **weak-result retry**; no local KB rerank/subquery loop in this tool.
+- **`search_rc_web`** -> URL-tree-first retrieval per enabled RC URL **host** (`rc_url_tree` candidates ranked by query, fetch capped by `rc_web_visit_limit`, then synthesis). If tree data is missing/empty, fallback to hosted provider web search.
 - **`always_augment`**: after KB tool, orchestrator instructs explicit second tool call to `search_rc_web` (separate traces).
 - **`kb_first`**: after KB tool, optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) decides whether web follow-up is needed.
+- **`kb_only`**: run KB retrieval only; no hosted web follow-up.
+- **`web_only`**: skip KB retrieval and force hosted web follow-up (`search_rc_web`). If no enabled RC URLs exist, return a clear unavailability message (no KB fallback).
 - **Gmail** reads via **`gmail-get-decoded.py`**; never sends mail.
 - Retrieval ranking policy is operator-configurable via `RETRIEVAL_RANKING_POLICY` (Configure), not hardcoded vendor boosts.
 
@@ -106,13 +108,15 @@ flowchart TB
   MODE{rc_web_retrieval_mode}
   RCURL{enabled_RC_URLs_exist}
   GATE[kb_web_gate_JSON_on_KB_evidence]
-  WEB[search_rc_web<br/>provider_web_search_only]
+  WEB[search_rc_web<br/>url_tree_first_then_provider_fallback]
   OUTKB[Finalize with KB evidence]
   OUTBOTH[Finalize with KB + web evidence]
 
   Q --> KB --> MODE
   MODE -->|always_augment| RCURL
   MODE -->|kb_first| GATE
+  MODE -->|kb_only| OUTKB
+  MODE -->|web_only| RCURL
   RCURL -->|yes| WEB
   RCURL -->|no| OUTKB
   GATE -->|proceed_web true or parse-fail default| RCURL
@@ -122,7 +126,7 @@ flowchart TB
 
 - **Gate model separation:** `effective_llm_model_kb_web_gate()` / `LLM_MODEL_KB_WEB_GATE` is dedicated to KB->web gating, separate from `LLM_MODEL_SEARCH_JSON`.
 - **Safe default:** on malformed gate JSON, proceed with web to avoid silently suppressing fallback evidence.
-- **Operator controls:** Configure sets gate model; Knowledge -> RC URLs sets `rc_web_retrieval_mode` (`kb_first` default, `always_augment` higher token/inference cost).
+- **Operator controls:** Configure sets gate model; Knowledge -> RC URLs sets `rc_web_retrieval_mode` (`kb_first` default, `always_augment`, `kb_only`, `web_only`).
 
 ## Why retrieval is foundational
 
@@ -147,7 +151,7 @@ Operators tune behavior primarily from the **Configure** tab (values persist in 
 |---------|-----------------------------|
 | **Configure** | Provider preset, `LLM_MODEL` / role overrides (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, `LLM_MODEL_KB_WEB_GATE`, …), `RETRIEVAL_RANKING_POLICY` (JSON), API keys, embedding provider/model, Gmail / `gog` paths, guardrail lists, **probe inbox** Gmail query + max results, **LangSmith**, `PROBE_THREAD_INTENT_CLASSIFIER` |
 | **Workbench** | Agent profile (vendor / product / role) stored for prompts; threads; **Scan inbox** button (`probe: true`); NL cron when message matches cron admin intent |
-| **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment`) |
+| **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment` / `kb_only` / `web_only`) |
 | **Cron** | Scheduled probe jobs (presets + expressions) |
 | **Action dashboard** | Card status, filters, bulk dismiss; “Discuss this action” spawns scoped threads |
 | **Run history** | Traces, feedback, learning loop inputs |
@@ -156,7 +160,7 @@ Prompt **text** keys (`prompt_email_agent_system_template`, `prompt_probe_mode_a
 
 ## Data and persistence
 
-- SQLite (path from `DATABASE_PATH`) holds threads, messages, interactions, cron, RC URLs, feedback, and Configure overrides.
+- SQLite (path from `DATABASE_PATH`) holds threads, messages, interactions, cron, RC URLs, RC URL tree nodes, feedback, and Configure overrides.
 - RAG / FTS artifacts and uploaded files live under **`data/`** (see `.gitignore`; not shipped in git). For a **clean tree before distribution**, use [scripts/README.md](../scripts/README.md) (`reset_local_data.py`, `reset_configure_overrides.py`).
 
 ## Operational interfaces

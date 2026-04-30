@@ -56,6 +56,9 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "llm_model_search_rerank",
     "llm_model_memory",
     "rc_web_retrieval_mode",
+    "rc_url_tree_max_depth",
+    "rc_url_tree_max_urls",
+    "rc_web_visit_limit",
     "retrieval_ranking_policy",
     "rag_embedding_provider",
     "rag_embedding_model",
@@ -232,7 +235,9 @@ def effective_llm_model_kb_web_gate() -> str:
     return effective_llm_model()
 
 
-_VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset({"kb_first", "always_augment"})
+_VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset(
+    {"kb_first", "always_augment", "kb_only", "web_only"}
+)
 
 _DEFAULT_RETRIEVAL_RANKING_POLICY: dict[str, Any] = {
     "version": "v1",
@@ -258,6 +263,27 @@ def effective_rc_web_retrieval_mode() -> str:
     if raw in _VALID_RC_WEB_RETRIEVAL_MODES:
         return raw
     return "kb_first"
+
+
+def effective_rc_url_tree_max_depth() -> str:
+    v = _db_str("rc_url_tree_max_depth")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=2, min_v=0, max_v=8)
+    return _bounded_int_str(getattr(settings, "rc_url_tree_max_depth", 2), default=2, min_v=0, max_v=8)
+
+
+def effective_rc_url_tree_max_urls() -> str:
+    v = _db_str("rc_url_tree_max_urls")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=300, min_v=10, max_v=5000)
+    return _bounded_int_str(getattr(settings, "rc_url_tree_max_urls", 300), default=300, min_v=10, max_v=5000)
+
+
+def effective_rc_web_visit_limit() -> str:
+    v = _db_str("rc_web_visit_limit")
+    if v is not None and str(v).strip():
+        return _bounded_int_str(v, default=5, min_v=1, max_v=50)
+    return _bounded_int_str(getattr(settings, "rc_web_visit_limit", 5), default=5, min_v=1, max_v=50)
 
 
 def _normalize_retrieval_policy(raw: dict[str, Any]) -> dict[str, Any]:
@@ -664,6 +690,15 @@ def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
         "llm_model_search_rerank": role_small,
         "llm_model_memory": role_small,
         "rc_web_retrieval_mode": "kb_first",
+        "rc_url_tree_max_depth": _bounded_int_str(
+            getattr(s, "rc_url_tree_max_depth", 2), default=2, min_v=0, max_v=8
+        ),
+        "rc_url_tree_max_urls": _bounded_int_str(
+            getattr(s, "rc_url_tree_max_urls", 300), default=300, min_v=10, max_v=5000
+        ),
+        "rc_web_visit_limit": _bounded_int_str(
+            getattr(s, "rc_web_visit_limit", 5), default=5, min_v=1, max_v=50
+        ),
         "retrieval_ranking_policy": json.dumps(_DEFAULT_RETRIEVAL_RANKING_POLICY, ensure_ascii=True),
         "rag_embedding_provider": embed_provider,
         "rag_embedding_model": embed_model,
@@ -834,6 +869,9 @@ def runtime_settings_snapshot() -> dict:
             "llm_model_search_rerank": effective_llm_model_search_rerank(),
             "llm_model_memory": effective_llm_model_memory(),
             "rc_web_retrieval_mode": effective_rc_web_retrieval_mode(),
+            "rc_url_tree_max_depth": effective_rc_url_tree_max_depth(),
+            "rc_url_tree_max_urls": effective_rc_url_tree_max_urls(),
+            "rc_web_visit_limit": effective_rc_web_visit_limit(),
             "retrieval_ranking_policy": effective_retrieval_ranking_policy(),
             "rag_embedding_provider": effective_rag_embedding_provider(),
             "rag_embedding_model": effective_rag_embedding_model(),

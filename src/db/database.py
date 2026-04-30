@@ -876,6 +876,151 @@ def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False) 
     return [dict(r) for r in rows]
 
 
+def upsert_rc_url_tree_nodes(*, main_rc_url: str, nodes: list[dict]) -> int:
+    """
+    Upsert discovered URL tree nodes for one main RC URL.
+    Returns number of processed nodes.
+    """
+    main = (main_rc_url or "").strip()
+    if not main:
+        raise ValueError("main_rc_url is required")
+    if not nodes:
+        return 0
+    with _WRITE_LOCK:
+        conn = _conn()
+        now = _utc_now_iso()
+        count = 0
+        for n in nodes:
+            u = str((n or {}).get("url") or "").strip()
+            if not u:
+                continue
+            depth = int((n or {}).get("depth") or 0)
+            if depth < 0:
+                depth = 0
+            parent_url = str((n or {}).get("parent_url") or "").strip() or None
+            title = str((n or {}).get("title") or "").strip() or None
+            meta = (n or {}).get("metadata")
+            conn.execute(
+                """
+                INSERT INTO rc_url_tree (main_rc_url, url, depth, parent_url, title, metadata, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(main_rc_url, url) DO UPDATE SET
+                  depth=excluded.depth,
+                  parent_url=excluded.parent_url,
+                  title=COALESCE(excluded.title, rc_url_tree.title),
+                  metadata=COALESCE(excluded.metadata, rc_url_tree.metadata),
+                  updated_at=excluded.updated_at
+                """,
+                (
+                    main,
+                    u,
+                    depth,
+                    parent_url,
+                    title,
+                    json.dumps(meta) if isinstance(meta, dict) else None,
+                    now,
+                ),
+            )
+            count += 1
+        conn.commit()
+        conn.close()
+        return count
+
+
+def list_rc_url_tree(main_rc_url: str, limit: int = 2000, offset: int = 0) -> list[dict]:
+    main = (main_rc_url or "").strip()
+    if not main:
+        return []
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT id, created_at, updated_at, main_rc_url, url, depth, parent_url, title, metadata
+        FROM rc_url_tree
+        WHERE main_rc_url = ?
+        ORDER BY depth ASC, id ASC
+        LIMIT ? OFFSET ?
+        """,
+        (main, limit, offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def list_rc_url_tree_by_host(host: str, enabled_main_only: bool = True, limit: int = 5000) -> list[dict]:
+    h = (host or "").strip().lower()
+    if not h:
+        return []
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    if enabled_main_only:
+        rows = conn.execute(
+            """
+            SELECT t.id, t.created_at, t.updated_at, t.main_rc_url, t.url, t.depth, t.parent_url, t.title, t.metadata
+            FROM rc_url_tree t
+            JOIN rc_urls r ON r.url = t.main_rc_url
+            WHERE r.enabled = 1
+              AND lower(replace(replace(t.main_rc_url, 'https://', ''), 'http://', '')) LIKE ? || '%'
+            ORDER BY t.depth ASC, t.id ASC
+            LIMIT ?
+            """,
+            (h, limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT id, created_at, updated_at, main_rc_url, url, depth, parent_url, title, metadata
+            FROM rc_url_tree
+            WHERE lower(replace(replace(main_rc_url, 'https://', ''), 'http://', '')) LIKE ? || '%'
+            ORDER BY depth ASC, id ASC
+            LIMIT ?
+            """,
+            (h, limit),
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def clear_rc_url_tree(main_rc_url: str) -> int:
+    main = (main_rc_url or "").strip()
+    if not main:
+        raise ValueError("main_rc_url is required")
+    with _WRITE_LOCK:
+        conn = _conn()
+        cur = conn.execute("DELETE FROM rc_url_tree WHERE main_rc_url = ?", (main,))
+        conn.commit()
+        deleted = cur.rowcount or 0
+        conn.close()
+        return deleted
+
+
+def rc_url_tree_summary(main_rc_url: str) -> dict:
+    main = (main_rc_url or "").strip()
+    if not main:
+        return {"main_rc_url": "", "count": 0, "max_depth": 0, "updated_at": None}
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        """
+        SELECT
+          COUNT(*) AS cnt,
+          COALESCE(MAX(depth), 0) AS max_depth,
+          MAX(updated_at) AS updated_at
+        FROM rc_url_tree
+        WHERE main_rc_url = ?
+        """,
+        (main,),
+    ).fetchone()
+    conn.close()
+    d = dict(row) if row else {}
+    return {
+        "main_rc_url": main,
+        "count": int(d.get("cnt") or 0),
+        "max_depth": int(d.get("max_depth") or 0),
+        "updated_at": d.get("updated_at"),
+    }
+
+
 def set_rc_url_enabled(url: str, enabled: bool) -> None:
     u = (url or "").strip()
     if not u:
@@ -897,6 +1042,8 @@ def delete_rc_url(url: str) -> int:
         raise ValueError("url is required")
     with _WRITE_LOCK:
         conn = _conn()
+        # Cascade delete discovered URL-tree nodes for this main URL.
+        conn.execute("DELETE FROM rc_url_tree WHERE main_rc_url = ?", (u,))
         cur = conn.execute("DELETE FROM rc_urls WHERE url = ?", (u,))
         conn.commit()
         deleted = cur.rowcount or 0

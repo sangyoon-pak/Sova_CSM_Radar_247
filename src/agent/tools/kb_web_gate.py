@@ -24,6 +24,7 @@ Return STRICT JSON only (no markdown, no prose outside JSON):
 Rules:
 - Set "proceed_web": true if snippets are irrelevant, off-topic, too thin, contradictory, outdated hints, or clearly insufficient to answer the query safely.
 - Set "proceed_web": false if snippets plausibly contain enough grounded material for a confident, doc-backed answer.
+- For multi-intent questions, set "proceed_web": true when any major user ask is still unsupported.
 """
 
 
