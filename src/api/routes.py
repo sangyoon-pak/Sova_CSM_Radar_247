@@ -282,6 +282,7 @@ class RuntimeSettingsPatch(BaseModel):
     llm_model_search_rerank: str | None = None
     llm_model_memory: str | None = None
     rc_web_retrieval_mode: str | None = None
+    rc_web_url_selection_policy: str | None = None
     retrieval_ranking_policy: str | None = None
     rag_embedding_provider: str | None = None
     rag_embedding_model: str | None = None
@@ -504,9 +505,9 @@ def discover_rc_urls(req: RCDiscoverRequest):
     """
     Discover up to N sub-URLs under the same domain.
 
-    Prefer deterministic sitemap/first-hop discovery so OpenAI direct gets
-    concrete child-page seeds. Fall back to hosted web search when no local
-    candidates are available.
+    Prefer local same-domain candidate collection plus agentic URL selection so
+    users can tune page choice through policy instead of provider-specific code.
+    Fall back to hosted web search when no local candidates are available.
     """
     try:
         base = (req.base_url or "").strip()

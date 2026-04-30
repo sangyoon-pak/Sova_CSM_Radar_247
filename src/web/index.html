@@ -1766,6 +1766,12 @@
               <textarea id="cfg_retrieval_ranking_policy" rows="8" style="width:100%;max-width:52rem;" spellcheck="false"></textarea>
               <span class="configure-env" id="cfg_env_retrieval_ranking_policy"></span>
             </div>
+            <p class="configure-hint" data-i18n="configureRcWebUrlSelectionPolicyHint">Agentic URL selection policy for RC web search. Local code only collects same-domain candidates; this policy tells the Search / JSON model how to choose which pages to inspect.</p>
+            <div class="configure-field">
+              <label for="cfg_rc_web_url_selection_policy" data-i18n="cfgRcWebUrlSelectionPolicy">RC_WEB_URL_SELECTION_POLICY (JSON)</label>
+              <textarea id="cfg_rc_web_url_selection_policy" rows="8" style="width:100%;max-width:52rem;" spellcheck="false"></textarea>
+              <span class="configure-env" id="cfg_env_rc_web_url_selection_policy"></span>
+            </div>
           </div>
         </details>
         <details class="configure-details">
@@ -3989,6 +3995,7 @@
       llm_model_search_rerank: 'LLM_MODEL_SEARCH_RERANK',
       llm_model_memory: 'LLM_MODEL_MEMORY',
       retrieval_ranking_policy: 'RETRIEVAL_RANKING_POLICY',
+      rc_web_url_selection_policy: 'RC_WEB_URL_SELECTION_POLICY',
       rag_embedding_provider: 'RAG_EMBEDDING_PROVIDER',
       rag_embedding_model: 'RAG_EMBEDDING_MODEL',
       openrouter_base_url: 'OPENROUTER_BASE_URL',
@@ -4243,6 +4250,7 @@
       llm_model_search_rerank: 'openai/gpt-4o-mini',
       llm_model_memory: 'openai/gpt-4o-mini',
       retrieval_ranking_policy: '{"version":"v1","policy_name":"default","source_order":["rag","grep","fts"],"actionable_definition":"Prioritize snippets that provide concrete troubleshooting, integration, or configuration instructions for the user query.","vendor_glossary":[],"must_include_terms":[],"must_avoid_terms":[]}',
+      rc_web_url_selection_policy: '{"version":"v1","policy_name":"default_rc_web_url_selection","selection_goal":"Choose authoritative same-domain documentation pages most likely to answer the user query.","operator_guidance":"","must_include_terms":[],"must_avoid_terms":[]}',
       rag_embedding_provider: 'openrouter',
       rag_embedding_model: 'text-embedding-3-large',
       openrouter_base_url: 'https://openrouter.ai/api/v1',
@@ -4273,6 +4281,7 @@
         ['cfg_env_llm_model_search_rerank', 'llm_model_search_rerank'],
         ['cfg_env_llm_model_memory', 'llm_model_memory'],
         ['cfg_env_retrieval_ranking_policy', 'retrieval_ranking_policy'],
+        ['cfg_env_rc_web_url_selection_policy', 'rc_web_url_selection_policy'],
         ['cfg_env_rag_embedding_provider', 'rag_embedding_provider'],
         ['cfg_env_rag_embedding_model', 'rag_embedding_model'],
         ['cfg_env_openrouter_base_url', 'openrouter_base_url'],
@@ -4332,6 +4341,17 @@
             policyEl.value = String(p);
           } else {
             policyEl.value = '';
+          }
+        }
+        const rcUrlPolicyEl = document.getElementById('cfg_rc_web_url_selection_policy');
+        if (rcUrlPolicyEl) {
+          const p = eff.rc_web_url_selection_policy;
+          if (p && typeof p === 'object') {
+            rcUrlPolicyEl.value = JSON.stringify(p, null, 2);
+          } else if (stored.rc_web_url_selection_policy && p != null) {
+            rcUrlPolicyEl.value = String(p);
+          } else {
+            rcUrlPolicyEl.value = '';
           }
         }
         setv(
@@ -4482,6 +4502,7 @@
         llm_model_search_rerank: gv('cfg_llm_model_search_rerank'),
         llm_model_memory: gv('cfg_llm_model_memory'),
         retrieval_ranking_policy: gv('cfg_retrieval_ranking_policy'),
+        rc_web_url_selection_policy: gv('cfg_rc_web_url_selection_policy'),
         rag_embedding_provider: gv('cfg_rag_embedding_provider'),
         rag_embedding_model: gv('cfg_rag_embedding_model'),
       };

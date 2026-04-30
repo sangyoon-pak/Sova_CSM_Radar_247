@@ -22,28 +22,25 @@ from langchain_core.messages import HumanMessage
 
 from src.agent.chat_llm import get_chat_llm
 from src.agent.tools.hosted_web_search import run_web_search
-from src.runtime_config import effective_llm_model_main, effective_llm_provider_preset
+from src.runtime_config import (
+    effective_llm_model_main,
+    effective_llm_model_search_json,
+    effective_rc_web_url_selection_policy_json,
+)
 from src.db import database
 
 # Medium budget defaults (per search_rc_web invocation).
 _MAX_SEEDS_PER_HOST = 12
 _MAX_AGENTIC_STEPS_PER_HOST = 3
 _MAX_FETCHED_CITATIONS_PER_HOST = 6
-_MAX_DISCOVERED_URLS_PER_HOST = 16
+_MAX_SELECTED_URLS_PER_HOST = 16
 _MAX_DISCOVERY_FETCHES_PER_HOST = 6
 _MAX_DISCOVERY_SITEMAP_URLS = 120
+_MAX_DISCOVERY_CANDIDATE_URLS = 180
 _MAX_FETCH_CHARS_PER_URL = 4000
 
-
-def _path_depth(url: str) -> int:
-    path = (urlparse(url).path or "").strip("/")
-    if not path:
-        return 0
-    return len(path.split("/"))
-
-
 def _seeds_for_prompt(urls: list[str], max_seeds: int) -> list[str]:
-    """Prefer deeper doc paths in the prompt so the model does not anchor only on the landing page."""
+    """Deduplicate seed URLs while preserving operator/configured order."""
     uniq: list[str] = []
     seen: set[str] = set()
     for u in urls:
@@ -52,7 +49,6 @@ def _seeds_for_prompt(urls: list[str], max_seeds: int) -> list[str]:
             continue
         seen.add(u)
         uniq.append(u)
-    uniq.sort(key=lambda u: (-_path_depth(u), -len(u), u))
     return uniq[:max_seeds]
 
 
@@ -90,25 +86,6 @@ def _extract_path_like_terms(user_query: str) -> list[str]:
         seen.add(h)
         out.append(h)
         if len(out) >= 8:
-            break
-    return out
-
-
-def _query_terms(user_query: str) -> list[str]:
-    """Small deterministic term set used to rank discovered URLs before any LLM sees them."""
-    q = (user_query or "").lower()
-    terms = re.findall(r"[a-z0-9][a-z0-9_-]{2,}", q)
-    path_bits: list[str] = []
-    for path in _extract_path_like_terms(q):
-        path_bits.extend([x for x in re.split(r"[/._-]+", path) if len(x) >= 3])
-    out: list[str] = []
-    seen: set[str] = set()
-    for t in path_bits + terms:
-        if t in seen:
-            continue
-        seen.add(t)
-        out.append(t)
-        if len(out) >= 32:
             break
     return out
 
@@ -176,37 +153,13 @@ def _sitemap_urls(host: str, seed_urls: list[str]) -> list[str]:
     return urls
 
 
-def _score_discovered_url(url: str, user_query: str, seed_urls: list[str]) -> int:
-    pu = urlparse(url)
-    hay = f"{pu.path} {pu.query}".lower()
-    terms = _query_terms(user_query)
-    score = 0
-    if url in seed_urls:
-        score += 40
-    score += min(_path_depth(url), 6) * 3
-    for term in terms:
-        if term in hay:
-            score += 8
-    for path_term in _extract_path_like_terms(user_query):
-        if path_term.strip("/").lower() in hay:
-            score += 20
-    if any(x in hay for x in ("api", "reference", "docs", "guide", "integration", "developer", "webhook", "endpoint")):
-        score += 6
-    if pu.query:
-        score -= 4
-    if re.search(r"/(?:blog|news|press|careers|legal|privacy|terms)(?:/|$)", pu.path.lower()):
-        score -= 10
-    return score
-
-
-def _discover_same_host_candidate_urls(host: str, seed_urls: list[str], user_query: str) -> list[str]:
+def _collect_same_host_candidate_urls(host: str, seed_urls: list[str]) -> list[str]:
     """
-    Deterministically shrink a large site/link surface into a small same-host shortlist.
+    Collect same-host URL candidates without assigning relevance.
 
-    Some hosted web plugins follow useful child pages from a base URL. OpenAI's
-    hosted web_search can be less reliable for that traversal, so we provide concrete
-    candidate URLs from sitemaps and first-hop links rather than asking a model to sort
-    hundreds of raw crawler URLs.
+    Local code is limited to safe crawling boundaries: same host, bounded sitemap
+    and first-hop link extraction, asset filtering, and deduplication. Relevance
+    selection is handled by the agentic URL selector below.
     """
     candidates: list[str] = []
     seen: set[str] = set()
@@ -243,21 +196,125 @@ def _discover_same_host_candidate_urls(host: str, seed_urls: list[str], user_que
         except Exception:
             continue
 
-    candidates.sort(key=lambda u: (-_score_discovered_url(u, user_query, seed_urls), -_path_depth(u), u))
-    return candidates[:_MAX_DISCOVERED_URLS_PER_HOST]
+    return candidates[:_MAX_DISCOVERY_CANDIDATE_URLS]
+
+
+def _url_selection_prompt(
+    *,
+    host: str,
+    user_query: str,
+    seed_urls: list[str],
+    candidate_urls: list[str],
+    max_urls: int,
+) -> str:
+    policy_json = effective_rc_web_url_selection_policy_json()
+    seeds = "\n".join(f"- {u}" for u in seed_urls) if seed_urls else "(none)"
+    candidates = "\n".join(f"{i + 1}. {u}" for i, u in enumerate(candidate_urls))
+    return (
+        "You are selecting URLs for an RC web retrieval agent.\n"
+        "The local crawler only collected same-host candidates; it did not rank relevance.\n"
+        "Use reasoning plus the operator policy to choose a small evidence plan.\n\n"
+        "Return STRICT JSON ONLY:\n"
+        "{\n"
+        '  "selected_urls": ["https://..."],\n'
+        '  "reason": "short reason"\n'
+        "}\n\n"
+        "Rules:\n"
+        f"- Select at most {max_urls} URLs.\n"
+        "- Select only from Candidate URLs exactly as written.\n"
+        "- Stay on the provided host.\n"
+        "- Prefer URLs that are likely to contain authoritative evidence for the user query.\n"
+        "- If the candidates are weak, include the best seed/base URL and explain the uncertainty in reason.\n\n"
+        f"Host: {host}\n"
+        f"Operator URL selection policy JSON:\n{policy_json}\n\n"
+        f"Seed URLs:\n{seeds}\n\n"
+        f"User query:\n{(user_query or '').strip()[:3000]}\n\n"
+        f"Candidate URLs:\n{candidates[:16000]}\n"
+    )
+
+
+def _select_candidate_urls_agentically(
+    *,
+    host: str,
+    user_query: str,
+    seed_urls: list[str],
+    candidate_urls: list[str],
+    max_urls: int,
+) -> tuple[list[str], str]:
+    """Use the configured search JSON model to choose URL candidates."""
+    if not candidate_urls:
+        return [], "no_candidates"
+    ordered_allowed: list[str] = []
+    seen_allowed: set[str] = set()
+    for u in seed_urls + candidate_urls:
+        s = (u or "").strip()
+        if not s or s in seen_allowed:
+            continue
+        if urlparse(s).netloc != host:
+            continue
+        seen_allowed.add(s)
+        ordered_allowed.append(s)
+    allowed = set(ordered_allowed)
+    if not ordered_allowed:
+        return [], "no_same_host_candidates"
+    try:
+        llm = get_chat_llm(model=effective_llm_model_search_json(), temperature=0.0)
+        prompt = _url_selection_prompt(
+            host=host,
+            user_query=user_query,
+            seed_urls=seed_urls,
+            candidate_urls=candidate_urls,
+            max_urls=max_urls,
+        )
+        resp = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={"run_name": "search_rc_web.url_selection", "tags": ["search_rc_web", "url_selection"]},
+        )
+        obj = _parse_json_object(str(resp.content or ""))
+        raw = obj.get("selected_urls") if obj else None
+        selected: list[str] = []
+        if isinstance(raw, list):
+            for u in raw:
+                s = str(u).strip()
+                if s not in allowed:
+                    continue
+                if urlparse(s).netloc != host:
+                    continue
+                if s not in selected:
+                    selected.append(s)
+                if len(selected) >= max_urls:
+                    break
+        if selected:
+            return selected, str((obj or {}).get("reason") or "agent_selected").strip()
+    except Exception as e:
+        return [], f"agent_selection_error:{type(e).__name__}"
+
+    # Safety fallback only: preserve collection order, not relevance scoring.
+    fallback: list[str] = []
+    for u in ordered_allowed:
+        fallback.append(u)
+        if len(fallback) >= max_urls:
+            break
+    return fallback, "agent_selection_empty_collection_order_fallback"
 
 
 def discover_same_host_candidate_urls(base_url: str, user_query: str = "", max_urls: int = 10) -> list[str]:
-    """Public helper for RC URL discovery without relying on provider-hosted traversal."""
+    """Public helper for agentic RC URL discovery without relying on provider-hosted traversal."""
     base = (base_url or "").strip()
     limit = max(1, int(max_urls or 10))
     pu = urlparse(base)
     if pu.scheme not in {"http", "https"} or not pu.netloc:
         return []
-    candidates = _discover_same_host_candidate_urls(pu.netloc, [base], user_query or base)
-    if base.rstrip("/") not in candidates:
-        candidates.insert(0, base.rstrip("/"))
-    return candidates[:limit]
+    seed = base.rstrip("/")
+    candidates = _collect_same_host_candidate_urls(pu.netloc, [seed])
+    selected, _reason = _select_candidate_urls_agentically(
+        host=pu.netloc,
+        user_query=user_query or f"Find important documentation pages under {seed}",
+        seed_urls=[seed],
+        candidate_urls=candidates,
+        max_urls=limit,
+    )
+    return selected[:limit]
 
 
 def _parse_json_object(raw: str) -> dict | None:
@@ -470,20 +527,25 @@ def _run_hosted_web_for_host(
     max_output_tokens: int,
 ) -> tuple[str, list[str], dict]:
     seeds = _seeds_for_prompt(all_urls_on_host, _MAX_SEEDS_PER_HOST)
-    provider_preset = effective_llm_provider_preset()
-    discovered_urls: list[str] = []
-    if provider_preset == "openai":
-        discovered_urls = _discover_same_host_candidate_urls(host, seeds or [primary_url], user_query)
-        # Promote deterministic candidates to seed URLs so hosted search has exact child pages to consider.
-        for u in discovered_urls:
-            if u not in seeds:
-                seeds.append(u)
-        seeds = _seeds_for_prompt(seeds, _MAX_SEEDS_PER_HOST)
+    candidate_urls = _collect_same_host_candidate_urls(host, seeds or [primary_url])
+    selected_urls, selection_reason = _select_candidate_urls_agentically(
+        host=host,
+        user_query=user_query,
+        seed_urls=seeds or [primary_url],
+        candidate_urls=candidate_urls,
+        max_urls=_MAX_SELECTED_URLS_PER_HOST,
+    )
+    for u in selected_urls:
+        if u not in seeds:
+            seeds.append(u)
+    seeds = _seeds_for_prompt(seeds, _MAX_SEEDS_PER_HOST)
     diag: dict = {
         "host": host,
         "primary_url": primary_url,
         "seed_count": len(seeds),
-        "deterministic_discovered_count": len(discovered_urls),
+        "candidate_url_count": len(candidate_urls),
+        "agent_selected_url_count": len(selected_urls),
+        "agent_selection_reason": selection_reason,
         "attempts": [],
     }
 
@@ -583,31 +645,32 @@ def _run_hosted_web_for_host(
                 + synth.strip()
             ).strip()
 
-    # OpenAI mitigation: if hosted search did not traverse to the right child pages, use the
-    # deterministic same-host shortlist directly. This avoids handing 300+ URLs to an LLM.
-    deterministic_fetched: list[tuple[str, str]] = []
-    if provider_preset == "openai" and discovered_urls:
+    # Agentic URL follow-up: if hosted search stays shallow, inspect the model-selected
+    # same-host pages directly. Local code only enforces host/budget safety; the URL
+    # relevance choice comes from the configurable selection policy above.
+    selected_fetched: list[tuple[str, str]] = []
+    if selected_urls:
         already = set(citations)
-        candidate_urls = [u for u in discovered_urls if u not in already]
-        deterministic_fetched = _fetch_same_host_snippets(
+        urls_to_fetch = [u for u in selected_urls if u not in already]
+        selected_fetched = _fetch_same_host_snippets(
             host,
-            candidate_urls,
+            urls_to_fetch,
             max_pages=_MAX_FETCHED_CITATIONS_PER_HOST,
         )
-        diag["fetched_deterministic_pages"] = len(deterministic_fetched)
-        if deterministic_fetched:
-            synth = _synthesize_from_cited_pages(host, user_query, deterministic_fetched)
+        diag["fetched_agent_selected_pages"] = len(selected_fetched)
+        if selected_fetched:
+            synth = _synthesize_from_cited_pages(host, user_query, selected_fetched)
             if synth:
                 text = (
                     (text or "").strip()
-                    + "\n\n### Deterministic URL follow-up\n"
+                    + "\n\n### Agent-selected URL follow-up\n"
                     + synth.strip()
                 ).strip()
-            for u, _snippet in deterministic_fetched:
+            for u, _snippet in selected_fetched:
                 if u not in citations:
                     citations.append(u)
     else:
-        diag["fetched_deterministic_pages"] = 0
+        diag["fetched_agent_selected_pages"] = 0
 
     # Back-compat: single additional retry flag for meta line (true when >1 step).
     diag["retry_used"] = bool(step > 1)

@@ -83,6 +83,8 @@ class Settings(BaseSettings):
     rc_web_retrieval_mode: str = Field("kb_first", validation_alias="RC_WEB_RETRIEVAL_MODE")
     # JSON policy object for vendor-agnostic retrieval/rerank behavior.
     retrieval_ranking_policy: str = Field("", validation_alias="RETRIEVAL_RANKING_POLICY")
+    # JSON policy object for agentic RC web URL selection from same-host candidates.
+    rc_web_url_selection_policy: str = Field("", validation_alias="RC_WEB_URL_SELECTION_POLICY")
 
     # Fernet key (44-char url-safe base64) for encrypting guardrail phrases in DB; optional.
     configure_encryption_key: str | None = Field(None, validation_alias="CONFIGURE_ENCRYPTION_KEY")
