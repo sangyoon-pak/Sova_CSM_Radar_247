@@ -99,6 +99,7 @@ For each term variant and each focus sub-query:
 - Output contract is strict JSON with `ranked_indices` + `scores`.
 - Tracing metadata includes policy name/version (`search_agent.policy_rerank`).
 - **Neutral fallback:** if rerank fails (timeout/error/invalid JSON/invalid permutation), the system uses deterministic policy-order sorting (no hardcoded vendor heuristics).
+- **Empty evidential set (valid rerank, all scores below threshold):** `_rerank_matches` can return **no** matches (for example every snippet scored `1` against the query). In that case the orchestrator **must not** re-inject raw `search_documents` hits: unfiltered chunks would still get `[Source: … | line …]` lines from `format_matches_for_context`, which misleads the main agent and the Workbench **citation pass** (`_extract_source_tags_from_messages` / `_add_citations_pass` in `email_agent.py`). Instead, `search_with_agent_structured` keeps **`last_evidential_matches`** (the last non-empty reranked pool), restores it when a later rerank returns empty, and **stops** the refinement loop—so the first iteration with zero evidential matches yields **no** `[Source: …]` tags and “No relevant documents found.” when appropriate.
 
 ### Step 5. Sufficiency check + optional refinement
 - `_check_sufficient(query, all_matches)`
@@ -107,8 +108,8 @@ For each term variant and each focus sub-query:
   - run another retrieval iteration
 
 ### Step 6. Return context for the main email agent
-- `format_matches_for_context()` truncates to `max_context_chars` and returns a string like:
-  `[From <file> line <line_num>] ...`
+- `format_matches_for_context()` truncates to `max_context_chars` and emits blocks like:
+  `[Source: <title> — <url or path> | line <n>]\n<snippet>` (joined with `---`), or the sentence `No relevant documents found.` when the match list is empty.
 - **`search_with_agent_structured`** returns `(that_string, final_matches)` for KB tooling that also needs gate decisions; `search_product_docs` uses this structured output to append mode-specific web follow-up instructions.
 
 ### Step 7. Contract with action-card creation
@@ -118,6 +119,15 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 - If evidence is strong, the downstream draft/card builder should include citations and grounded next steps.
 - If evidence is weak or insufficient, the agent should explicitly mark a knowledge gap and avoid confident speculation.
 - Card metadata should retain retrieval evidence references for downstream follow-up.
+- **KB citation safety contract:** before `search_product_docs` returns to the main agent, a KB relevance gate classifies the final KB match set as relevant/irrelevant for the query. When irrelevant, KB `[Source: ...]` tags are not exposed to the final citation pass, so the assistant cannot emit false KB citations.
+
+### KB relevance safety (irrelevant KB drop)
+
+`search_with_agent_structured` now returns KB metadata (`kb_relevant`, `kb_reason`) in addition to formatted context + matches.
+
+- If `kb_relevant=true`, behavior is unchanged: KB snippets and source tags flow through as normal.
+- If `kb_relevant=false`, `search_product_docs` emits a KB gap marker (`KB relevance: false | reason: ...`) and does **not** pass KB source-tag blocks to the final synthesis/citation stage.
+- This rule is mode-agnostic: it applies in both `kb_first` and `always_augment`. Web follow-up policy still follows mode settings.
 
 ---
 
@@ -125,9 +135,12 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 
 `search_rc_web` is a **web-native tool**:
 
-1. Resolve enabled RC URL hosts from Knowledge settings.
-2. Call provider-hosted web search (`run_web_search`) per enabled host.
-3. Return web findings + citations only (no local KB chunk merge in this tool output).
+1. Resolve **enabled** RC URLs from Knowledge settings and **group by host** (multiple enabled URLs on the same domain are all kept — not collapsed to a single landing URL).
+2. Call provider-hosted web search (`run_web_search`) **once per host** (domain filter still comes from the host’s primary URL).
+3. **Hybrid depth:** providers only receive a **domain** filter from `url=` — not a full path. The tool therefore injects **seed URLs** (enabled paths for that host, **deeper paths first**) into the hosted-web **prompt** so retrieval is steered past generic home pages.
+4. **Quality gate (medium budget):** if the first pass looks weak (very short text, **no citations**, or explicit “not found” phrasing), the tool runs **one retry** per host with a stricter “API / reference / citations required” prompt. If the retry is still weak, it merges the two passes for transparency.
+5. Return web findings + citations only (no local KB chunk merge in this tool output).
+6. **Diagnostics:** every invocation appends a compact line `_RC web meta:_ host:…` (attempt counts, final citation count, retry/weak flags). Set env **`RC_WEB_DIAGNOSTICS=1`** for a verbose per-attempt breakdown.
 
 Mode policy is orchestrated by `search_product_docs` in `email_agent.py`:
 - **`always_augment`**: after KB retrieval, emit a tool rule to call `search_rc_web` as a second explicit tool call.
@@ -169,6 +182,16 @@ When inspecting retrieval (logs, traces, or temporary prints in `doc_search.py` 
 - `| rag | score=...` → FAISS vector retrieval
 - `| fts` (or similar) → SQLite FTS search (ranked by BM25 internally)
 - no `| rag |` marker → typically grep-based hits (ripgrep exact match)
+
+### Retrieval miss diagnostics
+
+When `enable_retrieval_logging()` is on, each retrieval record now includes:
+- `rerank_debug`: per-iteration pre/post counts and whether balanced fallback (`score>=2`) was used.
+- `top_doc_keys`: top document ids after final diversify.
+- `indexing_summary`: current KB indexing state counts (`pending`, `indexing`, `failed`).
+
+At runtime, if uploads are still indexing, `search_with_agent_structured` prepends:
+- `[Indexing note] ...` to explain that very recent uploads may not be retrievable yet.
 
 ---
 

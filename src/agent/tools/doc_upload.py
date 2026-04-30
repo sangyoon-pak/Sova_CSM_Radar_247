@@ -136,17 +136,37 @@ async def ingest_upload(file: UploadFile, kb_path: Path, max_bytes: int = 5_000_
 
     doc_id = int(row.get("id")) if isinstance(row, dict) and row.get("id") else None
     if doc_id:
-        database.update_kb_document_metadata(doc_id, {"index_status": "indexing"})
+        database.update_kb_document_metadata(
+            doc_id,
+            {
+                "index_status": "indexing",
+                "index_started_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                "index_error": "",
+            },
+        )
 
     def _index_worker():
         try:
             from src.agent.tools import doc_search
             doc_search.index_files([out_path])
             if doc_id:
-                database.update_kb_document_metadata(doc_id, {"index_status": "indexed"})
+                database.update_kb_document_metadata(
+                    doc_id,
+                    {
+                        "index_status": "indexed",
+                        "index_completed_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                    },
+                )
         except Exception as e:
             if doc_id:
-                database.update_kb_document_metadata(doc_id, {"index_status": "failed", "index_error": str(e)[:500]})
+                database.update_kb_document_metadata(
+                    doc_id,
+                    {
+                        "index_status": "failed",
+                        "index_error": str(e)[:500],
+                        "index_completed_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                    },
+                )
 
     Thread(target=_index_worker, daemon=True).start()
 

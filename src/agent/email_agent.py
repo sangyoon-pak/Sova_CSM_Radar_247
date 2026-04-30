@@ -2,12 +2,13 @@
 import os
 import re
 import json
+from contextvars import ContextVar
 from contextlib import nullcontext
 from collections.abc import Callable, Sequence
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.tools import tool
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain.agents import create_agent
 from langsmith import Client as LangSmithClient
 from langsmith.run_helpers import trace, tracing_context
@@ -542,6 +543,27 @@ def is_inbox_probe_chat_intent(text: str) -> bool:
 
 
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
+_KB_RELEVANCE_FALSE_MARKER = "KB relevance: false"
+_SEARCH_PRODUCT_DOCS_CONTEXT: ContextVar[str] = ContextVar("search_product_docs_context", default="")
+
+_KB_QUERY_PLAN_PROMPT = """Expand a focused retrieval query into coverage-oriented subqueries.
+
+Return STRICT JSON only:
+{{"subqueries": ["...", "..."]}}  // 1 to 6 items
+
+Rules:
+- Cover all distinct user asks/constraints from Full user context.
+- Keep each item concise and retrieval-oriented.
+- Preserve exact paths/URLs/field names when present.
+- Preserve original language when possible.
+- Avoid generic broad terms.
+
+Focused tool query:
+{focused}
+
+Full user context:
+{full}
+"""
 
 
 def _flatten_ai_content(content) -> str:
@@ -564,6 +586,78 @@ def _flatten_ai_content(content) -> str:
                 parts.append(str(block))
         return "".join(parts)
     return str(content)
+
+
+def _parse_json_object_from_text(raw: str) -> dict | None:
+    s = (raw or "").strip()
+    if not s:
+        return None
+    if "```" in s:
+        s = s.split("```")[1]
+        if s.lstrip().startswith("json"):
+            s = s[4:].lstrip()
+    try:
+        data = json.loads(s.strip())
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _expand_kb_query_with_context(focused_query: str) -> str:
+    """
+    Planner-backed query expansion so `search_product_docs` doesn't lose non-endpoint asks.
+    Uses latest user context captured in `_run_agent_impl`.
+    """
+    focused = (focused_query or "").strip()
+    full_ctx = (_SEARCH_PRODUCT_DOCS_CONTEXT.get() or "").strip()
+    if not focused:
+        return full_ctx[:2600] if full_ctx else focused
+    if not full_ctx or len(full_ctx) <= len(focused) + 20:
+        return focused
+
+    llm = _llm_intent_router()
+    prompt = _KB_QUERY_PLAN_PROMPT.format(
+        focused=focused[:1200],
+        full=full_ctx[:4000],
+    )
+    try:
+        resp = llm.invoke(
+            [HumanMessage(content=prompt)],
+            config={
+                "run_name": "search_product_docs.query_planner",
+                "tags": ["search_product_docs", "query_planner"],
+            },
+        )
+        data = _parse_json_object_from_text(str(resp.content or ""))
+        subq = data.get("subqueries") if isinstance(data, dict) else None
+        items: list[str] = []
+        if isinstance(subq, list):
+            seen: set[str] = set()
+            for x in subq:
+                s = " ".join(str(x).split()).strip()
+                if not s:
+                    continue
+                lk = s.lower()
+                if lk in seen:
+                    continue
+                seen.add(lk)
+                items.append(s)
+                if len(items) >= 6:
+                    break
+        if items:
+            if focused.lower() not in {i.lower() for i in items}:
+                items.insert(0, focused)
+            lines = [f"{i+1}. {q}" for i, q in enumerate(items[:6])]
+            return "Focused retrieval intents:\n" + "\n".join(lines)
+    except Exception:
+        pass
+
+    # Fallback: keep focused query plus bounded full context for coverage.
+    return (
+        f"Focused query: {focused}\n\n"
+        "Full user context (bounded):\n"
+        f"{full_ctx[:1800]}"
+    )
 
 
 def db_conversation_to_langchain(rows: list[dict]) -> list:
@@ -612,10 +706,16 @@ def _extract_source_tags_from_messages(messages: list) -> list[str]:
     tags: list[str] = []
     seen: set[str] = set()
     for m in messages or []:
+        # Only trust tool outputs for citation tags; avoid picking up transformed AI text.
+        if not isinstance(m, ToolMessage):
+            continue
         content = getattr(m, "content", None)
         if not content:
             continue
         text = str(content)
+        # If KB was judged irrelevant for this turn, never allow KB source tags through.
+        if _KB_RELEVANCE_FALSE_MARKER in text:
+            continue
         for match in _SOURCE_TAG_RE.finditer(text):
             # Keep the full tag including the numeric line (do not replace with "line ...").
             tag = match.group(0).strip()
@@ -650,7 +750,9 @@ def _add_citations_pass(
     cancel_check: Callable[[], bool] | None = None,
 ) -> str:
     """
-    Second-pass enforcement: append citations to each numbered item.
+    Optional second pass: add (출처: …) only where a numbered line is clearly
+    supported by a provided ``[Source: … | line …]`` tag; skip lines that disclaim
+    KB/web evidence or lack grounding (see prompt rules).
     """
     if not draft or not source_tags:
         return draft
@@ -660,12 +762,17 @@ def _add_citations_pass(
     tags = "\n".join(f"- {t}" for t in source_tags)
     prompt = (
         "You are post-processing a draft email.\n"
-        "Task: Add citations to EVERY numbered answer item (1., 2., 3., ...).\n"
+        "Task: Add optional inline citations only where a numbered item (1., 2., 3., …) "
+        "makes a factual claim that is clearly supported by one of the source tags below.\n"
         "Rules:\n"
-        "- Do NOT rewrite the content beyond adding citations.\n"
-        "- For each numbered item, append exactly one parenthetical at the end: (출처: <tag>) or (출처: <tag1>; <tag2>).\n"
-        "- Use ONLY the provided source tags. Copy them exactly, including the full `| line <number>` part—never shorten to `line ...`.\n"
+        "- Do NOT rewrite the substantive wording; you may only append parenthetical citations.\n"
+        "- Citation form when used: (출처: <tag>) or (출처: <tag1>; <tag2>). "
+        "Use ONLY the provided source tags; copy exactly, including the full `| line <number>` segment.\n"
         "- If an item already has (출처: ...), keep it as-is.\n"
+        "- **No false citations:** If a numbered line says documentation/KB/web found **no** relevant results, "
+        "only recommends internal verification, or is clearly not grounded in the snippets below, "
+        "leave that line **without** (출처: …).\n"
+        "- If no tag below genuinely supports a numbered line, do **not** invent a citation for that line.\n"
         "- Keep the original language and formatting.\n"
         "\n"
         f"Available source tags:\n{tags}\n"
@@ -700,8 +807,17 @@ def search_product_docs(query: str) -> str:
     """Search local product documentation (KB only) for relevant context."""
     from src.agent.tools.search_agent import search_with_agent_structured
 
-    out, final_matches = search_with_agent_structured(query=query, max_context_chars=20000)
+    retrieval_query = _expand_kb_query_with_context(query)
+    out, final_matches, kb_meta = search_with_agent_structured(query=retrieval_query, max_context_chars=20000)
     out = (out or "").strip()
+    kb_relevant = bool((kb_meta or {}).get("kb_relevant", True))
+    kb_reason = str((kb_meta or {}).get("kb_reason") or "").strip() or "unspecified"
+
+    if not kb_relevant:
+        out = (
+            "No relevant KB documents found for this query.\n"
+            f"[{_KB_RELEVANCE_FALSE_MARKER} | reason: {kb_reason}]"
+        )
 
     # Enforce mode-specific explicit web follow-up as a separate tool call.
     try:
@@ -724,20 +840,23 @@ def search_product_docs(query: str) -> str:
         return (
             out.rstrip()
             + "\n\n[TOOL RULE] RC web retrieval mode is always_augment and enabled RC URLs exist. "
-            "Before finalizing your answer, call tool `search_rc_web` with the same query."
+            "Before finalizing your answer, call tool `search_rc_web` with a web query that preserves the user's context: "
+            "include the endpoint/path, key parameters/constraints mentioned by the user, and any numbered sub-questions. "
+            "Do NOT pass only a generic short keyword query if the user's message was long."
         )
     if should_gate_web_followup:
         try:
             from src.agent.tools.kb_web_gate import evaluate_kb_web_gate
 
-            proceed_web, reason = evaluate_kb_web_gate(query, final_matches)
+            proceed_web, reason = evaluate_kb_web_gate(retrieval_query, final_matches)
             if proceed_web:
                 reason_text = f" Reason: {reason}" if reason else ""
                 return (
                     out.rstrip()
                     + "\n\n[TOOL RULE] RC web retrieval mode is kb_first and the KB→web gate decided web follow-up is needed."
                     + reason_text
-                    + " Before finalizing your answer, call tool `search_rc_web` with the same query."
+                    + " Before finalizing your answer, call tool `search_rc_web` with a web query that preserves the user's context "
+                    "(endpoint/path + key constraints + any numbered sub-questions), not just a short keyword."
                 )
         except Exception:
             # Fail-open in kb_first: if gate call fails, keep KB-only output.
@@ -835,6 +954,29 @@ def create_agent_executor(
     if extra:
         system_prompt = system_prompt.rstrip() + "\n\n" + extra
     return create_agent(model=llm, tools=tools, system_prompt=system_prompt)
+
+
+def _message_has_tool_call(messages: list, tool_name: str) -> bool:
+    """Best-effort detection for tool execution across LangChain message variants."""
+    target = (tool_name or "").strip()
+    if not target:
+        return False
+    for m in messages or []:
+        if isinstance(m, ToolMessage):
+            if str(getattr(m, "name", "") or "").strip() == target:
+                return True
+        if isinstance(m, AIMessage):
+            calls = getattr(m, "tool_calls", None) or []
+            for c in calls:
+                if str((c or {}).get("name") or "").strip() == target:
+                    return True
+            # Some providers place tool calls under additional_kwargs
+            ak = getattr(m, "additional_kwargs", {}) or {}
+            for c in ak.get("tool_calls") or []:
+                fn = (c or {}).get("function") or {}
+                if str(fn.get("name") or "").strip() == target:
+                    return True
+    return False
 
 
 def run_agent(
@@ -964,6 +1106,10 @@ def _run_agent_impl(
         invoke_messages = lc_messages
     else:
         invoke_messages = [HumanMessage(content=input_text)]
+    retrieval_ctx = (input_text or "").strip()
+    if route_text and len(route_text) > len(retrieval_ctx):
+        retrieval_ctx = route_text
+    ctx_token = _SEARCH_PRODUCT_DOCS_CONTEXT.set(retrieval_ctx)
     try:
         result = agent.invoke({"messages": invoke_messages}, config=config)
     except Exception as e:
@@ -973,6 +1119,8 @@ def _run_agent_impl(
                 raise ex
             ex = ex.__cause__
         raise
+    finally:
+        _SEARCH_PRODUCT_DOCS_CONTEXT.reset(ctx_token)
     messages = result.get("messages", [])
     draft = None
     for m in reversed(messages):
@@ -981,6 +1129,56 @@ def _run_agent_impl(
             break
     if not draft:
         return str(result)
+
+    # Backstop for always_augment: if the model ignored the explicit tool rule, force one RC web pass.
+    try:
+        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+        force_web = (
+            effective_rc_web_retrieval_mode() == "always_augment"
+            and has_enabled_rc
+            and _message_has_tool_call(messages, "search_product_docs")
+            and not _message_has_tool_call(messages, "search_rc_web")
+        )
+    except Exception:
+        force_web = False
+    if force_web:
+        from src.agent.tools.rc_web_search import search_rc_web as _search_rc_web
+        # Prefer full user context for web retrieval (the hosted web tool needs direction).
+        raw_ctx = (route_text or input_text or "").strip()
+        # Keep bounded so provider web tools don't get swamped; preserve top context + any endpoint-like lines.
+        head = raw_ctx[:1800].strip()
+        tail = raw_ctx[-600:].strip() if len(raw_ctx) > 2400 else ""
+        if tail and tail not in head:
+            q = (head + "\n\n---\n\n(Additional context)\n" + tail).strip()
+        else:
+            q = head
+        web_out = ""
+        # Emit synthetic tool callbacks so traces still show this enforced web step.
+        for cb in cbs:
+            try:
+                cb.on_tool_start({"name": "search_rc_web"}, f"query={q[:200]}")  # type: ignore[attr-defined]
+            except AgentRunCancelled:
+                raise
+            except Exception:
+                pass
+        if cancel_check and cancel_check():
+            raise AgentRunCancelled()
+        try:
+            web_out = _search_rc_web(query=q)
+        finally:
+            for cb in cbs:
+                try:
+                    cb.on_tool_end(web_out)  # type: ignore[attr-defined]
+                except AgentRunCancelled:
+                    raise
+                except Exception:
+                    pass
+        if web_out.strip():
+            draft = (
+                draft.rstrip()
+                + "\n\n[Enforced RC web follow-up in always_augment mode]\n"
+                + web_out.strip()
+            )
 
     # Probe output should stay bullet-oriented; citation pass encourages formal numbered replies.
     if probe:

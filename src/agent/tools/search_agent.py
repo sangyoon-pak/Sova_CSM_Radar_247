@@ -22,6 +22,7 @@ from src.agent.tools.doc_search import (
     search_documents,
 )
 from src.agent.search_terms_extractor import extract_search_terms
+from src.db import database
 
 # Set by enable_retrieval_logging(); each search_with_agent call appends one record.
 # Off by default so production / API runs are unchanged.
@@ -95,9 +96,25 @@ def _split_focus_subqueries(query: str) -> list[str]:
     except Exception:
         pass
 
-    # Fallback: sentence split
-    sentences = [s.strip() for s in re.split(r"(?<=[?.!])\s+", text.replace("\n", " ")) if s.strip()]
-    return sentences[:6]
+    # Fallback 1: numbered / bullet lines (works better for long multiline prompts).
+    numbered = re.findall(r"(?m)^\s*(?:\d+[.)]|[-*])\s+(.+)$", text)
+    cleaned_numbered: list[str] = []
+    seen_num: set[str] = set()
+    for n in numbered:
+        s = " ".join(n.split()).strip()
+        if not s:
+            continue
+        lk = s.lower()
+        if lk in seen_num:
+            continue
+        seen_num.add(lk)
+        cleaned_numbered.append(s)
+    if len(cleaned_numbered) >= 2:
+        return cleaned_numbered[:6]
+
+    # Fallback 2: sentence split (English/Korean punctuation + newline).
+    chunks = [s.strip() for s in re.split(r"(?<=[?.!])\s+|(?<=다\.)\s+|\n+", text) if s.strip()]
+    return chunks[:6]
 
 
 def _extract_hard_terms(query: str) -> list[str]:
@@ -107,12 +124,12 @@ def _extract_hard_terms(query: str) -> list[str]:
     """
     hard: list[str] = []
     # URLs
-    hard.extend(re.findall(r"https?://\\S+", query))
+    hard.extend(re.findall(r"https?://\S+", query))
     # Endpoint-like paths
     # Put '-' at end of class to avoid range parsing issues.
-    hard.extend(re.findall(r"/[A-Za-z0-9_./\\-]+/?", query))
+    hard.extend(re.findall(r"/[A-Za-z0-9_./-]+/?", query))
     # snake_case tokens (event names, params)
-    hard.extend(re.findall(r"\\b[a-z]+(?:_[a-z0-9]+){1,}\\b", query))
+    hard.extend(re.findall(r"\b[a-z]+(?:_[a-z0-9]+){1,}\b", query))
     # Dedup preserve order
     seen: set[str] = set()
     out: list[str] = []
@@ -294,14 +311,18 @@ Scoring guidance:
 
 Output STRICT JSON only:
 {{
-  "ranked_indices": [3, 1, 2],
-  "scores": [5, 4, 2],
+  "ranked_indices": [1, 2, 3, "..."],
+  "scores": [1, 1, 1, "..."],
   "reason": "short reason"
 }}
 
 Rules:
-- `ranked_indices` and `scores` must have same length as snippet count.
-- Indices are 1-based and must be a permutation of all snippet indices.
+- Let `N` be the snippet count provided below.
+- `ranked_indices` length must be exactly `N`.
+- `scores` length must be exactly `N`.
+- Indices are 1-based and must be a full permutation of `1..N` (each index appears once).
+- `scores[i]` is the score for `ranked_indices[i]` in that ranked order.
+- If uncertain, still return all `N` items (use lower scores). Never return top-k only.
 - No markdown fences, no extra keys."""
 
 SUFFICIENCY_PROMPT = """Given the user's question and the retrieved document snippets, is there enough relevant information to answer the question?
@@ -337,6 +358,22 @@ Output a JSON object with 2-3 alternative term lists:
 - Prefer including at least one variant that is more "how-to/actionable" (contains verbs like configure/install/integrate/click/set) and one variant that is more "entity-focused" (product + feature name).
 - Output ONLY the JSON object."""
 
+KB_RELEVANCE_PROMPT = """Decide whether retrieved KB snippets are relevant for answering the user query.
+
+User query:
+{query}
+
+Retrieved snippet previews:
+{snippet_preview}
+
+Return STRICT JSON only:
+{{"kb_relevant": true or false, "reason": "<short reason>"}}
+
+Rules:
+- Set kb_relevant=true only when snippets are on-topic and materially support answering the query.
+- Set kb_relevant=false when snippets are off-topic/wrong-domain/noisy, or too weak to ground an answer safely.
+"""
+
 
 def _rerank_product_scope_note(query: str, exclusive_scope: str | None = None) -> str:
     if exclusive_scope:
@@ -360,10 +397,10 @@ def _rerank_matches(
     matches: list[dict],
     threshold: int = 3,
     exclusive_scope: str | None = None,
-) -> list[dict]:
+) -> tuple[list[dict], dict]:
     """Policy-driven LLM rerank with deterministic neutral fallback."""
     if not matches:
-        return []
+        return [], {"fallback_used": False, "pre_count": 0, "post_count": 0, "reason": "no_matches"}
     llm = _llm_search_rerank()
     retrieval_policy = effective_retrieval_ranking_policy()
     # Build snippet list for prompt (truncate long lines)
@@ -377,7 +414,7 @@ def _rerank_matches(
         query=query,
         product_scope=scope,
         retrieval_policy_json=json.dumps(retrieval_policy, ensure_ascii=True),
-    ) + "\n\nSnippets:\n" + snippet_text
+    ) + f"\n\nN = {len(matches)}\n\nSnippets:\n" + snippet_text
 
     def _neutral_sorted(items: list[dict]) -> list[dict]:
         order = retrieval_policy.get("source_order") if isinstance(retrieval_policy, dict) else None
@@ -417,21 +454,85 @@ def _rerank_matches(
         scores = data.get("scores", [])
         ranked_indices = data.get("ranked_indices", [])
     except json.JSONDecodeError:
-        return _neutral_sorted(matches)[:15]
+        out = _neutral_sorted(matches)[:15]
+        return out, {
+            "fallback_used": True,
+            "pre_count": len(matches),
+            "post_count": len(out),
+            "reason": "rerank_json_parse_failed",
+        }
     if len(scores) != len(matches) or len(ranked_indices) != len(matches):
-        return _neutral_sorted(matches)[:15]
+        out = _neutral_sorted(matches)[:15]
+        return out, {
+            "fallback_used": True,
+            "pre_count": len(matches),
+            "post_count": len(out),
+            "reason": "rerank_shape_mismatch",
+        }
     try:
         ranked_zero = [int(i) - 1 for i in ranked_indices]
     except Exception:
-        return _neutral_sorted(matches)[:15]
+        out = _neutral_sorted(matches)[:15]
+        return out, {
+            "fallback_used": True,
+            "pre_count": len(matches),
+            "post_count": len(out),
+            "reason": "rerank_indices_parse_failed",
+        }
     if sorted(ranked_zero) != list(range(len(matches))):
-        return _neutral_sorted(matches)[:15]
+        out = _neutral_sorted(matches)[:15]
+        return out, {
+            "fallback_used": True,
+            "pre_count": len(matches),
+            "post_count": len(out),
+            "reason": "rerank_not_permutation",
+        }
     reordered = [matches[i] for i in ranked_zero]
     scored = [(m, int(scores[idx]) if idx < len(scores) else 1) for idx, m in enumerate(reordered)]
-    filtered = [(m, s) for m, s in scored if s >= threshold]
-    filtered.sort(key=lambda x: (-x[1], x[0]["file"], x[0]["line_num"]))
-    result = [m for m, s in filtered]
-    return result if result else [m for m, s in scored if s >= 2][:15]
+    filtered_strict = [(m, s) for m, s in scored if s >= threshold]
+    filtered_strict.sort(key=lambda x: (-x[1], x[0]["file"], x[0]["line_num"]))
+    strict = [m for m, _s in filtered_strict]
+    # Balanced fallback: if strict set is too small, recover score>=2 + diversify.
+    if len(strict) >= 3:
+        return strict, {
+            "fallback_used": False,
+            "pre_count": len(matches),
+            "post_count": len(strict),
+            "reason": "strict_threshold",
+        }
+    fallback2 = [m for m, s in scored if s >= 2]
+    diversified = _diversify_matches(fallback2, max_per_doc=3, keep_limit=15)
+    return diversified, {
+        "fallback_used": True,
+        "pre_count": len(matches),
+        "post_count": len(diversified),
+        "reason": "strict_too_small_use_score_gte_2",
+    }
+
+
+def _kb_indexing_summary(limit: int = 300) -> dict:
+    rows = database.list_kb_documents(limit=limit, offset=0)
+    pending = 0
+    indexing = 0
+    failed = 0
+    for r in rows:
+        meta = r.get("metadata")
+        st = ""
+        if isinstance(meta, dict):
+            st = str(meta.get("index_status") or "").strip().lower()
+        elif isinstance(meta, str):
+            try:
+                obj = json.loads(meta)
+                st = str((obj or {}).get("index_status") or "").strip().lower()
+            except Exception:
+                st = ""
+        if st == "pending":
+            pending += 1
+        elif st == "indexing":
+            indexing += 1
+        elif st == "failed":
+            failed += 1
+    return {"pending": pending, "indexing": indexing, "failed": failed}
 
 
 def _check_sufficient(query: str, matches: list[dict]) -> tuple[bool, str]:
@@ -478,20 +579,62 @@ def _refine_search_terms(query: str, reason: str) -> list[list[str]]:
         return []
 
 
+def _assess_kb_relevance(query: str, matches: list[dict]) -> tuple[bool, str]:
+    """
+    LLM-based relevance gate for final KB evidence.
+    Returns (kb_relevant, reason).
+    """
+    if not matches:
+        return False, "no_matches"
+    llm = _llm_search_json()
+    preview_lines: list[str] = []
+    for m in matches[:12]:
+        meta = m.get("meta") or {}
+        title = str(meta.get("title") or m.get("file") or "").strip()
+        snippet = str(m.get("snippet") or m.get("line") or "").strip()[:240]
+        preview_lines.append(f"- {title}: {snippet}")
+    prompt = KB_RELEVANCE_PROMPT.format(
+        query=(query or "").strip()[:2500],
+        snippet_preview="\n".join(preview_lines)[:3500],
+    )
+    response = llm.invoke(
+        [HumanMessage(content=prompt)],
+        config={"run_name": "search_agent.kb_relevance_gate", "tags": ["search_agent", "kb_relevance_gate"]},
+    )
+    text = response.content.strip()
+    if "```" in text:
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    try:
+        data = json.loads(text.strip())
+        relevant = bool(data.get("kb_relevant", False))
+        reason = str(data.get("reason", "")).strip() or ("relevant" if relevant else "irrelevant")
+        return relevant, reason
+    except json.JSONDecodeError:
+        # Fail-open to avoid suppressing potentially useful KB on parser glitches.
+        return True, "kb_relevance_parse_failed"
+
+
 def search_with_agent_structured(
     query: str,
     max_iterations: int = 2,
     rerank_threshold: int = 3,
     max_context_chars: int = 20000,
-) -> tuple[str, list[dict]]:
+) -> tuple[str, list[dict], dict]:
     """
-    Same pipeline as ``search_with_agent`` but returns ``(formatted_context, final_matches)``
+    Same pipeline as ``search_with_agent`` but returns
+    ``(formatted_context, final_matches, kb_meta)``
     after diversify, for RC / KB→web gate callers. ``search_product_docs`` keeps using
     ``search_with_agent`` (string-only).
     """
     all_matches: list[dict] = []
     fallback_candidates: list[dict] = []
     seen = set()
+    # When rerank yields no evidential matches, do not substitute raw retrieval (would leak
+    # irrelevant chunks and `[Source: …]` tags into the main agent / citation pass).
+    last_evidential_matches: list[dict] = []
+    rerank_debug: list[dict] = []
 
     scope_hints, exclusive_scope = _infer_scope(query)
 
@@ -540,21 +683,36 @@ def search_with_agent_structured(
             break
 
         # Re-rank and filter (cap candidates to keep cost bounded).
-        all_matches = _rerank_matches(
+        ranked, rdbg = _rerank_matches(
             query,
             all_matches[:30],
             threshold=rerank_threshold,
             exclusive_scope=exclusive_scope,
         )
-        if not all_matches:
-            all_matches = matches[:15]  # Fallback
-        elif _distinct_doc_count(all_matches) < 2:
+        rdbg["iteration"] = iteration
+        rdbg["candidate_cap"] = min(len(all_matches), 30)
+        rerank_debug.append(rdbg)
+        if not ranked:
+            all_matches = list(last_evidential_matches)
+            break
+        all_matches = ranked
+        last_evidential_matches = list(ranked)
+        if _distinct_doc_count(all_matches) < 2:
             # Recover source diversity when rerank over-focuses on one large document.
             all_matches = _augment_with_unseen_docs(all_matches, fallback_candidates, target_docs=3)
+            last_evidential_matches = list(all_matches)
 
     all_matches = _diversify_matches(all_matches, max_per_doc=4, keep_limit=30)
+    kb_relevant, kb_reason = _assess_kb_relevance(query, all_matches)
 
     formatted = format_matches_for_context(all_matches, max_chars=max_context_chars)
+    idx = _kb_indexing_summary()
+    if (idx["pending"] + idx["indexing"]) > 0:
+        formatted = (
+            f"[Indexing note] {idx['pending']} pending, {idx['indexing']} indexing KB docs. "
+            "Very recent uploads may not be fully retrievable yet.\n\n"
+            + formatted
+        )
 
     def _format_retrieved_documents(matches: list[dict], max_items: int = 12) -> str:
         """
@@ -590,6 +748,12 @@ def search_with_agent_structured(
     retrieved_docs = _format_retrieved_documents(all_matches)
     if retrieved_docs and formatted and formatted != "No relevant documents found.":
         formatted = f"{formatted}\n\n---\n\n{retrieved_docs}"
+    kb_meta = {
+        "kb_relevant": bool(kb_relevant),
+        "kb_reason": str(kb_reason or "").strip(),
+        "match_count": len(all_matches),
+        "indexing_summary": idx,
+    }
     if _retrieval_log is not None:
         _retrieval_log.append(
             {
@@ -598,9 +762,14 @@ def search_with_agent_structured(
                 "match_count": len(all_matches),
                 "matches": [copy.deepcopy(m) for m in all_matches],
                 "context_passed_to_llm": formatted,
+                "kb_relevant": kb_meta["kb_relevant"],
+                "kb_reason": kb_meta["kb_reason"],
+                "rerank_debug": rerank_debug,
+                "indexing_summary": idx,
+                "top_doc_keys": [_doc_key(m) for m in all_matches[:5]],
             }
         )
-    return formatted, all_matches
+    return formatted, all_matches, kb_meta
 
 
 def search_with_agent(
@@ -613,7 +782,7 @@ def search_with_agent(
     Orchestrated search: grep → re-rank → sufficiency check → optional refined search.
     Returns formatted context for the main agent.
     """
-    formatted, _matches = search_with_agent_structured(
+    formatted, _matches, _kb_meta = search_with_agent_structured(
         query=query,
         max_iterations=max_iterations,
         rerank_threshold=rerank_threshold,
