@@ -11,6 +11,7 @@ Both delegate retrieval to the provider (no local fetch to arbitrary URLs).
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
@@ -49,6 +50,47 @@ def _model_id_for_openai_direct(model: str) -> str:
     return m
 
 
+def _openai_web_search_supports_allowed_domains(resolved_model_id: str) -> bool:
+    """
+    Some OpenAI models reject ``web_search`` tool ``filters.allowed_domains``.
+    Example: gpt-4o-mini returns invalid_request_error for ``filters``.
+    Domain restriction then relies on the prompt (RC web already injects seeds).
+    """
+    mid = (resolved_model_id or "").strip().lower()
+    if "gpt-4o-mini" in mid:
+        return False
+    return True
+
+
+def _openai_response_implies_filters_unsupported(body: str) -> bool:
+    try:
+        data = json.loads(body)
+        err = data.get("error") or {}
+        msg = str(err.get("message") or "").lower()
+        if "filters" in msg and "not supported" in msg:
+            return True
+        if err.get("param") == "tools" and "filter" in msg:
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _openai_response_implies_include_unsupported(body: str) -> bool:
+    try:
+        data = json.loads(body)
+        err = data.get("error") or {}
+        msg = str(err.get("message") or "").lower()
+        param = str(err.get("param") or "").lower()
+        if "include" in param:
+            return True
+        if "include" in msg and any(x in msg for x in ("unknown", "unsupported", "invalid", "unexpected")):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _urls_from_url_citation_annotation(ann: dict) -> list[str]:
     """Collect URLs from flat or nested ``url_citation`` annotation objects."""
     urls: list[str] = []
@@ -77,6 +119,90 @@ def _deep_collect_url_citations(obj: Any, out: list[str]) -> None:
             _deep_collect_url_citations(x, out)
 
 
+_URL_IN_TEXT_RE = re.compile(r"https?://[^\s\)\]<>\"']+", re.I)
+
+
+def _host_matches_allowed(url: str, allowed_hosts: list[str]) -> bool:
+    h = urlparse(url).netloc.lower()
+    if not h:
+        return False
+    for a in allowed_hosts:
+        al = (a or "").strip().lower()
+        if not al:
+            continue
+        if h == al or h.endswith("." + al):
+            return True
+    return False
+
+
+def _urls_from_plain_text_and_markdown(text: str, *, allowed_hosts: list[str]) -> list[str]:
+    """When OpenAI omits url_citation annotations (common on smaller models), recover same-host links from prose."""
+    if not text.strip() or not allowed_hosts:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for m in _URL_IN_TEXT_RE.finditer(text):
+        u = (m.group(0) or "").strip().rstrip(".,;:)}]")
+        if not u or u in seen:
+            continue
+        if not _host_matches_allowed(u, allowed_hosts):
+            continue
+        seen.add(u)
+        out.append(u)
+    return out
+
+
+def _extract_web_search_tool_source_urls(payload: dict) -> list[str]:
+    """
+    OpenAI may omit ``output_text.annotations`` but still attach consulted URLs under
+    ``web_search_call`` items. Request ``include: ['web_search_call.action.sources']``
+    when calling the Responses API so ``action.sources`` is populated.
+
+    Supports list of strings, list of {url: ...}, or nested shapes via light recursion.
+    """
+    urls: list[str] = []
+    seen: set[str] = set()
+
+    def _take_url_obj(obj: Any) -> None:
+        if isinstance(obj, str) and obj.startswith(("http://", "https://")):
+            u = obj.strip()
+            if u not in seen:
+                seen.add(u)
+                urls.append(u)
+            return
+        if isinstance(obj, dict):
+            u = obj.get("url") or obj.get("uri")
+            if u:
+                _take_url_obj(str(u))
+
+    def _consume_sources(src: Any) -> None:
+        if src is None:
+            return
+        if isinstance(src, list):
+            for x in src:
+                _consume_sources(x)
+            return
+        _take_url_obj(src)
+
+    output_items = payload.get("output") or []
+    stack: list[Any] = [output_items]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            if str(cur.get("type") or "") == "web_search_call":
+                action = cur.get("action") or {}
+                _consume_sources(action.get("sources"))
+                # open_page / similar
+                if isinstance(action, dict) and action.get("url"):
+                    _take_url_obj(str(action["url"]))
+            for v in cur.values():
+                if isinstance(v, (dict, list)):
+                    stack.append(v)
+        elif isinstance(cur, list):
+            stack.extend(cur)
+    return urls
+
+
 def _extract_output_text_and_citations(payload: dict) -> tuple[str, list[str]]:
     out = payload.get("output") or []
     texts: list[str] = []
@@ -101,13 +227,20 @@ def _extract_output_text_and_citations(payload: dict) -> tuple[str, list[str]]:
     extra: list[str] = []
     _deep_collect_url_citations(payload, extra)
     cites.extend(extra)
-    seen = set()
+    seen: set[str] = set()
     uniq: list[str] = []
     for u in cites:
         if not u or u in seen:
             continue
         seen.add(u)
         uniq.append(u)
+
+    for u in _extract_web_search_tool_source_urls(payload):
+        if not u or u in seen:
+            continue
+        seen.add(u)
+        uniq.append(u)
+
     return ("\n".join(texts).strip(), uniq)
 
 
@@ -174,31 +307,48 @@ def _web_search_openai(
     base = effective_chat_base_url().rstrip("/")
     endpoint = f"{base}/responses"
     mid = _model_id_for_openai_direct(model)
-    tools: list[dict] = [{"type": "web_search"}]
     hosts = _domain_hosts(url)
-    if hosts:
-        tools[0]["filters"] = {"allowed_domains": hosts}
 
-    payload = {
-        "model": mid,
-        "input": query,
-        "tools": tools,
-        "max_output_tokens": int(max_output_tokens),
-    }
+    def _post(*, with_domain_filters: bool, include_web_search_sources: bool) -> requests.Response:
+        tools: list[dict] = [{"type": "web_search"}]
+        if with_domain_filters and hosts:
+            tools[0]["filters"] = {"allowed_domains": hosts}
+        payload: dict[str, Any] = {
+            "model": mid,
+            "input": query,
+            "tools": tools,
+            "max_output_tokens": int(max_output_tokens),
+        }
+        if include_web_search_sources:
+            payload["include"] = ["web_search_call.action.sources"]
+        return requests.post(
+            endpoint,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(payload),
+            timeout=120,
+        )
 
-    resp = requests.post(
-        endpoint,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        data=json.dumps(payload),
-        timeout=120,
-    )
+    use_filters = bool(hosts) and _openai_web_search_supports_allowed_domains(mid)
+    wf = use_filters
+    resp = _post(with_domain_filters=wf, include_web_search_sources=True)
+    if resp.status_code >= 400 and wf and _openai_response_implies_filters_unsupported(resp.text):
+        wf = False
+        resp = _post(with_domain_filters=False, include_web_search_sources=True)
+    if resp.status_code >= 400 and _openai_response_implies_include_unsupported(resp.text):
+        resp = _post(with_domain_filters=wf, include_web_search_sources=False)
     if resp.status_code >= 400:
         raise ValueError(resp.text[:2000])
     data = resp.json()
     text, citations = _extract_output_text_and_citations(data)
+    if hosts:
+        seen_c = set(citations)
+        for u in _urls_from_plain_text_and_markdown(text, allowed_hosts=hosts):
+            if u not in seen_c:
+                seen_c.add(u)
+                citations.append(u)
     return WebSearchResult(
         text=text,
         citations=citations,
