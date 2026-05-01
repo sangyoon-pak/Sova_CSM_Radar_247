@@ -1,17 +1,31 @@
-"""Unit tests for RC URL-tree helper behavior (no LLM calls)."""
+"""Unit tests for RC URL-tree helper behavior."""
 
 import unittest
+from unittest.mock import Mock, patch
 
-from src.agent.tools.rc_web_search import _format_tree_candidate_lines, _tree_no_evidence_message
+from src.agent.tools.rc_url_tree_discovery import discover_url_tree
+from src.agent.tools.rc_web_search import _format_tree_candidate_lines, _select_tree_urls, _tree_no_evidence_message
 
 
 class TestRcWebTreeHelpers(unittest.TestCase):
     def test_format_tree_candidate_lines_includes_title(self):
-        rows = [{"url": "https://docs.example.com/ref/foo", "title": "Foo API"}]
+        rows = [
+            {
+                "url": "https://docs.example.com/ref/foo",
+                "title": "Foo API",
+                "depth": 2,
+                "parent_url": "https://docs.example.com/ref",
+                "metadata": {"h1": "Foo endpoint", "description": "Create and update Foo objects."},
+            }
+        ]
         lines = _format_tree_candidate_lines(rows)
         self.assertEqual(len(lines), 1)
         self.assertIn("https://docs.example.com/ref/foo", lines[0])
-        self.assertIn("Foo API", lines[0])
+        self.assertIn("title=Foo API", lines[0])
+        self.assertIn("h1=Foo endpoint", lines[0])
+        self.assertIn("description=Create and update Foo objects.", lines[0])
+        self.assertIn("path_terms=ref foo", lines[0])
+        self.assertIn("depth=2", lines[0])
 
     def test_format_tree_candidate_lines_skips_empty_url(self):
         rows = [{"url": "", "title": "x"}, {"url": "https://docs.example.com/a", "title": ""}]
@@ -29,6 +43,86 @@ class TestRcWebTreeHelpers(unittest.TestCase):
         self.assertIn("docs.example.com", msg)
         self.assertIn("Test reason", msg)
         self.assertIn("strict quality gate", msg.lower())
+
+    def test_discover_url_tree_reads_sitemap_index_metadata_and_filters_assets(self):
+        def fake_get(url, **_kwargs):
+            resp = Mock()
+            resp.status_code = 200
+            resp.headers = {"Content-Type": "text/xml"}
+            if url == "https://docs.example.com/robots.txt":
+                resp.text = "Sitemap: https://docs.example.com/sitemap-index.xml\n"
+            elif url == "https://docs.example.com/sitemap.xml":
+                resp.status_code = 404
+                resp.text = ""
+            elif url == "https://docs.example.com/sitemap_index.xml":
+                resp.status_code = 404
+                resp.text = ""
+            elif url == "https://docs.example.com/sitemap-index.xml":
+                resp.text = """<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                <sitemap><loc>https://docs.example.com/reference-sitemap.xml</loc></sitemap>
+                </sitemapindex>"""
+            elif url == "https://docs.example.com/reference-sitemap.xml":
+                resp.text = """<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                <url><loc>https://docs.example.com/reference/users</loc></url>
+                <url><loc>https://docs.example.com/assets/logo.png</loc></url>
+                </urlset>"""
+            elif url == "https://docs.example.com/":
+                resp.headers = {"Content-Type": "text/html"}
+                resp.text = """<html><head><title>Docs Home</title><meta name="description" content="Developer docs"></head>
+                <body><h1>Documentation</h1><a href="/reference/users/create">Create users</a>
+                <a href="/assets/app.js">Asset</a></body></html>"""
+            elif url == "https://docs.example.com/reference/users/create":
+                resp.headers = {"Content-Type": "text/html"}
+                resp.text = "<html><head><title>Create users</title></head><body></body></html>"
+            else:
+                resp.status_code = 404
+                resp.text = ""
+            return resp
+
+        with patch("src.agent.tools.rc_url_tree_discovery.requests.get", side_effect=fake_get):
+            nodes, by_depth = discover_url_tree(
+                base_url="https://docs.example.com/",
+                max_urls=20,
+                max_depth=1,
+                timeout_s=1,
+            )
+
+        urls = {n["url"] for n in nodes}
+        self.assertIn("https://docs.example.com/reference/users", urls)
+        self.assertIn("https://docs.example.com/reference/users/create", urls)
+        self.assertNotIn("https://docs.example.com/assets/logo.png", urls)
+        self.assertNotIn("https://docs.example.com/assets/app.js", urls)
+        root = next(n for n in nodes if n["url"] == "https://docs.example.com/")
+        self.assertEqual(root.get("title"), "Docs Home")
+        self.assertEqual(root.get("metadata", {}).get("h1"), "Documentation")
+        self.assertEqual(root.get("metadata", {}).get("description"), "Developer docs")
+        self.assertGreaterEqual(int(by_depth.get("1") or 0), 1)
+
+    def test_select_tree_urls_retains_first_pass_when_final_arbitration_empty(self):
+        calls = []
+
+        def fake_pick(*, user_query, batch_lines, allowed_urls, pick_n):
+            calls.append(list(batch_lines))
+            if len(calls) == 1:
+                return [
+                    {
+                        "url": "https://docs.example.com/reference/users",
+                        "reason": "users reference",
+                        "confidence": 0.91,
+                    }
+                ]
+            return []
+
+        nodes = [
+            {"url": "https://docs.example.com/reference/users", "title": "Users API"},
+            {"url": "https://docs.example.com/guides/intro", "title": "Intro"},
+        ]
+        with patch("src.agent.tools.rc_web_search._llm_pick_urls_for_batch", side_effect=fake_pick):
+            selected, ranked, final_pick = _select_tree_urls("How do I create users?", nodes, visit_limit=2)
+
+        self.assertEqual(selected, ["https://docs.example.com/reference/users"])
+        self.assertEqual(ranked[0]["url"], "https://docs.example.com/reference/users")
+        self.assertIn("Retained from first-pass", final_pick[0]["reason"])
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import requests
 from langchain_core.messages import HumanMessage
@@ -388,18 +388,56 @@ def _synthesize_from_fetched_pages(host: str, user_query: str, fetched: list[tup
         return ""
 
 
+def _tree_node_metadata(node: dict) -> dict:
+    raw = (node or {}).get("metadata")
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str) and raw.strip():
+        try:
+            obj = json.loads(raw)
+            return obj if isinstance(obj, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+def _url_path_text(url: str) -> str:
+    """Turn a URL path into neutral text context for the LLM selector."""
+    path = unquote((urlparse(url).path or "").strip("/"))
+    bits = [b for b in re.split(r"[/_.-]+", path) if b]
+    return " ".join(bits[:24])
+
+
 def _format_tree_candidate_lines(nodes_batch: list[dict]) -> list[str]:
-    """One line per candidate for the URL selector LLM (URL + optional title from discovery)."""
+    """One line per candidate for the URL selector LLM with neutral local metadata."""
     lines: list[str] = []
     for n in nodes_batch:
         u = str((n or {}).get("url") or "").strip()
         if not u:
             continue
+        parts = [u]
         title = str((n or {}).get("title") or "").strip()
         if title:
-            lines.append(f"- {u} | {title[:200]}")
-        else:
-            lines.append(f"- {u}")
+            parts.append(f"title={title[:200]}")
+        meta = _tree_node_metadata(n if isinstance(n, dict) else {})
+        h1 = str(meta.get("h1") or "").strip()
+        if h1 and h1 != title:
+            parts.append(f"h1={h1[:180]}")
+        desc = str(meta.get("description") or "").strip()
+        if desc:
+            parts.append(f"description={desc[:260]}")
+        path_text = _url_path_text(u)
+        if path_text:
+            parts.append(f"path_terms={path_text[:220]}")
+        try:
+            depth = int((n or {}).get("depth") or 0)
+            parts.append(f"depth={depth}")
+        except Exception:
+            pass
+        parent = str((n or {}).get("parent_url") or "").strip()
+        if parent:
+            parts.append(f"parent={parent[:180]}")
+        lines.append("- " + " | ".join(parts))
     return lines
 
 
@@ -408,10 +446,12 @@ def _llm_pick_urls_for_batch(*, user_query: str, batch_lines: list[str], allowed
         return []
     prompt = (
         "You are selecting documentation URLs for evidence retrieval.\n"
-        "Each candidate line is: URL [| optional title from site discovery].\n"
+        "Each candidate line is: URL plus neutral local metadata when available "
+        "(title, h1, description, URL path terms, depth, parent URL).\n"
         "Compare the **full user query** (all questions and constraints) to each candidate. "
         "Choose only URLs whose content is likely to help answer those asks.\n"
-        "Do not pick URLs just because they share a generic word with the query; prefer semantic fit.\n"
+        "Use the metadata as hints only: prefer semantic fit across URL path, title/heading, and description. "
+        "Do not pick URLs just because they share one generic word with the query.\n"
         "Return STRICT JSON ONLY:\n"
         "{\n"
         '  "selected": [\n'
@@ -510,6 +550,19 @@ def _select_tree_urls(user_query: str, nodes: list[dict], *, visit_limit: int) -
         allowed_urls=shortlist_allowed,
         pick_n=visit_limit,
     )
+    if not final_pick and shortlist:
+        # Still agentic: retain the strongest URLs the first LLM pass selected when the
+        # final arbitration pass returns empty or unparsable JSON.
+        final_pick = [
+            {
+                "url": str(it.get("url") or "").strip(),
+                "reason": "Retained from first-pass LLM URL selection after empty final arbitration. "
+                + str(it.get("reason") or "").strip(),
+                "confidence": float(it.get("confidence") or 0.0),
+            }
+            for it in shortlist[:visit_limit]
+            if str(it.get("url") or "").strip()
+        ]
     selected = [str(it.get("url") or "").strip() for it in final_pick if str(it.get("url") or "").strip()]
 
     ranked_meta: list[dict] = []
