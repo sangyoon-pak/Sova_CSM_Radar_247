@@ -2127,7 +2127,7 @@
       <section>
         <h2 data-i18n="rcTitle">RC URLs (web sources)</h2>
         <p style="margin:0 0 0.55rem 0;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcTreeMethodHelpHtml">
-          URL-tree discovery prebuilds same-domain docs URLs (depth-structured) so retrieval can select the best pages directly, instead of relying only on provider web-search citation recall.
+          URL-tree discovery lists same-domain doc URLs (with optional titles). For each query, an LLM picks the best-matching URLs (up to your visit limit), we fetch those pages and synthesize. If evidence is still weak, we return a clear no-evidence message and do not fall back to provider web search for that host.
         </p>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.55rem;">
           <label style="font-size:0.8rem;color:var(--muted);" for="rcTreeMaxDepth" data-i18n="rcTreeMaxDepthLabel">Max depth</label>
@@ -2434,7 +2434,7 @@
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web sources)',
-        rcTreeMethodHelpHtml: 'Purpose: improve web retrieval stability. We crawl one main docs URL to build a full same-domain URL tree, then the agent selects and visits the best-matching pages directly. This avoids weak provider-only citation recall.',
+        rcTreeMethodHelpHtml: 'Purpose: stable, query-aligned RC docs. We build a same-domain URL tree from your main URL; each query uses an LLM to pick the best-matching URLs (visit limit), then we fetch and synthesize. Weak or empty evidence returns an explicit no-evidence message—no provider web fallback for that host.',
         rcTreeMaxDepthLabel: 'Max depth',
         rcTreeMaxUrlsLabel: 'Max URLs',
         rcWebVisitLimitLabel: 'Visit limit',
@@ -2793,7 +2793,7 @@
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web)',
-        rcTreeMethodHelpHtml: '목적: 웹 검색 안정성 향상. 메인 문서 URL 1개를 기준으로 동일 도메인 URL 트리를 미리 수집하고, 에이전트가 질의와 가장 맞는 페이지를 직접 선택/방문합니다. 제공자 citation 품질 저하에 덜 의존하게 됩니다.',
+        rcTreeMethodHelpHtml: '목적: 질의에 맞는 RC 문서 안정 확보. 메인 URL로 동일 도메인 URL 트리를 구축하고, 질의마다 LLM이 최적 URL(방문 제한)을 선택한 뒤 페이지를 가져와 요약합니다. 증거가 약하거나 비면 명시적 무증거 메시지를 반환하며 해당 호스트에 대해 제공자 웹 검색으로 대체하지 않습니다.',
         rcTreeMaxDepthLabel: '최대 depth',
         rcTreeMaxUrlsLabel: '최대 URL 수',
         rcWebVisitLimitLabel: '방문 URL 제한',

@@ -1,12 +1,13 @@
-"""Hosted web search over enabled RC URLs (provider-native).
+"""Hosted web search over enabled RC URLs.
 
-This tool is intentionally web-only: no local KB retrieval / rerank loops inside this module.
-Mode-specific orchestration (always_augment vs kb_first gate decision) is handled by the caller.
+When a URL tree exists for the host, retrieval is **tree-first**: an LLM compares the user
+query to candidate URLs (and optional titles from discovery), selects up to ``rc_web_visit_limit``
+pages, fetches them, and synthesizes. If the result is **weak** or pages cannot be fetched,
+the tool returns an explicit no-evidence message and does **not** fall back to provider web
+search for that host (strict drop-on-weak).
 
-**Hybrid depth:** OpenRouter/OpenAI web tools only receive *domain* filters from the ``url``
-parameter — not full paths. We therefore inject **all enabled RC URLs on that host** (seed
-paths, deeper pages first) into the prompt, and perform a **bounded retry** when the first
-pass looks evidentially weak (short text, no citations, or explicit "not found" phrasing).
+If no tree is stored yet, behavior falls back to provider hosted web search (agentic loop)
+for that host.
 """
 
 from __future__ import annotations
@@ -105,26 +106,6 @@ def _extract_path_like_terms(user_query: str) -> list[str]:
         seen.add(h)
         out.append(h)
         if len(out) >= 8:
-            break
-    return out
-
-
-def _tokenize_query_terms(user_query: str) -> list[str]:
-    """
-    Tokenize query into reusable terms for URL matching.
-    Keeps path-like and keyword-ish tokens (3+ chars), de-duplicated.
-    """
-    q = (user_query or "").strip().lower()
-    cand = re.findall(r"[a-z0-9_./-]{3,}", q)
-    out: list[str] = []
-    seen: set[str] = set()
-    for t in cand:
-        tt = (t or "").strip(" .,/")
-        if not tt or tt in seen:
-            continue
-        seen.add(tt)
-        out.append(tt)
-        if len(out) >= 48:
             break
     return out
 
@@ -361,6 +342,24 @@ def _fetch_citation_snippets(host: str, citations: list[str], *, max_pages: int 
     return out
 
 
+def _tree_no_evidence_message(
+    host: str,
+    *,
+    reason: str,
+    selected_urls: list[str],
+    fetched_count: int,
+) -> str:
+    n_sel = len(selected_urls or [])
+    return (
+        f"No verifiable documentation evidence could be produced from the stored URL tree "
+        f"for **{host}** (strict quality gate).\n\n"
+        f"**Reason:** {reason}\n\n"
+        f"URLs selected for fetch: {n_sel}. Pages successfully fetched: {fetched_count}.\n\n"
+        "Try rebuilding the URL tree (Knowledge tab), increasing **Visit limit**, or rephrasing the query. "
+        "Provider web search is not used after a weak or empty tree-based pass for this host."
+    )
+
+
 def _synthesize_from_fetched_pages(host: str, user_query: str, fetched: list[tuple[str, str]]) -> str:
     if not fetched:
         return ""
@@ -389,23 +388,40 @@ def _synthesize_from_fetched_pages(host: str, user_query: str, fetched: list[tup
         return ""
 
 
-def _llm_pick_urls_for_batch(*, user_query: str, batch_urls: list[str], pick_n: int) -> list[dict]:
-    if not batch_urls:
+def _format_tree_candidate_lines(nodes_batch: list[dict]) -> list[str]:
+    """One line per candidate for the URL selector LLM (URL + optional title from discovery)."""
+    lines: list[str] = []
+    for n in nodes_batch:
+        u = str((n or {}).get("url") or "").strip()
+        if not u:
+            continue
+        title = str((n or {}).get("title") or "").strip()
+        if title:
+            lines.append(f"- {u} | {title[:200]}")
+        else:
+            lines.append(f"- {u}")
+    return lines
+
+
+def _llm_pick_urls_for_batch(*, user_query: str, batch_lines: list[str], allowed_urls: set[str], pick_n: int) -> list[dict]:
+    if not batch_lines:
         return []
     prompt = (
         "You are selecting documentation URLs for evidence retrieval.\n"
-        "Compare the user query against candidate URLs and choose the best matches only.\n"
-        "Do not use hardcoded product assumptions. Choose strictly by semantic relevance to the asks.\n"
+        "Each candidate line is: URL [| optional title from site discovery].\n"
+        "Compare the **full user query** (all questions and constraints) to each candidate. "
+        "Choose only URLs whose content is likely to help answer those asks.\n"
+        "Do not pick URLs just because they share a generic word with the query; prefer semantic fit.\n"
         "Return STRICT JSON ONLY:\n"
         "{\n"
         '  "selected": [\n'
         '    {"url":"https://...", "reason":"short reason", "confidence":0.0}\n'
         "  ]\n"
         "}\n"
-        f"Select up to {int(max(1, pick_n))} URLs.\n\n"
+        f"Select up to {int(max(1, pick_n))} URLs. confidence must be in [0,1].\n\n"
         f"User query:\n{(user_query or '').strip()[:2800]}\n\n"
-        "Candidate URLs:\n"
-        + "\n".join(f"- {u}" for u in batch_urls)
+        "Candidates:\n"
+        + "\n".join(batch_lines)
     )
     try:
         llm = get_chat_llm(model=effective_llm_model_main(), temperature=0.0)
@@ -414,13 +430,12 @@ def _llm_pick_urls_for_batch(*, user_query: str, batch_urls: list[str], pick_n: 
         sel = (obj or {}).get("selected") or []
         if not isinstance(sel, list):
             return []
-        allowed = set(batch_urls)
         out: list[dict] = []
         for it in sel:
             if not isinstance(it, dict):
                 continue
             u = str(it.get("url") or "").strip()
-            if u not in allowed:
+            if u not in allowed_urls:
                 continue
             reason = str(it.get("reason") or "").strip()
             try:
@@ -433,24 +448,39 @@ def _llm_pick_urls_for_batch(*, user_query: str, batch_urls: list[str], pick_n: 
         return []
 
 
-def _select_tree_urls(user_query: str, nodes: list[dict], *, visit_limit: int) -> tuple[list[str], list[dict]]:
+def _select_tree_urls(user_query: str, nodes: list[dict], *, visit_limit: int) -> tuple[list[str], list[dict], list[dict]]:
+    """
+    Two-pass agent-only URL selection from tree nodes (URL + optional title).
+    Returns (selected_urls, ranked_meta_for_diagnostics, final_pick_items_with_reason).
+    """
     if not nodes:
-        return [], []
-    uniq_urls: list[str] = []
+        return [], [], []
+
+    uniq_nodes: list[dict] = []
     seen_u: set[str] = set()
     for n in nodes:
         u = str((n or {}).get("url") or "").strip()
         if not u or u in seen_u:
             continue
         seen_u.add(u)
-        uniq_urls.append(u)
+        uniq_nodes.append(n if isinstance(n, dict) else {"url": u})
 
     batch_size = 120
     pick_each = max(4, min(12, visit_limit * 2))
     first_pass: list[dict] = []
-    for i in range(0, len(uniq_urls), batch_size):
-        batch = uniq_urls[i : i + batch_size]
-        first_pass.extend(_llm_pick_urls_for_batch(user_query=user_query, batch_urls=batch, pick_n=pick_each))
+    for i in range(0, len(uniq_nodes), batch_size):
+        batch_nodes = uniq_nodes[i : i + batch_size]
+        lines = _format_tree_candidate_lines(batch_nodes)
+        allowed = {str((x or {}).get("url") or "").strip() for x in batch_nodes}
+        allowed.discard("")
+        first_pass.extend(
+            _llm_pick_urls_for_batch(
+                user_query=user_query,
+                batch_lines=lines,
+                allowed_urls=allowed,
+                pick_n=pick_each,
+            )
+        )
 
     best_by_url: dict[str, dict] = {}
     for it in first_pass:
@@ -462,12 +492,25 @@ def _select_tree_urls(user_query: str, nodes: list[dict], *, visit_limit: int) -
             best_by_url[u] = it
     shortlist = list(best_by_url.values())
     shortlist.sort(key=lambda x: float(x.get("confidence") or 0.0), reverse=True)
-    shortlist_urls = [str(x.get("url") or "").strip() for x in shortlist[: max(visit_limit * 8, 24)]]
+    shortlist_nodes = shortlist[: max(visit_limit * 8, 24)]
+    shortlist_lines = []
+    shortlist_allowed: set[str] = set()
+    for it in shortlist_nodes:
+        u = str(it.get("url") or "").strip()
+        if not u:
+            continue
+        shortlist_allowed.add(u)
+        reason = str(it.get("reason") or "").strip()
+        conf = float(it.get("confidence") or 0.0)
+        shortlist_lines.append(f"- {u} | prior_confidence={conf:.3f} | prior_pick_reason={reason[:160]}")
 
-    final_pick = _llm_pick_urls_for_batch(user_query=user_query, batch_urls=shortlist_urls, pick_n=visit_limit)
+    final_pick = _llm_pick_urls_for_batch(
+        user_query=user_query,
+        batch_lines=shortlist_lines,
+        allowed_urls=shortlist_allowed,
+        pick_n=visit_limit,
+    )
     selected = [str(it.get("url") or "").strip() for it in final_pick if str(it.get("url") or "").strip()]
-    if not selected:
-        selected = [u for u in shortlist_urls[: max(1, visit_limit)] if u]
 
     ranked_meta: list[dict] = []
     for it in shortlist[: min(len(shortlist), max(visit_limit * 8, 24))]:
@@ -480,7 +523,7 @@ def _select_tree_urls(user_query: str, nodes: list[dict], *, visit_limit: int) -
                 },
             }
         )
-    return selected, ranked_meta
+    return selected, ranked_meta, final_pick
 
 
 def _base_web_prompt(*, user_query: str, host: str, seed_urls: list[str]) -> str:
@@ -551,45 +594,125 @@ def _run_hosted_web_for_host(
         "attempts": [],
     }
 
-    # URL-tree-first path: deterministic candidate selection + direct fetch + synthesis.
+    # URL-tree-first path: LLM semantic URL selection + fetch + synthesis. Strict drop-on-weak: no provider fallback.
     tree_nodes = database.list_rc_url_tree_by_host(host, enabled_main_only=True, limit=10000)
     tree_urls = [str((n or {}).get("url") or "").strip() for n in tree_nodes if str((n or {}).get("url") or "").strip()]
     if tree_urls:
-        selected_urls, ranked_urls = _select_tree_urls(user_query, tree_nodes, visit_limit=visit_limit)
-        fetched = _fetch_citation_snippets(host, selected_urls, max_pages=visit_limit)
+        diag["tree_strict_no_provider_fallback"] = True
+        selected_urls, ranked_urls, final_pick_items = _select_tree_urls(
+            user_query, tree_nodes, visit_limit=visit_limit
+        )
         diag["tree_url_count"] = len(tree_urls)
         diag["selected_url_count"] = len(selected_urls)
-        diag["selected_urls"] = selected_urls
+        diag["selected_urls"] = list(selected_urls)
+        diag["selector_final_pick"] = [
+            {
+                "url": str(it.get("url") or "").strip(),
+                "reason": str(it.get("reason") or "").strip(),
+                "confidence": float(it.get("confidence") or 0.0),
+            }
+            for it in (final_pick_items or [])
+            if isinstance(it, dict)
+        ]
         diag["top_ranked_urls"] = ranked_urls[: min(len(ranked_urls), 20)]
-        diag["fetched_citation_pages"] = len(fetched)
         diag["retry_used"] = False
-        if fetched:
-            text = _synthesize_from_fetched_pages(host, user_query, fetched)
-            citations = [u for (u, _t) in fetched]
-            final_weak, final_quality = _is_weak_web_result(host, text, citations)
-            diag["final_citation_quality"] = final_quality
-            diag["final_weak"] = final_weak
-            diag["final_citation_count"] = len(citations)
+
+        if not selected_urls:
+            diag["weak_drop_reason"] = (
+                "Semantic URL selector returned no candidates from the tree "
+                "(empty final pick and no non-LLM fallback)."
+            )
+            diag["final_weak"] = True
+            diag["final_citation_count"] = 0
+            diag["final_citation_quality"] = {}
+            diag["fetched_citation_pages"] = 0
+            diag["attempts"].append(
+                {
+                    "label": "url_tree",
+                    "text_len": 0,
+                    "citation_count": 0,
+                    "citation_quality": {},
+                    "weak": True,
+                    "weak_drop_reason": diag["weak_drop_reason"],
+                }
+            )
+            msg = _tree_no_evidence_message(
+                host,
+                reason=diag["weak_drop_reason"],
+                selected_urls=[],
+                fetched_count=0,
+            )
+            return msg, [], diag
+
+        fetched = _fetch_citation_snippets(host, selected_urls, max_pages=visit_limit)
+        diag["fetched_citation_pages"] = len(fetched)
+
+        if not fetched:
+            diag["weak_drop_reason"] = (
+                "No selected pages could be fetched successfully "
+                "(HTTP errors, empty body, or unsupported content type)."
+            )
+            diag["final_weak"] = True
+            diag["final_citation_count"] = 0
+            diag["final_citation_quality"] = {}
+            diag["attempts"].append(
+                {
+                    "label": "url_tree",
+                    "text_len": 0,
+                    "citation_count": 0,
+                    "citation_quality": {"citation_total": len(selected_urls), "citation_valid": 0},
+                    "weak": True,
+                    "weak_drop_reason": diag["weak_drop_reason"],
+                }
+            )
+            msg = _tree_no_evidence_message(
+                host,
+                reason=diag["weak_drop_reason"],
+                selected_urls=selected_urls,
+                fetched_count=0,
+            )
+            return msg, [], diag
+
+        text = _synthesize_from_fetched_pages(host, user_query, fetched)
+        citations = [u for (u, _t) in fetched]
+        final_weak, final_quality = _is_weak_web_result(host, text, citations)
+        diag["final_citation_quality"] = final_quality
+        diag["final_weak"] = final_weak
+        diag["final_citation_count"] = len(citations)
+
+        if final_weak:
+            diag["weak_drop_reason"] = (
+                "Evidence quality gate marked the tree-based answer as weak "
+                "(e.g. too short, generic 'not found' phrasing, or shallow citations)."
+            )
             diag["attempts"].append(
                 {
                     "label": "url_tree",
                     "text_len": len(text or ""),
                     "citation_count": len(citations),
                     "citation_quality": final_quality,
-                    "weak": final_weak,
+                    "weak": True,
+                    "weak_drop_reason": diag["weak_drop_reason"],
                 }
             )
-            return text, citations, diag
-        # No fetchable pages from selected URLs; continue to provider fallback.
+            msg = _tree_no_evidence_message(
+                host,
+                reason=diag["weak_drop_reason"],
+                selected_urls=selected_urls,
+                fetched_count=len(fetched),
+            )
+            return msg, [], diag
+
         diag["attempts"].append(
             {
                 "label": "url_tree",
-                "text_len": 0,
-                "citation_count": 0,
-                "citation_quality": {"citation_total": len(selected_urls), "citation_valid": 0},
-                "weak": True,
+                "text_len": len(text or ""),
+                "citation_count": len(citations),
+                "citation_quality": final_quality,
+                "weak": False,
             }
         )
+        return text, citations, diag
 
     def _one_call(label: str, prompt: str) -> tuple[str, list[str]]:
         res = run_web_search(
@@ -766,6 +889,22 @@ def _run_hosted_web_aggregate(
                 f"- `{d.get('host')}`: seeds={d.get('seed_count')}, retry={d.get('retry_used')}, "
                 f"final_cites={d.get('final_citation_count')}, final_weak={d.get('final_weak')} | {ac}"
             )
+            if d.get("tree_strict_no_provider_fallback"):
+                lines.append("  tree_mode: strict (no provider fallback after tree pass for this host)")
+            wdr = d.get("weak_drop_reason")
+            if wdr:
+                lines.append(f"  weak_drop_reason: {wdr}")
+            sfp = d.get("selector_final_pick") or []
+            if sfp:
+                pick_bits = [
+                    f"{p.get('url')} (conf={p.get('confidence')})"
+                    for p in sfp[:8]
+                    if isinstance(p, dict)
+                ]
+                lines.append("  selector_final_pick: " + "; ".join(pick_bits))
+            sel = d.get("selected_urls") or []
+            if sel and not sfp:
+                lines.append("  selected_urls: " + "; ".join(str(u) for u in sel[:8]))
             fq = d.get("final_citation_quality") or {}
             if fq:
                 lines.append(

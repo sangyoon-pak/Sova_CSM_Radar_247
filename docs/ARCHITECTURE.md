@@ -12,7 +12,7 @@ End-to-end view of **Sova - CSM Radar Agent 24/7**: how the UI, API, agent, retr
 | Search orchestration | `src/agent/tools/search_agent.py` |
 | Retrieval engines | `src/agent/tools/doc_search.py`, `src/agent/search_terms_extractor.py` |
 | Gmail | `src/agent/tools/gmail_tool.py` → subprocess `scripts/gmail-get-decoded.py` + local `gog` |
-| RC web | `src/agent/tools/rc_web_search.py` (URL-tree-first fetch/synthesis on enabled RC URLs; provider hosted web fallback only) |
+| RC web | `src/agent/tools/rc_web_search.py` (URL-tree: LLM URL pick + fetch + synthesize; strict drop-on-weak with no provider fallback; provider web only if no tree) |
 | Cron | `src/scheduler/`, `src/api/cron_routes.py` |
 | DB + settings | `src/db/database.py`, `src/runtime_config.py`, `src/config.py` |
 | Learning / memory | `src/agent/memory.py` + `/memory/*` routes |
@@ -86,7 +86,7 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 ## Tools vs retrieval orchestration
 
 - **`search_product_docs`** -> `search_with_agent_structured` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns KB context and mode-aware web follow-up rules.
-- **`search_rc_web`** -> URL-tree-first retrieval per enabled RC URL **host** (`rc_url_tree` candidates ranked by query, fetch capped by `rc_web_visit_limit`, then synthesis). If tree data is missing/empty, fallback to hosted provider web search.
+- **`search_rc_web`** -> Per host: if `rc_url_tree` exists, **LLM semantic URL selection** from tree (URL + optional title), fetch up to `rc_web_visit_limit`, synthesize; on weak/empty/fetch-fail return **no-evidence** and **no** provider fallback. If no tree rows, use hosted provider web search (agentic loop).
 - **`always_augment`**: after KB tool, orchestrator instructs explicit second tool call to `search_rc_web` (separate traces).
 - **`kb_first`**: after KB tool, optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) decides whether web follow-up is needed.
 - **`kb_only`**: run KB retrieval only; no hosted web follow-up.
@@ -108,7 +108,7 @@ flowchart TB
   MODE{rc_web_retrieval_mode}
   RCURL{enabled_RC_URLs_exist}
   GATE[kb_web_gate_JSON_on_KB_evidence]
-  WEB[search_rc_web<br/>url_tree_first_then_provider_fallback]
+  WEB[search_rc_web<br/>tree_llm_pick_or_provider_if_no_tree]
   OUTKB[Finalize with KB evidence]
   OUTBOTH[Finalize with KB + web evidence]
 
