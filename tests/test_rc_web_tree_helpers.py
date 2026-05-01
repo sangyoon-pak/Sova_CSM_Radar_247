@@ -4,7 +4,12 @@ import unittest
 from unittest.mock import Mock, patch
 
 from src.agent.tools.rc_url_tree_discovery import discover_url_tree
-from src.agent.tools.rc_web_search import _format_tree_candidate_lines, _select_tree_urls, _tree_no_evidence_message
+from src.agent.tools.rc_web_search import (
+    _format_tree_candidate_lines,
+    _is_weak_tree_result,
+    _select_tree_urls,
+    _tree_no_evidence_message,
+)
 
 
 class TestRcWebTreeHelpers(unittest.TestCase):
@@ -43,6 +48,21 @@ class TestRcWebTreeHelpers(unittest.TestCase):
         self.assertIn("docs.example.com", msg)
         self.assertIn("Test reason", msg)
         self.assertIn("strict quality gate", msg.lower())
+
+    def test_tree_quality_allows_single_deep_fetched_citation(self):
+        weak, meta = _is_weak_tree_result(
+            "docs.example.com",
+            (
+                "This documentation page directly answers the question with concrete behavior, parameter "
+                "semantics, return behavior, and warnings that are specific enough for a CSM to cite safely "
+                "when responding to a customer."
+            ),
+            ["https://docs.example.com/reference/users"],
+            fetched_count=1,
+        )
+        self.assertFalse(weak)
+        self.assertEqual(meta["citation_deep_links"], 1)
+        self.assertTrue(meta["tree_single_deep_citation_allowed"])
 
     def test_discover_url_tree_reads_sitemap_index_metadata_and_filters_assets(self):
         def fake_get(url, **_kwargs):

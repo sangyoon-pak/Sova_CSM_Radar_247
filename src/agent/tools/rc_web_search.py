@@ -301,6 +301,33 @@ def _is_weak_web_result(host: str, text: str, citations: list[str]) -> tuple[boo
     return weak, out
 
 
+def _is_weak_tree_result(host: str, text: str, citations: list[str], *, fetched_count: int) -> tuple[bool, dict]:
+    """
+    Strict-local tree results are based on pages we selected and fetched ourselves.
+    One exact deep documentation page can be sufficient evidence, unlike provider
+    hosted web search where multiple citations are a stronger quality signal.
+    """
+    q = _citation_url_quality(host, citations)
+    t = (text or "").strip().lower()
+    text_weak = (
+        len(t) < _WEAK_TEXT_LEN
+        or any(p in t for p in _WEAK_TEXT_PHRASES)
+        or "not found in cited pages" in t
+    )
+    weak_cites = (
+        q["citation_total"] == 0
+        or q["citation_valid"] == 0
+        or q["citation_same_host"] == 0
+        or q["citation_deep_links"] == 0
+    )
+    weak = bool(weak_cites or text_weak)
+    out = dict(q)
+    out["text_weak"] = bool(text_weak)
+    out["fetched_count"] = int(fetched_count or 0)
+    out["tree_single_deep_citation_allowed"] = True
+    return weak, out
+
+
 def _fetch_citation_snippets(host: str, citations: list[str], *, max_pages: int = _MAX_FETCHED_CITATIONS_PER_HOST) -> list[tuple[str, str]]:
     """
     Fetch top citation URLs and extract plain text snippets.
@@ -728,7 +755,7 @@ def _run_hosted_web_for_host(
 
         text = _synthesize_from_fetched_pages(host, user_query, fetched)
         citations = [u for (u, _t) in fetched]
-        final_weak, final_quality = _is_weak_web_result(host, text, citations)
+        final_weak, final_quality = _is_weak_tree_result(host, text, citations, fetched_count=len(fetched))
         diag["final_citation_quality"] = final_quality
         diag["final_weak"] = final_weak
         diag["final_citation_count"] = len(citations)
