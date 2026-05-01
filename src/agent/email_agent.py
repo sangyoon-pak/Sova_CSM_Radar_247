@@ -808,6 +808,25 @@ def search_product_docs(query: str) -> str:
     from src.agent.tools.search_agent import search_with_agent_structured
 
     retrieval_query = _expand_kb_query_with_context(query)
+    try:
+        mode = effective_rc_web_retrieval_mode()
+        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+    except Exception:
+        mode = "kb_first"
+        has_enabled_rc = False
+
+    if mode == "web_only":
+        if not has_enabled_rc:
+            return (
+                "RC web retrieval mode is web_only, but no enabled RC URLs exist. "
+                "Enable at least one RC URL in Knowledge > RC URLs."
+            )
+        return (
+            "[TOOL RULE] RC web retrieval mode is web_only. Skip KB evidence and call tool `search_rc_web` "
+            "before finalizing your answer. Use a web query that preserves user context (endpoint/path + key "
+            "constraints + numbered sub-questions), not a short generic keyword."
+        )
+
     out, final_matches, kb_meta = search_with_agent_structured(query=retrieval_query, max_context_chars=20000)
     out = (out or "").strip()
     kb_relevant = bool((kb_meta or {}).get("kb_relevant", True))
@@ -819,22 +838,11 @@ def search_product_docs(query: str) -> str:
             f"[{_KB_RELEVANCE_FALSE_MARKER} | reason: {kb_reason}]"
         )
 
-    # Enforce mode-specific explicit web follow-up as a separate tool call.
-    try:
-        has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
-        mode = effective_rc_web_retrieval_mode()
-        should_force_web_followup = (
-            mode == "always_augment"
-            and has_enabled_rc
-        )
-        should_gate_web_followup = (
-            mode == "kb_first"
-            and has_enabled_rc
-            and bool(final_matches)
-        )
-    except Exception:
-        should_force_web_followup = False
-        should_gate_web_followup = False
+    if mode == "kb_only":
+        return out
+
+    should_force_web_followup = mode == "always_augment" and has_enabled_rc
+    should_gate_web_followup = mode == "kb_first" and has_enabled_rc and bool(final_matches)
 
     if should_force_web_followup:
         return (
@@ -1130,17 +1138,19 @@ def _run_agent_impl(
     if not draft:
         return str(result)
 
-    # Backstop for always_augment: if the model ignored the explicit tool rule, force one RC web pass.
+    # Backstop for web-forcing modes: if the model ignored the explicit tool rule, force one RC web pass.
     try:
         has_enabled_rc = bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+        mode = effective_rc_web_retrieval_mode()
         force_web = (
-            effective_rc_web_retrieval_mode() == "always_augment"
+            mode in ("always_augment", "web_only")
             and has_enabled_rc
             and _message_has_tool_call(messages, "search_product_docs")
             and not _message_has_tool_call(messages, "search_rc_web")
         )
     except Exception:
         force_web = False
+        mode = "always_augment"
     if force_web:
         from src.agent.tools.rc_web_search import search_rc_web as _search_rc_web
         # Prefer full user context for web retrieval (the hosted web tool needs direction).
@@ -1174,9 +1184,10 @@ def _run_agent_impl(
                 except Exception:
                     pass
         if web_out.strip():
+            mode_label = "web_only" if mode == "web_only" else "always_augment"
             draft = (
                 draft.rstrip()
-                + "\n\n[Enforced RC web follow-up in always_augment mode]\n"
+                + f"\n\n[Enforced RC web follow-up in {mode_label} mode]\n"
                 + web_out.strip()
             )
 

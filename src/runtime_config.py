@@ -233,7 +233,9 @@ def effective_llm_model_kb_web_gate() -> str:
     return effective_llm_model()
 
 
-_VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset({"kb_first", "always_augment"})
+_VALID_RC_WEB_RETRIEVAL_MODES: frozenset[str] = frozenset(
+    {"kb_first", "always_augment", "kb_only", "web_only"}
+)
 
 _DEFAULT_RETRIEVAL_RANKING_POLICY: dict[str, Any] = {
     "version": "v1",

@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     user_inbox_peek_max_results: int = Field(5, validation_alias="USER_INBOX_PEEK_MAX_RESULTS")
     # thread send: llm = JSON classifier (LLM_MODEL_SEARCH_JSON); off|heuristic = no auto-probe from chat.
     probe_thread_intent_classifier: str = Field("llm", validation_alias="PROBE_THREAD_INTENT_CLASSIFIER")
-    # RC web: kb_first = LLM gate may skip hosted web; always_augment = always run web after KB (higher cost).
+    # RC web: kb_only | web_only | kb_first | always_augment.
     rc_web_retrieval_mode: str = Field("kb_first", validation_alias="RC_WEB_RETRIEVAL_MODE")
     # JSON policy object for vendor-agnostic retrieval/rerank behavior.
     retrieval_ranking_policy: str = Field("", validation_alias="RETRIEVAL_RANKING_POLICY")

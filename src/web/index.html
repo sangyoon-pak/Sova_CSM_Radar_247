@@ -2128,6 +2128,8 @@
             <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
               <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
               <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
+              <option value="kb_only" data-i18n="rcWebModeKbOnly">KB only</option>
+              <option value="web_only" data-i18n="rcWebModeWebOnly">Web only</option>
             </select>
             <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
             <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
@@ -2422,9 +2424,11 @@
         rcWebModeLabel: 'RC web retrieval mode',
         rcWebModeKbFirst: 'KB first (LLM gate may skip web)',
         rcWebModeAugment: 'Always augment with web',
+        rcWebModeKbOnly: 'KB only',
+        rcWebModeWebOnly: 'Web only',
         rcWebModeSave: 'Save',
         rcWebModeWarnHtml:
-          '<strong>Always augment</strong> runs hosted web after KB on every call → <strong>higher token and inference cost</strong> (provider billing). <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
+          '<strong>KB only</strong> never runs hosted web. <strong>Web only</strong> skips KB and requires enabled RC URLs. <strong>Always augment</strong> runs hosted web after KB on every call → <strong>higher token and inference cost</strong> (provider billing). <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
         rcWebModeSaving: 'Saving…',
         rcWebModeSaved: 'Saved.',
         rcWebModeSaveFail: 'Save failed',
@@ -2767,9 +2771,11 @@
         rcWebModeLabel: 'RC 웹 검색 모드',
         rcWebModeKbFirst: 'KB 우선 (게이트가 web 생략 가능)',
         rcWebModeAugment: '항상 web으로 보강',
+        rcWebModeKbOnly: 'KB만 사용',
+        rcWebModeWebOnly: 'Web만 사용',
         rcWebModeSave: '저장',
         rcWebModeWarnHtml:
-          '<strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 <strong>토큰·추론 비용이 커집니다</strong>(과금). <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
+          '<strong>KB만 사용</strong>은 hosted web을 실행하지 않습니다. <strong>Web만 사용</strong>은 KB를 건너뛰며 활성화된 RC URL이 필요합니다. <strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 <strong>토큰·추론 비용이 커집니다</strong>(과금). <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
         rcWebModeSaving: '저장 중…',
         rcWebModeSaved: '저장됨.',
         rcWebModeSaveFail: '저장 실패',
@@ -4409,7 +4415,11 @@
           eff.user_inbox_peek_max_results != null ? String(eff.user_inbox_peek_max_results) : '5'
         );
         const rcModeEl = document.getElementById('rcWebRetrievalMode');
-        if (rcModeEl) rcModeEl.value = eff.rc_web_retrieval_mode === 'always_augment' ? 'always_augment' : 'kb_first';
+        if (rcModeEl) {
+          const allowedModes = new Set(['kb_first', 'always_augment', 'kb_only', 'web_only']);
+          const rcMode = allowedModes.has(eff.rc_web_retrieval_mode) ? eff.rc_web_retrieval_mode : 'kb_first';
+          rcModeEl.value = rcMode;
+        }
         setv('cfg_prompt_email_agent_system_template', String(eff.prompt_email_agent_system_template || ''));
         setv('cfg_prompt_probe_user_message', String(eff.prompt_probe_user_message || ''));
         setv('cfg_prompt_probe_mode_append', String(eff.prompt_probe_mode_append || ''));
