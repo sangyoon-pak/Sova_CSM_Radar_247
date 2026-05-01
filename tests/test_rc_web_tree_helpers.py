@@ -8,6 +8,7 @@ from src.agent.tools.rc_web_search import (
     _format_tree_candidate_lines,
     _is_weak_tree_result,
     _select_tree_urls,
+    _strip_html_to_text,
     _tree_no_evidence_message,
 )
 
@@ -63,6 +64,30 @@ class TestRcWebTreeHelpers(unittest.TestCase):
         self.assertFalse(weak)
         self.assertEqual(meta["citation_deep_links"], 1)
         self.assertTrue(meta["tree_single_deep_citation_allowed"])
+
+    def test_strip_html_prefers_article_body_over_sidebar(self):
+        # ReadMe-style layout: TOC/nav live outside <article>; excerpt must not be sidebar soup.
+        html_blob = """<body>
+          <aside>TOC Analytics Campaigns SEGMENTS FAQs SDK FULL TREE TEXT</aside>
+          <main>
+            <nav>Home Guides Announcements 한국어홈</nav>
+            <article class="rm-Article">
+              <header><h1>iOS Push Campaigns</h1></header>
+              <p>Note that push opt-in &#x2014; users who opt out won't receive pushes.</p>
+              <table><tr><td>Configure credentials</td><td>Use .p8 or .p12 with APNs.</td></tr></table>
+            </article>
+          </main></body>"""
+        text = _strip_html_to_text(html_blob)
+        self.assertIn("iOS Push Campaigns", text)
+        self.assertIn(".p8", text)
+        self.assertIn("won't receive", text)
+        self.assertNotIn("FULL TREE TEXT", text)
+        self.assertNotIn("SEGMENTS FAQs SDK", text)
+
+    def test_strip_html_falls_back_when_no_article(self):
+        html_blob = '<html><body><p>No article tag, plain body only.</p></body></html>'
+        text = _strip_html_to_text(html_blob)
+        self.assertIn("plain body only", text)
 
     def test_discover_url_tree_reads_sitemap_index_metadata_and_filters_assets(self):
         def fake_get(url, **_kwargs):

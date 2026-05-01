@@ -22,6 +22,7 @@ from langchain_core.messages import HumanMessage
 
 from src.agent.chat_llm import get_chat_llm
 from src.agent.tools.hosted_web_search import run_web_search
+from src.agent.tools.html_document_text import html_to_document_excerpt_text
 from src.runtime_config import effective_llm_model_main, effective_rc_web_visit_limit
 from src.db import database
 
@@ -179,11 +180,8 @@ def _agentic_answer_prompt(*, host: str, user_query: str, seed_urls: list[str]) 
 
 
 def _strip_html_to_text(raw: str) -> str:
-    text = re.sub(r"(?is)<script.*?>.*?</script>", " ", raw)
-    text = re.sub(r"(?is)<style.*?>.*?</style>", " ", text)
-    text = re.sub(r"(?s)<[^>]+>", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    """Plain text excerpt for fetched HTML citations (neutral multi-strategy extractor)."""
+    return html_to_document_excerpt_text(raw)
 
 
 def _citation_url_quality(host: str, citations: list[str]) -> dict:
