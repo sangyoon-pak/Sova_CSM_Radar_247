@@ -100,6 +100,8 @@ def _format_feedback_sample_for_distillation(idx: int, s: dict) -> str:
         scope_bits.append("action_dashboard")
         if meta.get("action_index") is not None:
             scope_bits.append(f"action_index={meta.get('action_index')}")
+    elif meta.get("source") == "run_history":
+        scope_bits.append("run_history")
     scope = f" ({', '.join(scope_bits)})" if scope_bits else ""
     return (
         f"[{idx}] verdict={verdict}{scope}\n"

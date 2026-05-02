@@ -2598,7 +2598,8 @@
         optVacuum: 'Vacuum database',
         optPurgeMemory: 'Purge memory table',
         maintenanceStatsFail: 'Could not load database stats.',
-        historyTip: 'Tip: expand a run and submit feedback. Feedback updates learning memory.',
+        historyTip:
+          'Tip: expand a run and use OK / NG / Good / Noise. Each click saves a short note so it can be distilled into learning rules. Open Configure → Distilled learning rules to read or re-run distillation.',
         historyTriggerFilter: 'Run type',
         historyTriggerAll: 'All',
         historyTriggerCronAdmin: 'Cron admin (Workbench)',
@@ -2767,7 +2768,7 @@
           'Used by: action_review — “Discuss this action” threads scoped to one dashboard card.',
         configureDistilledLearningTitle: 'Distilled learning rules',
         configureDistilledLearningHintHtml:
-          'Read-only text injected into the main template as <code>{learning_section}</code> (from Run history feedback). Separate from interaction compaction (<code>agent_memory</code>).',
+          'Read-only text injected into the main template as <code>{learning_section}</code> (distilled from feedback that includes a <strong>note</strong> or <strong>correction</strong>). Run history verdict buttons now send an automatic note so OK/Good counts toward distillation. Separate from interaction compaction (<code>agent_memory</code>).',
         configureDistilledLearningQualityHintHtml:
           '<strong>Sanity check:</strong> distillation is an LLM summary of your notes — it can over-generalize. Prefer <strong>specific</strong> wording in feedback (e.g. “skip internal AIRIS quota alerts from Woopra”). If bullets look wrong, <strong>Reset</strong> and leave clearer feedback, then <strong>Re-run distillation</strong>.',
         configureDistilledLearningEmpty: '(No distilled rules yet. Submit feedback from Run history or the Action dashboard.)',
@@ -3008,7 +3009,8 @@
         optVacuum: 'VACUUM',
         optPurgeMemory: 'Memory 테이블 purge',
         maintenanceStatsFail: 'DB stats 로드 실패',
-        historyTip: 'Run을 펼쳐 피드백 — learning memory 반영',
+        historyTip:
+          '팁: Run을 펼쳐 OK/NG/Good/Noise를 누르면 짧은 메모가 함께 저장되어 정제(learning rules)에 포함됩니다. 설정 → Distilled learning rules에서 확인하거나 정제를 다시 실행하세요.',
         historyTriggerFilter: 'Run 유형',
         historyTriggerAll: '전체',
         historyTriggerCronAdmin: 'Cron 관리 (Workbench)',
@@ -3177,7 +3179,7 @@
           '사용처: action_review — 대시보드 카드 하나에 한정된 “이 작업 논의” 스레드.',
         configureDistilledLearningTitle: '정제된 학습 규칙',
         configureDistilledLearningHintHtml:
-          '메인 템플릿의 <code>{learning_section}</code>에 주입되는 읽기 전용 텍스트(Run history 피드백). 상호작용 요약(<code>agent_memory</code>)과는 별개입니다.',
+          '메인 템플릿의 <code>{learning_section}</code>에 주입되는 읽기 전용 텍스트(<strong>note</strong> 또는 <strong>correction</strong>이 있는 피드백만 정제 대상). Run history의 OK/Good 등은 자동 메모가 붙어 정제에 포함됩니다. 상호작용 요약(<code>agent_memory</code>)과는 별개입니다.',
         configureDistilledLearningQualityHintHtml:
           '<strong>점검:</strong> 정제(distillation)는 메모를 LLM이 요약한 것이라 과하게 일반화될 수 있습니다. 피드백은 <strong>구체적으로</strong>(예: “Woopra 내부 AIRIS 할당량 알림 카드는 스킵”) 쓰는 것이 좋습니다. 이상하면 <strong>Reset</strong> 후 더 명확한 피드백을 남기고 <strong>정제 다시 실행</strong>하세요.',
         configureDistilledLearningEmpty: '(아직 정제된 규칙이 없습니다. Run history 또는 Action dashboard에서 피드백을 남기세요.)',
@@ -5942,11 +5944,33 @@
     async function submitRunFeedback(interactionId, verdict) {
       const needsText = verdict === 'incorrect' || verdict === 'noisy';
       const correction = needsText ? (prompt(uiText('correctionPrompt')) || '').trim() : '';
+      const vLabel =
+        verdict === 'correct'
+          ? uiText('feedbackCorrect')
+          : verdict === 'incorrect'
+            ? uiText('feedbackIncorrect')
+            : verdict === 'useful'
+              ? uiText('feedbackUseful')
+              : uiText('feedbackNoisy');
+      // Learning distillation only ingests rows with non-empty note or correction; verdict-only
+      // POSTs used to send neither, so Run history OK/Good never reached distilled rules.
+      let note = `[Run history] run #${interactionId}: ${vLabel}`;
+      if (needsText && correction) {
+        note = `${note}\n${correction}`;
+      } else if (needsText && !correction) {
+        note = `${note} (no extra text provided)`;
+      }
       try {
         await fetchJson('/memory/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ interaction_id: interactionId, verdict, correction })
+          body: JSON.stringify({
+            interaction_id: interactionId,
+            verdict,
+            note,
+            correction: correction || null,
+            metadata: { source: 'run_history' },
+          }),
         });
         alert(uiText('feedbackSaved'));
       } catch (e) {

@@ -756,6 +756,8 @@ class FeedbackRequest(BaseModel):
     correction: str | None = None
     # When set, feedback is scoped to one Action dashboard card (stored in feedback metadata).
     action_index: int | None = None
+    # Optional client metadata (e.g. {"source": "run_history"}); ignored when action_index is set.
+    metadata: dict | None = None
 
 
 class OptimizeRequest(BaseModel):
@@ -831,6 +833,8 @@ def memory_feedback(req: FeedbackRequest):
     meta = None
     if req.action_index is not None:
         meta = {"source": "action_dashboard", "action_index": int(req.action_index)}
+    elif req.metadata and isinstance(req.metadata, dict):
+        meta = dict(req.metadata)
     row = database.insert_feedback(
         interaction_id=req.interaction_id,
         verdict=req.verdict,

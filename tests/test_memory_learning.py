@@ -116,6 +116,17 @@ class TestMemoryLearning(unittest.TestCase):
         self.assertEqual(md.get("action_index"), 3)
         self.assertEqual(md.get("source"), "action_dashboard")
 
+    def test_learning_samples_include_run_history_verdict_only_with_note(self):
+        database.insert_feedback(
+            interaction_id=99,
+            verdict="correct",
+            note="[Run history] run #99: OK",
+            correction=None,
+            metadata={"source": "run_history"},
+        )
+        samples = database.get_learning_feedback_samples(limit=10)
+        self.assertTrue(any(s.get("verdict") == "correct" and "Run history" in str(s.get("note")) for s in samples))
+
 
 class TestMemoryLearningApi(unittest.TestCase):
     def setUp(self):
@@ -154,6 +165,26 @@ class TestMemoryLearningApi(unittest.TestCase):
         self.assertTrue(data.get("cleared"))
         self.assertEqual((data.get("instructions") or "").strip(), "")
         self.assertEqual(database.get_runtime_learning_instructions(), "")
+
+    def test_post_memory_feedback_persists_run_history_metadata(self):
+        from src.main import app
+
+        with patch("src.api.routes.refresh_learning_instructions", return_value={"updated": True, "rules": 1}):
+            with TestClient(app) as client:
+                r = client.post(
+                    "/memory/feedback",
+                    json={
+                        "interaction_id": 5,
+                        "verdict": "useful",
+                        "note": "[Run history] run #5: Good",
+                        "metadata": {"source": "run_history"},
+                    },
+                )
+        self.assertEqual(r.status_code, 200)
+        row = r.json().get("feedback") or {}
+        md_raw = row.get("metadata")
+        md = json.loads(md_raw) if isinstance(md_raw, str) else (md_raw or {})
+        self.assertEqual(md.get("source"), "run_history")
 
     def test_patch_dashboard_action_category(self):
         database.log_interaction(
