@@ -733,6 +733,52 @@
     .configure-details__body {
       padding: 0.75rem 0.85rem 0.85rem;
     }
+    .configure-legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+      margin: 0.5rem 0 0.65rem;
+      max-width: 52rem;
+    }
+    @media (max-width: 720px) {
+      .configure-legend-grid { grid-template-columns: 1fr; }
+    }
+    .configure-legend-box {
+      margin: 0;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .configure-legend-box--editable {
+      border-left: 4px solid #22c55e;
+    }
+    .configure-legend-box--system {
+      border-left: 4px solid var(--muted);
+    }
+    .configure-legend-box strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.82rem;
+    }
+    .configure-prompt-svg-wrap {
+      margin: 0.35rem 0 0.75rem;
+      padding: 0.45rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      overflow-x: auto;
+    }
+    .configure-prompt-svg {
+      display: block;
+      width: 100%;
+      max-width: 44rem;
+      height: auto;
+      margin: 0 auto;
+      color: var(--text);
+    }
     .configure-env-table {
       width: 100%;
       border-collapse: collapse;
@@ -1796,16 +1842,75 @@
             <div class="configure-field"><label for="cfg_guardrail_team_guidance">Team guidance</label><textarea id="cfg_guardrail_team_guidance" rows="3" placeholder="Internal policy notes for what to surface/ignore."></textarea></div>
           </div>
         </details>
-        <details class="configure-details">
-          <summary>Agent prompts (database)</summary>
+        <details class="configure-details" open>
+          <summary data-i18n="configureAgentPromptsSurfacesTitle">Agent prompts · runtime surfaces</summary>
           <div class="configure-details__body">
-            <p class="configure-hint"><strong>Source of truth:</strong> these four prompts live in the <strong>app database</strong> (<code>app_settings</code>). The agent reads them from there at runtime. Bundled text in <code>src/agent/prompts.py</code> is only used to <strong>fill or repair</strong> empty rows.</p>
-            <p class="configure-hint" style="margin-top:0.35rem;">On server start or when you open Configure, any prompt row that is missing or blank is <strong>back-filled</strong> with the current bundled default and saved to the database. If you <strong>clear a field</strong> (all whitespace) and click <strong>Save configuration</strong>, that row is reset to the bundled default and <strong>written to the database</strong> again—so you always see the full text here after save or reload, not an invisible fallback.</p>
-            <p class="configure-hint" style="margin-top:0.35rem;"><strong>Curly braces <code>{…}</code></strong> are <strong>runtime placeholders</strong>—do not paste your vendor name or product list in place of them. Keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code> exactly as written. At run time, the first three are filled from <strong>Workbench → Agent profile</strong> (vendor, product scope, role title). <code>{learning_section}</code> is filled from <strong>learning memory</strong> (distilled from Run history feedback), not from the profile form. <strong>Everything else</strong> in the template is yours to edit—rules, tone, and instructions—without changing those four placeholder names.</p>
-            <div class="configure-field"><label for="cfg_prompt_email_agent_system_template">Main system prompt template <span class="configure-hint" id="cfg_prompt_email_agent_system_template_sync"></span></label><textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea></div>
-            <div class="configure-field"><label for="cfg_prompt_probe_user_message">Probe user message (Scan inbox / cron) <span class="configure-hint" id="cfg_prompt_probe_user_message_sync"></span></label><textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea></div>
-            <div class="configure-field"><label for="cfg_prompt_probe_mode_append">Probe mode system append <span class="configure-hint" id="cfg_prompt_probe_mode_append_sync"></span></label><textarea id="cfg_prompt_probe_mode_append" rows="8" style="width:100%;max-width:52rem;" placeholder="Appended to system prompt when probe=True."></textarea></div>
-            <div class="configure-field"><label for="cfg_prompt_action_review_append">Action review system append <span class="configure-hint" id="cfg_prompt_action_review_append_sync"></span></label><textarea id="cfg_prompt_action_review_append" rows="5" style="width:100%;max-width:52rem;" placeholder="“Discuss this action” threads."></textarea></div>
+            <p class="configure-hint" data-i18n-html="configureAgentPromptsSurfacesIntroHtml">Overview, <strong>what you can edit here</strong>, and the <strong>four database-backed templates</strong> in one place. See <strong>Effective prompts by mode</strong> below for assembled previews.</p>
+            <div class="configure-legend-grid">
+              <div class="configure-legend-box configure-legend-box--editable" data-i18n-html="configureLegendEditableHtml"></div>
+              <div class="configure-legend-box configure-legend-box--system" data-i18n-html="configureLegendNotEditableHtml"></div>
+            </div>
+            <div class="configure-prompt-svg-wrap">
+              <svg class="configure-prompt-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 268" role="img" aria-labelledby="configurePromptSvgTitle">
+                <title id="configurePromptSvgTitle">Simplified prompt and tool surfaces</title>
+                <defs>
+                  <marker id="cfgArr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                    <polygon points="0 0, 7 3.5, 0 7" fill="currentColor" opacity="0.85"/>
+                  </marker>
+                </defs>
+                <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">Simplified runtime (one process)</text>
+                <rect x="12" y="40" width="168" height="188" rx="10" fill="currentColor" fill-opacity="0.06" stroke="#22c55e" stroke-width="1.5"/>
+                <text x="96" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">Operator-editable</text>
+                <text x="96" y="78" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.75" font-family="ui-sans-serif,system-ui,sans-serif">app_settings · this page</text>
+                <text x="24" y="102" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">main template</text>
+                <text x="24" y="118" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">probe user msg</text>
+                <text x="24" y="134" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">probe append</text>
+                <text x="24" y="150" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">action review</text>
+                <text x="96" y="176" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">Save configuration → DB</text>
+                <line x1="180" y1="120" x2="218" y2="120" stroke="currentColor" stroke-width="1.5" marker-end="url(#cfgArr)" opacity="0.9"/>
+                <rect x="220" y="52" width="200" height="136" rx="10" fill="currentColor" fill-opacity="0.07" stroke="currentColor" stroke-width="1.2" opacity="0.95"/>
+                <text x="320" y="78" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">LangChain agent</text>
+                <text x="320" y="96" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.75" font-family="ui-sans-serif,system-ui,sans-serif">workbench_chat · inbox_probe</text>
+                <text x="320" y="112" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.75" font-family="ui-sans-serif,system-ui,sans-serif">· action_review</text>
+                <text x="320" y="144" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72" font-family="ui-sans-serif,system-ui,sans-serif">Templates above + profile</text>
+                <text x="320" y="160" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72" font-family="ui-sans-serif,system-ui,sans-serif">+ learning + guardrails</text>
+                <line x1="420" y1="120" x2="458" y2="120" stroke="currentColor" stroke-width="1.5" marker-end="url(#cfgArr)" opacity="0.9"/>
+                <rect x="460" y="40" width="248" height="188" rx="10" fill="currentColor" fill-opacity="0.06" stroke="currentColor" stroke-width="1.2"/>
+                <text x="584" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">Tools &amp; retrieval</text>
+                <text x="472" y="90" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">search_product_docs</text>
+                <text x="472" y="106" font-size="8.5" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">Knowledge base (uploads + index)</text>
+                <text x="472" y="132" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">search_rc_web</text>
+                <text x="472" y="148" font-size="8.5" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">RC docs web (enabled URLs)</text>
+                <text x="472" y="174" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">Gmail tools</text>
+                <text x="472" y="190" font-size="8.5" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">fetch_inbox / thread …</text>
+                <rect x="140" y="200" width="440" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="5 4" opacity="0.75"/>
+                <text x="360" y="222" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" opacity="0.85" font-family="ui-sans-serif,system-ui,sans-serif">Sidecar JSON / code (not on this screen)</text>
+                <text x="360" y="240" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72" font-family="ui-sans-serif,system-ui,sans-serif">Intent route · probe-thread intent · KB planner · rerank · KB→web gate · RC synthesis</text>
+              </svg>
+            </div>
+            <p class="configure-hint" data-i18n-html="configureAgentPromptsDbHintHtml"><strong>Source of truth:</strong> the four templates live in the <strong>app database</strong> (<code>app_settings</code>). Bundled defaults in <code>src/agent/prompts.py</code> only <strong>fill or repair</strong> empty rows.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;" data-i18n="configureAgentPromptsBackfillHint">On server start or when you open Configure, missing or blank prompt rows are back-filled from bundled defaults and saved. Clearing a field (whitespace only) and saving resets that row to the bundled default.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;" data-i18n-html="configureAgentPromptsPlaceholdersHint"><strong>Curly braces <code>{…}</code></strong> are runtime placeholders — keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code>. Profile fills the first three; <code>{learning_section}</code> comes from distilled learning (Run history feedback), not the profile form.</p>
+            <div class="configure-field"><label for="cfg_prompt_email_agent_system_template">Main system prompt template <span class="configure-hint" id="cfg_prompt_email_agent_system_template_sync"></span></label><p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByMain">Used by: main LangChain agent — Workbench chat when <code>probe=false</code>, and shared base for other modes.</p><textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea></div>
+            <div class="configure-field"><label for="cfg_prompt_probe_user_message">Probe user message (Scan inbox / cron) <span class="configure-hint" id="cfg_prompt_probe_user_message_sync"></span></label><p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByProbeUser">Used by: inbox probe — human-style turn for <strong>inbox_probe</strong> mode (see Effective prompts by mode).</p><textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea></div>
+            <div class="configure-field"><label for="cfg_prompt_probe_mode_append">Probe mode system append <span class="configure-hint" id="cfg_prompt_probe_mode_append_sync"></span></label><p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByProbeAppend">Used by: <strong>inbox_probe</strong> — appended to the system prompt when the agent runs with <code>probe=true</code> (Scan inbox / cron).</p><textarea id="cfg_prompt_probe_mode_append" rows="8" style="width:100%;max-width:52rem;" placeholder="Appended to system prompt when probe=True."></textarea></div>
+            <div class="configure-field"><label for="cfg_prompt_action_review_append">Action review system append <span class="configure-hint" id="cfg_prompt_action_review_append_sync"></span></label><p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByActionReview">Used by: <strong>action_review</strong> — “Discuss this action” threads scoped to one dashboard card.</p><textarea id="cfg_prompt_action_review_append" rows="5" style="width:100%;max-width:52rem;" placeholder="“Discuss this action” threads."></textarea></div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureDistilledLearningTitle">Distilled learning rules</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n-html="configureDistilledLearningHintHtml">Read-only text injected into the main template as <code>{learning_section}</code> (from Run history feedback). Separate from interaction compaction (<code>agent_memory</code>).</p>
+            <p class="configure-hint" style="margin-top:0.35rem;" data-i18n-html="configureDistilledLearningQualityHintHtml"></p>
+            <p class="configure-hint" id="cfg_distilled_learning_updated" style="margin-top:0.25rem;"></p>
+            <pre id="cfg_distilled_learning_body" style="white-space:pre-wrap;max-height:18rem;overflow:auto;font-size:0.85rem;padding:0.55rem;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin:0.35rem 0 0.5rem 0;"></pre>
+            <div class="row" style="gap:0.5rem;align-items:center;flex-wrap:wrap;">
+              <button type="button" class="ghost btn-compact" onclick="refreshDistilledLearningFromServer()" data-i18n="configureDistilledLearningReload">Reload from server</button>
+              <button type="button" class="ghost btn-compact" onclick="rerunLearningDistillation()" data-i18n="configureDistilledLearningRerun">Re-run distillation</button>
+              <button type="button" class="danger btn-compact" onclick="resetDistilledLearningRules()" data-i18n="configureDistilledLearningReset">Reset distilled rules</button>
+              <span id="cfg_distilled_learning_status" style="font-size:0.78rem;color:var(--muted);"></span>
+            </div>
+            <p class="configure-hint" style="margin-top:0.45rem;" data-i18n-html="configureDistilledLearningResetFootHtml"></p>
           </div>
         </details>
         <details class="configure-details">
@@ -2004,6 +2109,15 @@
               <option value="high" data-i18n="dashboardPriorityHigh">High</option>
               <option value="medium" data-i18n="dashboardPriorityMedium">Medium</option>
               <option value="low" data-i18n="dashboardPriorityLow">Low</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="dashboardCategoryFilter" data-i18n="dashboardCategoryFilter">Action category</label>
+            <select id="dashboardCategoryFilter" onchange="rerenderActionBoardFromCache()">
+              <option value="all" data-i18n="dashboardCategoryAll">All categories</option>
+              <option value="client_technical" data-i18n="dashCatClientTechnical">Client · technical</option>
+              <option value="client_non_technical" data-i18n="dashCatClientNonTechnical">Client · non-technical</option>
+              <option value="internal" data-i18n="dashCatInternal">Internal</option>
             </select>
           </div>
           <div class="filter-field" style="min-width:11rem;flex:1;">
@@ -2610,6 +2724,10 @@
         dashboardDiscussFail: 'Could not open action chat',
         dashboardActionStatusLabel: 'Action status',
         dashboardStatusUpdateFail: 'Could not update action status',
+        dashboardCategoryFilter: 'Action category',
+        dashboardCategoryAll: 'All categories',
+        dashboardActionCategoryLabel: 'Category',
+        dashboardCategoryUpdateFail: 'Could not update category',
         dashboardThreadTitle: 'Thread',
         dashboardClientId: 'Client',
         dashboardClientDomain: 'Domain',
@@ -2620,9 +2738,53 @@
         dashboardGmailThread: 'Gmail thread',
         dashboardRunStatusRunning: 'Running',
         dashboardRunStatusQueued: 'Queued',
-        dashCatGeneral: 'General',
-        dashCatProductTechnical: 'Product · technical',
-        dashCatAccount: 'Account',
+        dashCatClientTechnical: 'Client · technical',
+        dashCatClientNonTechnical: 'Client · non-technical',
+        dashCatInternal: 'Internal',
+        dashCatGeneral: 'General (legacy)',
+        dashCatProductTechnical: 'Product · technical (legacy)',
+        dashCatAccount: 'Account (legacy)',
+        configureAgentPromptsSurfacesTitle: 'Agent prompts · runtime surfaces',
+        configureAgentPromptsSurfacesIntroHtml:
+          'Single place for the <strong>visual map</strong>, <strong>what is editable vs not</strong>, and the <strong>four prompt templates</strong> stored in the app database. Open <strong>Effective prompts by mode</strong> below for assembled previews.',
+        configureLegendEditableHtml:
+          '<strong>Editable on this screen</strong><ul style="margin:0.25rem 0 0 1rem;padding:0;"><li>The four <code>prompt_*</code> text areas (main system template, probe user message, probe mode append, action review append).</li><li>Persisted to SQLite <code>app_settings</code> when you click <strong>Save configuration</strong>.</li><li><strong>Distilled learning</strong> is not typed here — it is produced from Run history / Action dashboard feedback (see <strong>Distilled learning rules</strong> below).</li></ul>',
+        configureLegendNotEditableHtml:
+          '<strong>Not editable in these text areas</strong><ul style="margin:0.25rem 0 0 1rem;padding:0;"><li><strong>Code</strong>: intent routing, probe-thread intent classifier, KB subquery planner, rerank/sufficiency, KB→web gate, RC web synthesis — in modules such as <code>email_agent.py</code>, <code>search_agent.py</code>, <code>kb_web_gate.py</code>, <code>rc_web_search.py</code> (changes need a deploy).</li><li><strong>Other Configure sections</strong>: model roles, <code>RETRIEVAL_RANKING_POLICY</code>, guardrails, Gmail paths.</li><li><strong>Knowledge tab</strong>: uploads, reindex, RC URLs, <code>rc_web_retrieval_mode</code>.</li></ul><p style="margin:0.35rem 0 0 0;">Full map: <code>docs/ARCHITECTURE.md</code>.</p>',
+        configureAgentPromptsDbHintHtml:
+          '<strong>Source of truth:</strong> the four templates live in the <strong>app database</strong> (<code>app_settings</code>). Bundled text in <code>src/agent/prompts.py</code> only <strong>fills or repairs</strong> empty rows.',
+        configureAgentPromptsBackfillHint:
+          'On server start or when you open Configure, missing or blank prompt rows are back-filled from bundled defaults and saved. Clearing a field (whitespace only) and saving resets that row to the bundled default.',
+        configureAgentPromptsPlaceholdersHint:
+          '<strong>Curly braces <code>{…}</code></strong> are runtime placeholders — keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code>. Profile fills the first three; <code>{learning_section}</code> comes from distilled learning (Run history feedback), not the profile form.',
+        configurePromptUsedByMain:
+          'Used by: main LangChain agent — Workbench chat when probe=false, and shared base for other modes.',
+        configurePromptUsedByProbeUser:
+          'Used by: inbox probe — human-style turn for inbox_probe mode (see Effective prompts by mode).',
+        configurePromptUsedByProbeAppend:
+          'Used by: inbox_probe — appended to the system prompt when the agent runs with probe=true (Scan inbox / cron).',
+        configurePromptUsedByActionReview:
+          'Used by: action_review — “Discuss this action” threads scoped to one dashboard card.',
+        configureDistilledLearningTitle: 'Distilled learning rules',
+        configureDistilledLearningHintHtml:
+          'Read-only text injected into the main template as <code>{learning_section}</code> (from Run history feedback). Separate from interaction compaction (<code>agent_memory</code>).',
+        configureDistilledLearningQualityHintHtml:
+          '<strong>Sanity check:</strong> distillation is an LLM summary of your notes — it can over-generalize. Prefer <strong>specific</strong> wording in feedback (e.g. “skip internal AIRIS quota alerts from Woopra”). If bullets look wrong, <strong>Reset</strong> and leave clearer feedback, then <strong>Re-run distillation</strong>.',
+        configureDistilledLearningEmpty: '(No distilled rules yet. Submit feedback from Run history or the Action dashboard.)',
+        configureDistilledLearningReload: 'Reload from server',
+        configureDistilledLearningRerun: 'Re-run distillation',
+        configureDistilledLearningReset: 'Reset distilled rules',
+        configureDistilledLearningResetConfirm:
+          'Clear all distilled rules text from the database? Feedback rows are kept — you can re-run distillation afterward. The learning block in the system prompt will be empty until you distill again.',
+        configureDistilledLearningResetDone: 'Distilled rules cleared.',
+        configureDistilledLearningResetFail: 'Reset failed: ',
+        configureDistilledLearningResetFootHtml:
+          '<strong>Reset</strong> clears only <code>agent_learning_instructions</code>. <code>agent_feedback</code> rows stay in the database (Run history / exports). Use <strong>Re-run distillation</strong> to rebuild from remaining feedback.',
+        configureDistilledLearningUpdated: 'Last updated: {t}',
+        configureDistilledLearningRerunning: 'Running distillation…',
+        configureDistilledLearningRerunDone: 'Distillation finished.',
+        configureDistilledLearningFail: 'Could not load: ',
+        configureDistilledLearningRerunFail: 'Distillation failed: ',
         relReasonModelIncludeDashboard: 'Model flagged include on dashboard',
         relReasonPermissiveAmbiguous: 'Permissive mode — ambiguous intent surfaced',
         relReasonStrictAmbiguous: 'Strict mode — ambiguous intent not surfaced as action',
@@ -2982,9 +3144,57 @@
         dashboardGmailThread: 'Gmail 스레드',
         dashboardRunStatusRunning: '실행 중',
         dashboardRunStatusQueued: '대기 중',
-        dashCatGeneral: '일반',
-        dashCatProductTechnical: '제품 · 기술',
-        dashCatAccount: '계정',
+        dashCatClientTechnical: '고객 · 기술',
+        dashCatClientNonTechnical: '고객 · 비기술',
+        dashCatInternal: '내부',
+        dashCatGeneral: '일반(레거시)',
+        dashCatProductTechnical: '제품 · 기술(레거시)',
+        dashCatAccount: '계정(레거시)',
+        dashboardCategoryFilter: '액션 분류',
+        dashboardCategoryAll: '모든 분류',
+        dashboardActionCategoryLabel: '분류',
+        dashboardCategoryUpdateFail: '분류를 바꾸지 못했습니다',
+        configureAgentPromptsSurfacesTitle: '에이전트 프롬프트 · 런타임 표면',
+        configureAgentPromptsSurfacesIntroHtml:
+          '<strong>다이어그램</strong>, <strong>편집 가능/불가 구분</strong>, <strong>DB에 저장된 네 프롬프트</strong>를 한 섹션에 모았습니다. 조합된 미리보기는 아래 <strong>Effective prompts by mode</strong>를 여세요.',
+        configureLegendEditableHtml:
+          '<strong>이 화면에서 편집 가능</strong><ul style="margin:0.25rem 0 0 1rem;padding:0;"><li>아래 네 <code>prompt_*</code> 텍스트 영역(메인 시스템, 프로브 사용자 메시지, 프로브 모드 덧붙임, 액션 리뷰 덧붙임).</li><li><strong>Save configuration</strong> 시 SQLite <code>app_settings</code>에 저장됩니다.</li><li><strong>정제된 학습(Distilled learning)</strong>은 여기서 직접 입력하지 않으며 Run history / Action dashboard 피드백으로 생성됩니다(아래 <strong>Distilled learning rules</strong>).</li></ul>',
+        configureLegendNotEditableHtml:
+          '<strong>이 텍스트 영역으로는 편집되지 않음</strong><ul style="margin:0.25rem 0 0 1rem;padding:0;"><li><strong>코드</strong>: 인텐트 라우팅, 프로브 스레드 인텐트 분류, KB 서브쿼리 플래너, 리랭크/충분성, KB→웹 게이트, RC 웹 합성 등 — <code>email_agent.py</code>, <code>search_agent.py</code>, <code>kb_web_gate.py</code>, <code>rc_web_search.py</code> 등(배포가 필요).</li><li><strong>설정의 다른 섹션</strong>: 모델 역할, <code>RETRIEVAL_RANKING_POLICY</code>, 가드레일, Gmail 경로.</li><li><strong>Knowledge 탭</strong>: 업로드, 재색인, RC URL, <code>rc_web_retrieval_mode</code>.</li></ul><p style="margin:0.35rem 0 0 0;">전체 구조: <code>docs/ARCHITECTURE.md</code>.</p>',
+        configureAgentPromptsDbHintHtml:
+          '<strong>저장 원본:</strong> 네 템플릿은 <strong>앱 DB</strong>(<code>app_settings</code>)에 있습니다. <code>src/agent/prompts.py</code>의 번들 문구는 <strong>비어 있을 때만 채움/복구</strong>에 쓰입니다.',
+        configureAgentPromptsBackfillHint:
+          '서버 기동 또는 Configure를 열 때 비어 있는 프롬프트 행은 번들 기본값으로 채워져 저장됩니다. 필드를 비우고(공백만) 저장하면 해당 행이 번들 기본값으로 초기화됩니다.',
+        configureAgentPromptsPlaceholdersHint:
+          '<strong>중괄호 <code>{…}</code></strong>는 런타임 플레이스홀더입니다. <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, <code>{learning_section}</code> 이름을 유지하세요. 앞 세 개는 프로필에서, <code>{learning_section}</code>은 정제된 학습(Run history 피드백)에서 채워집니다.',
+        configurePromptUsedByMain:
+          '사용처: 메인 LangChain 에이전트 — probe=false일 때 Workbench 채팅, 기타 모드의 공통 베이스.',
+        configurePromptUsedByProbeUser:
+          '사용처: 인박스 프로브 — inbox_probe 모드의 사람 발화 턴(Effective prompts by mode 참고).',
+        configurePromptUsedByProbeAppend:
+          '사용처: inbox_probe — 에이전트가 probe=true로 실행될 때(Scan inbox / cron) 시스템 프롬프트에 덧붙는 문구.',
+        configurePromptUsedByActionReview:
+          '사용처: action_review — 대시보드 카드 하나에 한정된 “이 작업 논의” 스레드.',
+        configureDistilledLearningTitle: '정제된 학습 규칙',
+        configureDistilledLearningHintHtml:
+          '메인 템플릿의 <code>{learning_section}</code>에 주입되는 읽기 전용 텍스트(Run history 피드백). 상호작용 요약(<code>agent_memory</code>)과는 별개입니다.',
+        configureDistilledLearningQualityHintHtml:
+          '<strong>점검:</strong> 정제(distillation)는 메모를 LLM이 요약한 것이라 과하게 일반화될 수 있습니다. 피드백은 <strong>구체적으로</strong>(예: “Woopra 내부 AIRIS 할당량 알림 카드는 스킵”) 쓰는 것이 좋습니다. 이상하면 <strong>Reset</strong> 후 더 명확한 피드백을 남기고 <strong>정제 다시 실행</strong>하세요.',
+        configureDistilledLearningEmpty: '(아직 정제된 규칙이 없습니다. Run history 또는 Action dashboard에서 피드백을 남기세요.)',
+        configureDistilledLearningReload: '서버에서 다시 불러오기',
+        configureDistilledLearningRerun: '정제(distillation) 다시 실행',
+        configureDistilledLearningUpdated: '마지막 갱신: {t}',
+        configureDistilledLearningRerunning: '정제 실행 중…',
+        configureDistilledLearningRerunDone: '정제가 완료되었습니다.',
+        configureDistilledLearningFail: '불러오기 실패: ',
+        configureDistilledLearningRerunFail: '정제 실패: ',
+        configureDistilledLearningReset: '정제 규칙 초기화',
+        configureDistilledLearningResetConfirm:
+          'DB에 저장된 정제 규칙 텍스트를 모두 지울까요? 피드백 행은 유지되며 이후 정제를 다시 실행할 수 있습니다. 정제 전까지 시스템 프롬프트의 학습 블록은 비어 있습니다.',
+        configureDistilledLearningResetDone: '정제 규칙을 지웠습니다.',
+        configureDistilledLearningResetFail: '초기화 실패: ',
+        configureDistilledLearningResetFootHtml:
+          '<strong>Reset</strong>은 <code>agent_learning_instructions</code>만 비웁니다. <code>agent_feedback</code> 행은 DB에 그대로(Run history 등)입니다. 남은 피드백으로 다시 만들려면 <strong>정제 다시 실행</strong>을 누르세요.',
         relReasonModelIncludeDashboard: '모델이 대시보드 포함으로 표시',
         relReasonPermissiveAmbiguous: '허용 모드 — 모호한 의도도 노출',
         relReasonStrictAmbiguous: '엄격 모드 — 모호한 의도는 액션으로 노출 안 함',
@@ -3088,6 +3298,13 @@
         dpf.options[2].text = uiText('dashboardPriorityHigh');
         dpf.options[3].text = uiText('dashboardPriorityMedium');
         dpf.options[4].text = uiText('dashboardPriorityLow');
+      }
+      const dcf = document.getElementById('dashboardCategoryFilter');
+      if (dcf && dcf.options && dcf.options.length >= 4) {
+        dcf.options[0].text = uiText('dashboardCategoryAll');
+        dcf.options[1].text = uiText('dashCatClientTechnical');
+        dcf.options[2].text = uiText('dashCatClientNonTechnical');
+        dcf.options[3].text = uiText('dashCatInternal');
       }
       const das = document.getElementById('dashboardActionSort');
       if (das && das.options && das.options.length >= 5) {
@@ -4460,6 +4677,7 @@
         renderConfigureEnvTable(data);
         renderGogSetupStatus(data);
         renderPromptEffectiveByMode(data.prompt_effective_by_mode);
+        updateDistilledLearningPanel(data.distilled_learning || {});
         const ks = document.getElementById('cfg_key_status');
         if (ks) {
           const preset = eff.llm_provider_preset || 'openrouter';
@@ -4759,9 +4977,25 @@
       return k ? uiText(k) : String(raw || '').trim();
     }
 
+    function canonicalDashboardActionCategory(raw) {
+      let c = String(raw || '').trim().toLowerCase();
+      const leg = {
+        product_technical: 'client_technical',
+        account: 'client_non_technical',
+        other: 'client_non_technical',
+        general: 'client_non_technical',
+      };
+      if (leg[c]) c = leg[c];
+      if (c === 'client_technical' || c === 'client_non_technical' || c === 'internal') return c;
+      return 'client_non_technical';
+    }
+
     function formatActionCategoryLabel(raw) {
-      const c = String(raw || 'general').trim().toLowerCase();
+      const c = canonicalDashboardActionCategory(raw);
       const map = {
+        client_technical: 'dashCatClientTechnical',
+        client_non_technical: 'dashCatClientNonTechnical',
+        internal: 'dashCatInternal',
         general: 'dashCatGeneral',
         product_technical: 'dashCatProductTechnical',
         account: 'dashCatAccount',
@@ -4948,11 +5182,25 @@
       const statusControl = Number.isFinite(iid)
         ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionStatusLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionStatus(${iid}, ${Number(actionIndex)}, this.value)">${statusOptions}</select></div>`
         : '';
+      const catCanon = canonicalDashboardActionCategory(action.category);
+      const categoryOptions = [
+        ['client_technical', uiText('dashCatClientTechnical')],
+        ['client_non_technical', uiText('dashCatClientNonTechnical')],
+        ['internal', uiText('dashCatInternal')],
+      ]
+        .map(
+          ([v, label]) =>
+            `<option value="${escapeHtml(v)}"${v === catCanon ? ' selected' : ''}>${escapeHtml(label)}</option>`
+        )
+        .join('');
+      const categoryControl = Number.isFinite(iid)
+        ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionCategoryLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionCategory(${iid}, ${Number(actionIndex)}, this.value)">${categoryOptions}</select></div>`
+        : '';
       const gmailTid = String(action.gmail_thread_id || '').trim();
       const subj = String(action.email_subject || '').trim();
       const from = String(action.email_from || '').trim();
       const customerEmail = String(action.customer_email || '').trim();
-      const metaLine = `${statusControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      const metaLine = `${statusControl}${categoryControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
 
       const clientId = String(action.customer_identifier || '').trim();
       const clientDomain =
@@ -5116,6 +5364,12 @@
       return ['all', 'not_started', 'in_progress', 'completed'].includes(v) ? v : 'all';
     }
 
+    function getDashboardCategoryFilter() {
+      const el = document.getElementById('dashboardCategoryFilter');
+      const v = (el && el.value) || 'all';
+      return ['all', 'client_technical', 'client_non_technical', 'internal'].includes(v) ? v : 'all';
+    }
+
     function getDashboardActionSortMode() {
       const el = document.getElementById('dashboardActionSort');
       const v = (el && el.value) || 'updated_desc';
@@ -5169,6 +5423,12 @@
             cd.includes(domQ) || em.includes(domQ) || (dom2 && dom2.includes(domQ))
           );
         });
+      }
+      const catF = getDashboardCategoryFilter();
+      if (catF !== 'all') {
+        filtered = filtered.filter(
+          (x) => canonicalDashboardActionCategory(x.action && x.action.category) === catF
+        );
       }
       const sortMode = getDashboardActionSortMode();
       filtered.sort((a, b) => {
@@ -5268,6 +5528,80 @@
         await loadActionBoard(true);
       } catch (e) {
         alert(`${uiText('dashboardStatusUpdateFail')}: ${e.message}`);
+      }
+    }
+
+    async function setDashboardActionCategory(interactionId, actionIndex, category) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      if (!id || !Number.isFinite(idx) || idx < 0) return;
+      try {
+        const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}/category`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: String(category || '') }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardCategoryUpdateFail')}: ${e.message}`);
+      }
+    }
+
+    function updateDistilledLearningPanel(dl) {
+      const pre = document.getElementById('cfg_distilled_learning_body');
+      const stamp = document.getElementById('cfg_distilled_learning_updated');
+      if (!pre) return;
+      const instr = dl && dl.instructions != null ? String(dl.instructions) : '';
+      const trimmed = instr.trim();
+      pre.textContent = trimmed ? instr : configureUiText('configureDistilledLearningEmpty');
+      if (stamp) {
+        const ua = dl && dl.updated_at != null ? String(dl.updated_at) : '';
+        stamp.textContent = ua
+          ? configureUiText('configureDistilledLearningUpdated').split('{t}').join(ua)
+          : '';
+      }
+    }
+
+    async function refreshDistilledLearningFromServer() {
+      const st = document.getElementById('cfg_distilled_learning_status');
+      try {
+        const data = await fetchJson('/memory/learning', { cache: 'no-store' });
+        updateDistilledLearningPanel(data);
+        if (st) st.textContent = '';
+      } catch (e) {
+        if (st) st.textContent = configureUiText('configureDistilledLearningFail') + e.message;
+      }
+    }
+
+    async function rerunLearningDistillation() {
+      const st = document.getElementById('cfg_distilled_learning_status');
+      if (st) st.textContent = configureUiText('configureDistilledLearningRerunning');
+      try {
+        await fetchJson('/memory/refresh', { method: 'POST' });
+        await refreshDistilledLearningFromServer();
+        if (st) st.textContent = configureUiText('configureDistilledLearningRerunDone');
+      } catch (e) {
+        if (st) st.textContent = configureUiText('configureDistilledLearningRerunFail') + e.message;
+      }
+    }
+
+    async function resetDistilledLearningRules() {
+      if (!confirm(configureUiText('configureDistilledLearningResetConfirm'))) return;
+      const st = document.getElementById('cfg_distilled_learning_status');
+      if (st) st.textContent = '';
+      try {
+        const data = await fetchJson('/memory/learning', { method: 'DELETE' });
+        updateDistilledLearningPanel(data);
+        if (_lastRuntimePayload && typeof _lastRuntimePayload === 'object') {
+          _lastRuntimePayload.distilled_learning = {
+            instructions: data.instructions,
+            updated_at: data.updated_at,
+          };
+        }
+        if (st) st.textContent = configureUiText('configureDistilledLearningResetDone');
+      } catch (e) {
+        if (st) st.textContent = configureUiText('configureDistilledLearningResetFail') + e.message;
       }
     }
 

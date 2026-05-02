@@ -849,6 +849,8 @@ def runtime_settings_snapshot() -> dict:
             "preview_error": f"{type(e).__name__}: {e}",
         }
 
+    distilled_learning = database.get_agent_learning_instructions_snapshot()
+
     # Optional dependency: cryptography (see requirements.txt). Missing wheel must not 500 Configure.
     try:
         from src.configure_crypto import encryption_enabled
@@ -860,6 +862,7 @@ def runtime_settings_snapshot() -> dict:
     return {
         "configure_encryption_enabled": _enc_flag,
         "prompt_effective_by_mode": prompt_effective_by_mode,
+        "distilled_learning": distilled_learning,
         "effective": {
             "llm_provider_preset": effective_llm_provider_preset(),
             "llm_model": effective_llm_model(),

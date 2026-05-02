@@ -15,6 +15,8 @@ So **`prompts.py` is the canonical default text in the repo**, but **an existing
 | `prompt_probe_mode_append` | `PROBE_MODE_SYSTEM_APPEND` | Extra system block appended when `probe=True` |
 | `prompt_action_review_append` | `ACTION_REVIEW_SYSTEM_APPEND` | Extra system block for “Discuss this action” threads |
 
+The main template must keep the **`{learning_section}`** placeholder. At runtime it is filled from **`agent_learning_instructions`** (distilled from Run history / Action dashboard feedback via `refresh_learning_instructions`), not from the Workbench profile form. Configure shows the current text under **Distilled learning rules**; `GET /memory/learning` and `GET /settings/runtime` → `distilled_learning` expose the same payload without an LLM call.
+
 Implementation: `src/agent/prompt_seed.py` (`PROMPT_LIBRARY_KEYS`, `default_prompt_value()`, `seed_prompt_library_if_needed()`).
 
 ## When `prompts.py` is written into the DB

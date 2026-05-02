@@ -53,7 +53,8 @@ Common entrypoints (not exhaustive; see `src/api/routes.py`):
 | `POST /threads/bulk-delete` | Deletes many threads + messages + linked run rows (Workbench cleanup) |
 | `POST /agent/run` | Manual agent or probe from API / older clients |
 | `GET/POST` cron + scheduler | Scheduled inbox probes and job management |
-| `POST /memory/feedback`, `/memory/refresh`, `/memory/compact` | Feedback and learning-memory maintenance |
+| `POST /memory/feedback`, `GET /memory/learning`, `DELETE /memory/learning`, `/memory/refresh`, `/memory/compact` | Feedback, read/clear distilled rules, learning refresh, compaction |
+| `PATCH /dashboard/probe-runs/{id}/actions/{i}/category` | Operator override for one action’s `category` on the current probe row |
 | `PATCH /settings/runtime` | **Configure** saves overrides into `app_settings` (via runtime config) |
 
 ## Workbench threads vs full inbox probe
@@ -139,9 +140,9 @@ Tuning and file-level behavior: [SEARCH_AGENT.md](SEARCH_AGENT.md).
 
 ## Self-evolution and feedback
 
-- **UI:** **Run history** (per-run feedback: useful / noisy / correct / incorrect, plus notes where offered) and **Action dashboard** (card-level signals; see [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md) for fields like `feedback_notes` and the feedback contract).
-- **API:** `POST /memory/feedback` stores verdicts and optional corrections; `POST /memory/refresh` refreshes distilled learning instructions; `POST /memory/compact` summarizes older interactions.
-- **Code:** `src/agent/memory.py` (compaction, learning text surfaced into the system prompt via `get_runtime_learning_instructions()` / Configure-backed prompts—see [PROMPTS.md](PROMPTS.md)).
+- **UI:** **Run history** (per-run feedback: useful / noisy / correct / incorrect, plus notes where offered) and **Action dashboard** (card-level signals; see [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md) for fields like `feedback_notes` and the feedback contract). **Configure → Distilled learning rules** shows the current **`agent_learning_instructions`** text (same payload as `GET /memory/learning` and the `distilled_learning` field on `GET /settings/runtime`).
+- **API:** `POST /memory/feedback` stores verdicts and optional corrections (metadata may include `action_index` for dashboard-scoped feedback); `POST /memory/refresh` runs LLM distillation into **`app_settings.agent_learning_instructions`**; **`GET /memory/learning`** returns that text without calling an LLM; **`DELETE /memory/learning`** clears distilled rules only (feedback rows unchanged). **`POST /memory/compact`** is separate: it summarizes older **`agent_interactions`** rows into **`agent_memory`** and does **not** drive `{learning_section}` in the main system template.
+- **Code:** `src/agent/memory.py` (`refresh_learning_instructions`, `compact_memory`); runtime injection via `get_runtime_learning_instructions()` in `render_email_agent_system` / agent bootstrap (see [PROMPTS.md](PROMPTS.md)).
 
 ## Configure map (UI tab → what to edit)
 
@@ -153,7 +154,7 @@ Operators tune behavior primarily from the **Configure** tab (values persist in 
 | **Workbench** | Agent profile (vendor / product / role) stored for prompts; threads; **Scan inbox** button (`probe: true`); NL cron when message matches cron admin intent |
 | **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment` / `kb_only` / `web_only`) |
 | **Cron** | Scheduled probe jobs (presets + expressions) |
-| **Action dashboard** | Card status, filters, bulk dismiss; “Discuss this action” spawns scoped threads |
+| **Action dashboard** | Card **status** and **category** (operator edits persist on the row), filters, bulk dismiss; “Discuss this action” spawns scoped threads |
 | **Run history** | Traces, feedback, learning loop inputs |
 
 Prompt **text** keys (`prompt_email_agent_system_template`, `prompt_probe_mode_append`, …) live in the DB, not only in `src/agent/prompts.py`—see [PROMPTS.md](PROMPTS.md).

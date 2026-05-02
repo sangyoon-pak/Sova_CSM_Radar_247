@@ -85,10 +85,11 @@ Action cards should include enough metadata for practical execution:
 - thread title and source linkage
 - customer identity signal (name and/or domain)
 - actionable summary and recommended next step
-- status transitions (`not_started`, `in_progress`, `completed`)
+- **`category`:** `client_technical` | `client_non_technical` | `internal` (legacy probe values are normalized in `probe_actions`)
+- status transitions (`not_started`, `in_progress`, `completed`); operators can fix miscategorisation from the UI
 - retrieval evidence metadata for follow-up Q&A
 
-Reference: [docs/ACTION_CARD_SPEC.md](docs/ACTION_CARD_SPEC.md)
+**Configure** exposes assembled prompts by mode plus **Distilled learning rules** (feedback-derived text injected as `{learning_section}`), distinct from DB compaction. Reference: [docs/ACTION_CARD_SPEC.md](docs/ACTION_CARD_SPEC.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Troubleshooting Quick Map
 

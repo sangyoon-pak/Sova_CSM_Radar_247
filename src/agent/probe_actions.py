@@ -15,6 +15,35 @@ import re
 from typing import Any
 
 _GMAIL_TID_RE = re.compile(r"^[a-zA-Z0-9_-]{6,128}$")
+
+# Canonical dashboard action categories (probe JSON + persisted metadata).
+CSM_ACTION_CATEGORIES: tuple[str, ...] = ("client_technical", "client_non_technical", "internal")
+_LEGACY_CATEGORY_TO_CANONICAL: dict[str, str] = {
+    "product_technical": "client_technical",
+    "account": "client_non_technical",
+    "other": "client_non_technical",
+    "general": "client_non_technical",
+}
+
+
+def normalize_dashboard_category(raw: Any) -> str:
+    """Normalize model or legacy `category` to a canonical value."""
+    c = str(raw or "").strip().lower()
+    if c in _LEGACY_CATEGORY_TO_CANONICAL:
+        c = _LEGACY_CATEGORY_TO_CANONICAL[c]
+    if c in CSM_ACTION_CATEGORIES:
+        return c
+    return "client_non_technical"
+
+
+def _coerce_action_category_field(a: dict[str, Any]) -> None:
+    a["category"] = normalize_dashboard_category(a.get("category"))
+
+
+def category_requires_mandatory_kb_retrieval(category: str) -> bool:
+    """True when probe merge should warn if no KB/RC tool calls were made for this action."""
+    c = normalize_dashboard_category(category)
+    return c == "client_technical"
 _THREAD_ID_LINE_RE = re.compile(r"(?im)^thread_id\t([^\n\r]+)$")
 _FROM_LINE_RE = re.compile(r"(?im)^from\t(.+)$")
 _SUBJECT_LINE_RE = re.compile(r"(?im)^subject\t(.+)$")
@@ -327,11 +356,11 @@ def _infer_relevance_outcome(a: dict[str, Any], policy: dict[str, str]) -> tuple
     if _include_dashboard_explicitly_yes(a):
         return "requires_csm_action", "model_include_dashboard"
 
-    cat = str(a.get("category") or "").strip().lower()
-    if cat in {"product_technical", "account"}:
+    cat = normalize_dashboard_category(a.get("category"))
+    if cat in {"client_technical", "client_non_technical", "internal"}:
         return "requires_csm_action", f"model_category:{cat}"
 
-    # Ambiguous: model did not set dashboard visibility or product/account category.
+    # Ambiguous: model did not set dashboard visibility or category.
     if strictness == "permissive":
         return "requires_csm_action", "permissive_ambiguous_intent"
     if strictness == "strict":
@@ -355,6 +384,7 @@ def _normalize_actions(
         if not isinstance(a, dict):
             continue
         title_hint = str(a.get("title") or "")[:120]
+        _coerce_action_category_field(a)
         if _include_dashboard_explicitly_no(a):
             dropped.append(
                 {"index": i, "title": title_hint, "stage": "include_on_dashboard_false"}
@@ -555,7 +585,7 @@ def _normalize_actions(
                 "email_from": e_from,
                 "email_subject": e_subj,
                 "status": st,
-                "category": str(a.get("category") or "general")[:120],
+                "category": str(a.get("category") or "client_non_technical")[:120],
                 "thread_title": thread_title,
                 "customer_identifier": customer_identifier,
                 "customer_email": customer_email,
@@ -1033,7 +1063,7 @@ def merge_csm_actions_metadata(
         if not has_retrieval:
             a["references"] = []
             a["retrieval_evidence"] = []
-        if str(a.get("category") or "").strip().lower() == "product_technical" and not has_retrieval:
+        if category_requires_mandatory_kb_retrieval(str(a.get("category") or "")) and not has_retrieval:
             product_without_retrieval += 1
         key = _dedupe_key(a)
         if key and key in by_thread:
@@ -1103,13 +1133,16 @@ def merge_csm_actions_metadata(
         "dedupe_skipped_unchanged": skipped_unchanged,
         "retrieval_tools_used": sorted(list(used_tools)),
         "has_retrieval_tool_call": has_retrieval,
+        "client_technical_without_kb_retrieval": product_without_retrieval,
+        # Deprecated key; kept for older UI parsers.
         "product_technical_without_retrieval": product_without_retrieval,
     }
     if product_without_retrieval > 0:
         md["csm_policy_warnings"] = (
             md.get("csm_policy_warnings") or []
         ) + [
-            f"{product_without_retrieval} product_technical action(s) were produced without search_product_docs/search_rc_web tool calls."
+            f"{product_without_retrieval} client_technical action(s) were produced without Knowledge base retrieval "
+            f"(`search_product_docs`) or RC web (`search_rc_web`) tool calls when required."
         ]
     return md
 

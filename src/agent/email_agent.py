@@ -1119,7 +1119,7 @@ def _run_agent_impl(
             "Threads outside that slice never appear in `fetch_inbox_emails` (and `category:primary` hides other tabs). "
             "Widen `newer_than:` or drop `category:primary` in `search` if needed, or use `fetch_gmail_thread` when the id is known.\n"
             f"For `fetch_inbox_emails`, use max_results={probe_limit} unless the user explicitly asks otherwise.\n"
-            "If any action is `product_technical`, you MUST call `search_product_docs` before final JSON. "
+            "If any action is `client_technical`, you MUST call `search_product_docs` (Knowledge base retrieval) before final JSON; follow `rc_web_retrieval_mode` for `search_rc_web` when required. "
             "If docs are truly unavailable, keep `references` and `retrieval_evidence` empty rather than fabricating sources.\n"
             "Language: follow the inferred-language note per thread. Do not default to English for dashboard strings "
             "just because the latest reply is an internal English ping — read who actually asked for help and in which language."

@@ -25,8 +25,11 @@ An action card represents a customer-facing CSM task that needs follow-up and ca
 - `retrieval_evidence`: citations/snippets used for draft reasoning
 - `confidence_label`: `high | medium | low`
 - `priority`: `low | medium | high | urgent`
+- `category` (probe JSON, persisted on each action): `client_technical` | `client_non_technical` | `internal` — triage label from the model; legacy values (`product_technical`, `account`, `other`, `general`) are normalized server-side to the canonical three.
 - `owner`: assigned user/team
 - `feedback_notes`: free-text user feedback for self-evolution loops
+
+Operators can change **`category`** and **`status`** per card on the Action dashboard; those edits update the **current** interaction row only. The next inbox probe may emit a fresh **`category`** from the model for newly merged actions (model wins on merge).
 
 ## Status Behavior
 

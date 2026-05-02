@@ -16,7 +16,7 @@ from src.agent.email_agent import (
     is_inbox_probe_chat_intent,
     run_agent,
 )
-from src.agent.memory import compact_memory, refresh_learning_instructions
+from src.agent.memory import clear_distilled_learning_instructions, compact_memory, refresh_learning_instructions
 from src.agent.probe_actions import (
     build_action_review_runtime_hydration,
     format_action_review_chat_prefix,
@@ -695,6 +695,26 @@ def set_dashboard_probe_action_status(interaction_id: int, action_index: int, re
     return {"ok": True}
 
 
+class DashboardActionCategoryRequest(BaseModel):
+    category: str
+
+
+@router.patch("/dashboard/probe-runs/{interaction_id}/actions/{action_index}/category")
+def set_dashboard_probe_action_category(
+    interaction_id: int, action_index: int, req: DashboardActionCategoryRequest
+):
+    """Update one dashboard action category: client_technical | client_non_technical | internal."""
+    if action_index < 0:
+        raise HTTPException(status_code=400, detail="Invalid action index.")
+    ok = database.set_csm_dashboard_action_category(interaction_id, action_index, req.category)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Interaction/action not found, not a probe run, or invalid category.",
+        )
+    return {"ok": True}
+
+
 @router.delete("/dashboard/probe-runs/{interaction_id}")
 def dismiss_dashboard_probe_run(interaction_id: int):
     """Hide an inbox review run from the Action dashboard (metadata); row remains in Run history."""
@@ -775,6 +795,18 @@ class ThreadSendRequest(BaseModel):
     text: str
     probe: bool = False
     ui_locale: str | None = None
+
+
+@router.get("/memory/learning")
+def memory_learning():
+    """Read-only distilled rules from Run history feedback (no LLM call)."""
+    return database.get_agent_learning_instructions_snapshot()
+
+
+@router.delete("/memory/learning")
+def memory_learning_reset():
+    """Clear distilled rules text (`agent_learning_instructions`). Does not delete feedback rows."""
+    return clear_distilled_learning_instructions()
 
 
 @router.post("/memory/compact")

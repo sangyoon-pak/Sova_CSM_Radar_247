@@ -54,8 +54,9 @@ This keeps behavior adaptable across CSM teams and tenants.
 
 For threads classified as potentially CSM-relevant:
 
-- Retrieval must run before final card drafting unless explicitly disabled.
-- Search must include uploaded documents and `knowledge-base/` sources.
+- **Mandatory KB for `client_technical`:** For probe JSON actions with **`category: client_technical`**, the probe executor must run **Knowledge base retrieval** (tool: `search_product_docs`) before final structured output; merge diagnostics flag `client_technical_without_kb_retrieval` when that did not happen. **RC documentation web** (`search_rc_web`, enabled RC URLs) still follows **`rc_web_retrieval_mode`** / the KB→web gate — it is not optional “extra” in modes that require web follow-up.
+- For **`client_non_technical`** and **`internal`**, there is no forced KB/web sequence in the probe merge; the model may still call tools when useful.
+- Search must include uploaded documents and indexed KB sources for grounded answers when the model chooses retrieval.
 - If retrieval has low confidence, surface this as a gap instead of guessing.
 - Retrieval ranking behavior should be configured through runtime policy (`RETRIEVAL_RANKING_POLICY`) rather than hardcoded vendor-specific boosts.
 

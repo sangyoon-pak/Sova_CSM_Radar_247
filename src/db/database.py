@@ -309,6 +309,45 @@ def set_csm_dashboard_action_status(interaction_id: int, action_index: int, stat
         return True
 
 
+def set_csm_dashboard_action_category(interaction_id: int, action_index: int, category: str) -> bool:
+    """Set one action `category` in metadata.csm_actions (canonical probe categories)."""
+    allowed = {"client_technical", "client_non_technical", "internal"}
+    cat = (category or "").strip().lower()
+    if cat not in allowed:
+        return False
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (interaction_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        actions = md.get("csm_actions")
+        if not isinstance(actions, list) or action_index < 0 or action_index >= len(actions):
+            conn.close()
+            return False
+        actions = list(actions)
+        item = dict(actions[action_index] or {})
+        item["category"] = cat
+        actions[action_index] = item
+        md["csm_actions"] = actions
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), interaction_id),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
 def latest_dashboard_actions_by_gmail_thread(limit: int = 800) -> dict[str, dict]:
     """
     Latest visible dashboard action per gmail_thread_id.
@@ -1105,7 +1144,7 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
-        SELECT created_at, verdict, note, correction
+        SELECT created_at, verdict, note, correction, metadata
         FROM agent_feedback
         WHERE (correction IS NOT NULL AND TRIM(correction) != '')
            OR (note IS NOT NULL AND TRIM(note) != '')
@@ -1120,6 +1159,23 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
 
 def get_runtime_learning_instructions() -> str:
     return (get_app_setting("agent_learning_instructions", "") or "").strip()
+
+
+def get_agent_learning_instructions_snapshot() -> dict:
+    """Distilled feedback rules for Configure / GET /memory/learning (no LLM)."""
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT value, updated_at FROM app_settings WHERE key = ?",
+        ("agent_learning_instructions",),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return {"instructions": "", "updated_at": None}
+    return {
+        "instructions": (row["value"] or "").strip(),
+        "updated_at": row["updated_at"],
+    }
 
 
 def db_stats() -> dict:
