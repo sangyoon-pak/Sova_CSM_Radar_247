@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import Optional
+from typing import Optional, Sequence
 
 from src.config import settings
 
@@ -118,6 +118,33 @@ def get_interaction_by_id(interaction_id: int) -> dict | None:
     ).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def get_interactions_by_ids(ids: Sequence[int]) -> dict[int, dict]:
+    """Batch-load interactions for learning distillation (Run history context)."""
+    uniq: list[int] = []
+    seen: set[int] = set()
+    for raw in ids:
+        try:
+            i = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if i <= 0 or i in seen:
+            continue
+        seen.add(i)
+        uniq.append(i)
+    if not uniq:
+        return {}
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    qmarks = ",".join("?" * len(uniq))
+    rows = conn.execute(
+        f"""SELECT id, created_at, trigger_type, input_text, output_text, status, error_message, metadata
+            FROM agent_interactions WHERE id IN ({qmarks})""",
+        uniq,
+    ).fetchall()
+    conn.close()
+    return {int(r["id"]): dict(r) for r in rows}
 
 
 def _parse_interaction_metadata(raw: str | None) -> dict:
@@ -1123,6 +1150,17 @@ def insert_feedback(
         return dict(row) if row else {}
 
 
+def delete_all_agent_feedback() -> int:
+    """Delete every row in agent_feedback (Run history + Action dashboard learning inputs)."""
+    with _WRITE_LOCK:
+        conn = _conn()
+        cur = conn.execute("DELETE FROM agent_feedback")
+        conn.commit()
+        deleted = int(cur.rowcount or 0)
+        conn.close()
+        return deleted
+
+
 def list_feedback(limit: int = 100, offset: int = 0) -> list[dict]:
     conn = _conn()
     conn.row_factory = sqlite3.Row
@@ -1144,7 +1182,7 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
-        SELECT created_at, verdict, note, correction, metadata
+        SELECT created_at, interaction_id, verdict, note, correction, metadata
         FROM agent_feedback
         WHERE (correction IS NOT NULL AND TRIM(correction) != '')
            OR (note IS NOT NULL AND TRIM(note) != '')

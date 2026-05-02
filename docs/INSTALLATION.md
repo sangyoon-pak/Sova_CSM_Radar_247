@@ -117,7 +117,7 @@ Inbox tools need **`gog`** and a one-time OAuth in the terminal — follow [GMAI
 ## 7. Verify
 
 - **Health:** `GET http://127.0.0.1:8000/health` → `{"status":"ok"}`
-- **Distilled learning (API-only operators):** `GET http://127.0.0.1:8000/memory/learning` returns `{ "instructions": "...", "updated_at": ... }` from the app database (**no LLM**). **`DELETE /memory/learning`** clears only the distilled rules text (`agent_learning_instructions`); it does **not** delete `agent_feedback` rows. Use **GET** to read the same feedback-derived rules the UI injects as `{learning_section}`. The **Configure** load (`GET /settings/runtime`) also includes this payload under **`distilled_learning`**. After `POST /memory/feedback` or `POST /memory/refresh`, poll **GET** if you are not using the browser. Details: [ARCHITECTURE.md](ARCHITECTURE.md) § Self-evolution and feedback.
+- **Distilled learning (API-only operators):** `GET http://127.0.0.1:8000/memory/learning` returns `{ "instructions": "...", "updated_at": ... }` from the app database (**no LLM**). **`DELETE /memory/learning`** clears the distilled rules text (`agent_learning_instructions`) **and** deletes all **`agent_feedback`** rows (card + Run history feedback used for distillation; interaction history is not removed). The JSON response includes **`feedback_deleted`** (row count). Use **GET** to read the same feedback-derived rules the UI injects as `{learning_section}`. The **Configure** load (`GET /settings/runtime`) also includes this payload under **`distilled_learning`**. After `POST /memory/feedback` or `POST /memory/refresh`, poll **GET** if you are not using the browser. Details: [ARCHITECTURE.md](ARCHITECTURE.md) § Self-evolution and feedback.
 - **Gmail (if configured):**
 
 ```bash

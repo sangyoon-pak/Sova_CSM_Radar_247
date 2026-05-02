@@ -807,7 +807,7 @@ def memory_learning():
 
 @router.delete("/memory/learning")
 def memory_learning_reset():
-    """Clear distilled rules text (`agent_learning_instructions`). Does not delete feedback rows."""
+    """Clear distilled rules and delete all `agent_feedback` (Run history + Action dashboard)."""
     return clear_distilled_learning_instructions()
 
 

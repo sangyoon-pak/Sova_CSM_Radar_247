@@ -11,12 +11,18 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from src.agent.memory import refresh_learning_instructions
+from src.agent.memory import LEARNING_DISTILL_SYSTEM, refresh_learning_instructions
 from src.agent.prompts import render_email_agent_system
 from src.db import database
 
 
 class TestMemoryLearning(unittest.TestCase):
+    def test_learning_distill_system_has_no_stencil_vendor_examples(self):
+        """Regression: concrete examples in the system prompt were copied by the model as fake rules."""
+        lowered = LEARNING_DISTILL_SYSTEM.lower()
+        self.assertNotIn("airis", lowered)
+        self.assertNotIn("woopra", lowered)
+
     def setUp(self):
         self._tf = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         self._tf.close()
@@ -125,7 +131,47 @@ class TestMemoryLearning(unittest.TestCase):
             metadata={"source": "run_history"},
         )
         samples = database.get_learning_feedback_samples(limit=10)
-        self.assertTrue(any(s.get("verdict") == "correct" and "Run history" in str(s.get("note")) for s in samples))
+        hit = next(
+            (s for s in samples if s.get("verdict") == "correct" and "Run history" in str(s.get("note"))),
+            None,
+        )
+        self.assertIsNotNone(hit)
+        self.assertEqual(hit.get("interaction_id"), 99)
+
+    def test_refresh_prompt_includes_run_context_for_run_history_useful(self):
+        database.log_interaction(
+            trigger_type="thread_probe",
+            input_text="SUBJECT_LINE_UNIQUE_X9F2",
+            output_text='{"cards": [{"title": "PROBE_JSON_SNIPPET_K3"}]}',
+            status="completed",
+            metadata=None,
+        )
+        row = database.get_interactions(limit=1, offset=0)[0]
+        iid = int(row["id"])
+        database.insert_feedback(
+            interaction_id=iid,
+            verdict="useful",
+            note=f"[Run history] run #{iid}: Good",
+            correction=None,
+            metadata={"source": "run_history"},
+        )
+        captured: dict = {}
+
+        class _Resp:
+            content = "- When input resembles SUBJECT_LINE_UNIQUE_X9F2, keep surfacing probe cards like PROBE_JSON_SNIPPET_K3.\n"
+
+        class _LLM:
+            def invoke(self, messages):
+                captured["messages"] = messages
+                return _Resp()
+
+        with patch("src.agent.memory.get_chat_llm", return_value=_LLM()):
+            refresh_learning_instructions(max_feedback=80)
+        msgs = captured.get("messages") or []
+        human = str(getattr(msgs[1], "content", "") or "")
+        self.assertIn("run_context", human)
+        self.assertIn("SUBJECT_LINE_UNIQUE_X9F2", human)
+        self.assertIn("PROBE_JSON_SNIPPET_K3", human)
 
 
 class TestMemoryLearningApi(unittest.TestCase):
@@ -156,6 +202,20 @@ class TestMemoryLearningApi(unittest.TestCase):
 
     def test_delete_memory_learning_clears_distilled_text(self):
         database.set_app_setting("agent_learning_instructions", "- Old rule")
+        database.insert_feedback(
+            interaction_id=1,
+            verdict="useful",
+            note="run note",
+            metadata={"source": "run_history"},
+        )
+        database.insert_feedback(
+            interaction_id=1,
+            verdict="incorrect",
+            note="card note",
+            correction="fix",
+            metadata={"source": "action_dashboard", "action_index": 0},
+        )
+        self.assertEqual(len(database.list_feedback(limit=10, offset=0)), 2)
         from src.main import app
 
         with TestClient(app) as client:
@@ -163,8 +223,10 @@ class TestMemoryLearningApi(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         data = r.json()
         self.assertTrue(data.get("cleared"))
+        self.assertEqual(data.get("feedback_deleted"), 2)
         self.assertEqual((data.get("instructions") or "").strip(), "")
         self.assertEqual(database.get_runtime_learning_instructions(), "")
+        self.assertEqual(database.list_feedback(limit=10, offset=0), [])
 
     def test_post_memory_feedback_persists_run_history_metadata(self):
         from src.main import app
