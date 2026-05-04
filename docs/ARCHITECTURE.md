@@ -84,6 +84,19 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 4. **`probe=True`**: probe-specific system append, Gmail slice, then model must emit **probe JSON**; server merges into dashboard metadata on completion (routes worker).
 5. **Default**: full LangChain agent with tools (`fetch_inbox_emails`, `fetch_gmail_thread`, `search_product_docs`, `search_rc_web`, cron tools, …).
 
+## Configure tab: runtime diagram (UI)
+
+The **Configure** → **Agent prompts · runtime surfaces** section of the web UI shows a simplified **single-process** layout (see inline SVG in `src/web/index.html`). The same structure in diagram form:
+
+```mermaid
+%%{init: {"themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;}"}}%%
+flowchart LR
+  O[Operator_editable<br/>app_settings on Configure] --> L[LangChain_agent<br/>workbench chat inbox_probe action_review]
+  L --> R[Tools_and_retrieval<br/>search_product_docs search_rc_web Gmail tools]
+```
+
+**Sidecar (code / JSON, not edited on this screen):** intent routing, probe-thread intent classifier, KB subquery planner, rerank, KB→web gate, RC web synthesis — implemented in `email_agent.py`, `search_agent.py`, `kb_web_gate.py`, `rc_web_search.py`. Prompt **text** keys for the first column are documented in [PROMPTS.md](PROMPTS.md).
+
 ## Tools vs retrieval orchestration
 
 - **`search_product_docs`** -> `search_with_agent_structured` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns KB context and mode-aware web follow-up rules.
@@ -180,21 +193,3 @@ Prompt **text** keys (`prompt_email_agent_system_template`, `prompt_probe_mode_a
 - **Run history:** Traces and feedback.
 
 Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md). Release hygiene: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
-
-## Legacy diagram (relevance vs retrieval pipeline)
-
-The following diagram emphasizes the **logical** split between triage/relevance and retrieval-heavy response construction (same spirit as the older README figure):
-
-```mermaid
-%%{init: {"themeCSS": ".edgePath path{stroke-width:3px !important;} .flowchart-link{stroke-width:3px !important;} .edge-pattern-dotted{stroke-width:3px !important;} .edge-pattern-dashed{stroke-width:3px !important;}"}}%%
-flowchart TD
-  inboxThread[InboxOrThreadContext] --> relevanceGate[RelevanceAndGuardrails]
-  relevanceGate -->|"CSM_relevant"| retrievalPipeline[RetrievalPipeline]
-  relevanceGate -->|"Not_CSM_relevant"| noCard[NoCardOrSkipped]
-  retrievalPipeline --> groundedDraft[GroundedDraft]
-  groundedDraft --> actionCard[ActionCardPayload]
-  actionCard --> dashboard[ActionDashboard]
-  dashboard --> userFeedback[FeedbackAndMemory]
-```
-
-For **file-level** and **API-level** detail, prefer the sections above over relying on this diagram alone.

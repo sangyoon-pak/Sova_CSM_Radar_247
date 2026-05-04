@@ -14,7 +14,7 @@
       --border: #e4e2dc;
       --border-subtle: #eceae6;
       --text: #2d2c29;
-      --muted: #6f6e69;
+      --muted: #585651;
       --accent: #1d6fc4;
       --accent-hover: #185ea8;
       --accent-soft: rgba(29, 111, 196, 0.1);
@@ -37,7 +37,7 @@
       --border: #e4e2dc;
       --border-subtle: #eceae6;
       --text: #2d2c29;
-      --muted: #6f6e69;
+      --muted: #585651;
       --accent: #1d6fc4;
       --accent-hover: #185ea8;
       --accent-soft: rgba(29, 111, 196, 0.1);
@@ -53,7 +53,7 @@
       --border: #3a3935;
       --border-subtle: #32312e;
       --text: #e8e7e3;
-      --muted: #9c9a94;
+      --muted: #b0ada7;
       --accent: #6ba3e0;
       --accent-hover: #8bb8e8;
       --accent-soft: rgba(107, 163, 224, 0.14);
@@ -303,11 +303,20 @@
       overflow-wrap: anywhere;    /* prevent long URLs/tokens from overflowing */
       word-break: break-word;
     }
-    /* Trace inspector: flat list (no card boxes) */
-    .trace-item { padding: 0.35rem 0; margin: 0; border-bottom: 1px solid var(--border); background: transparent; }
-    .trace-head { display:flex; justify-content:flex-start; gap: 0.75rem; align-items:baseline; padding: 0.15rem 0; }
-    .trace-type { color: var(--muted); font-size: 0.78rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.05em; min-width: 84px; }
-    .trace-title { font-weight: 850; flex: 1; font-size: 0.92rem; line-height: 1.25; }
+    /* Trace inspector: readable rows, product tone (detail stays mono) */
+    .trace-item { padding: 0.4rem 0; margin: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; }
+    .trace-item:last-child { border-bottom: 0; }
+    .trace-head { display:flex; justify-content:flex-start; gap: 0.75rem; align-items: baseline; padding: 0.12rem 0; }
+    .trace-type {
+      color: color-mix(in srgb, var(--muted) 88%, var(--text));
+      font-size: 0.71rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      min-width: 6.5rem;
+      flex-shrink: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .trace-title { font-weight: 600; flex: 1; font-size: 0.9rem; line-height: 1.3; font-family: ui-sans-serif, system-ui, sans-serif; }
     .trace-time { color: var(--muted); font-size: 0.78rem; font-weight: 850; white-space: nowrap; }
     .trace-detail { padding: 0.55rem 0 0.65rem 0; font-size: 0.88rem; color: var(--text); font-family: var(--mono); white-space: pre-wrap; line-height: 1.35; }
     .trace-caret { color: var(--muted); font-size: 0.95rem; font-weight: 950; margin-left: 0.15rem; user-select:none; }
@@ -433,16 +442,16 @@
       padding: 0.45rem 0.55rem;
       font-family: var(--mono);
     }
-    /* Flat trace list container (avoid "big box" look) */
+    /* Trace list: contained panel, sans for row chrome; mono only in .trace-detail */
     .trace-list {
       margin-top: 0.65rem;
-      padding: 0.25rem 0;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
+      padding: 0.45rem 0.6rem 0.55rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
       max-height: 520px;
       overflow-y: auto;
-      font-family: var(--mono);
+      font-family: ui-sans-serif, system-ui, sans-serif;
     }
     .run-queue-list { margin-top: 0.45rem; display:flex; flex-direction:column; gap:0.4rem; }
     .run-queue-item { border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.6rem; background:var(--surface); }
@@ -2077,7 +2086,7 @@
   <div class="tab-pane" id="tab-agent">
     <section>
       <h2 data-i18n="workbenchTitle">Workbench</h2>
-      <p class="section-lead" data-i18n="workbenchLead">Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.</p>
+      <p class="section-lead" data-i18n="workbenchLead">Chat in threads here. Use the Action dashboard tab for inbox review runs; expand Run trace for step detail, and Run history for audit.</p>
       <details id="profileDetails" class="profile-card" open>
         <summary>
           <div class="profile-head">
@@ -2590,7 +2599,7 @@
         landingDisclaimerTitle: 'Email provider note',
         landingDisclaimerBody: 'Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.',
         workbenchTitle: 'Workbench',
-        workbenchLead: 'Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.',
+        workbenchLead: 'Chat in threads here. Use the Action dashboard tab for inbox review runs; expand Run trace for step detail, and Run history for audit.',
         profileCardTitle: 'Agent profile',
         profileConfigure: 'Configure',
         profilePill: 'Applies to all runs',
@@ -2638,6 +2647,12 @@
         roleUser: 'User',
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
+        traceTypeSovaAgent: 'Sova Agent',
+        traceTypeTool: 'Tool',
+        traceTypeWeb: 'Web',
+        traceTypeChain: 'Chain',
+        traceTypeRun: 'Run',
+        traceTypeEvent: 'Event',
         cronTitle: 'Cron jobs',
         cronHelp: 'Schedule automatic "Scan inbox" runs. Start with a preset, then fine-tune the cron expression if needed.',
         cronPresetSelect: 'Preset cadence…',
@@ -3011,7 +3026,7 @@
         landingDisclaimerTitle: '이메일 공급자 안내',
         landingDisclaimerBody: 'Inbox 연동은 <strong>Gmail</strong>만 지원하며, 로컬 <strong>gog</strong> CLI와 OAuth 설정을 전제로 합니다. Outlook 등 다른 서비스는 <strong>포함되지 않습니다</strong>. 필요하면 별도 수집 파이프라인을 구현하거나 Gmail 도구 레이어를 교체해야 합니다.',
         workbenchTitle: 'Workbench',
-        workbenchLead: '스레드·대화는 Workbench에서. Inbox 리뷰 Run은 Action dashboard 탭에서 확인하세요. Trace·Run history는 감사용입니다.',
+        workbenchLead: '이 탭에서 스레드 대화. Inbox 리뷰 런은 Action dashboard에서; 단계는 Run trace, 감사는 Run history.',
         profileCardTitle: 'Agent 프로필',
         profileConfigure: '설정',
         profilePill: '모든 Run에 적용',
@@ -3059,6 +3074,12 @@
         roleUser: 'User',
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
+        traceTypeSovaAgent: 'Sova Agent',
+        traceTypeTool: '도구',
+        traceTypeWeb: '웹',
+        traceTypeChain: '체인',
+        traceTypeRun: '실행',
+        traceTypeEvent: '이벤트',
         cronTitle: 'Cron',
         cronHelp: 'Inbox 스캔 자동 실행 스케줄입니다. 프리셋을 먼저 고르고 필요하면 cron 식을 미세 조정하세요.',
         cronPresetSelect: '실행 주기 프리셋…',
@@ -4301,12 +4322,14 @@
       if (d) d.open = false; // keep it quiet by default
     }
 
-    function typeLabel(t) {
-      if (t === 'model_start' || t === 'model_end') return 'assistant';
-      if (t === 'tool_start' || t === 'tool_end') return 'tool';
-      if (t === 'web_round_start' || t === 'web_round_end') return 'web';
-      if (t === 'chain_start' || t === 'chain_end') return 'chain';
-      return String(t || 'event');
+    function traceEventTypeLabel(t) {
+      const x = String(t || '');
+      if (x === 'model_start' || x === 'model_end') return uiText('traceTypeSovaAgent');
+      if (x === 'tool_start' || x === 'tool_end') return uiText('traceTypeTool');
+      if (x === 'web_round_start' || x === 'web_round_end') return uiText('traceTypeWeb');
+      if (x === 'chain_start' || x === 'chain_end') return uiText('traceTypeChain');
+      if (x === 'run_cancelled') return uiText('traceTypeRun');
+      return uiText('traceTypeEvent');
     }
 
     function renderTraceItem(e) {
@@ -4321,7 +4344,7 @@
           <details>
             <summary style="cursor:pointer;">
               <div class="trace-head">
-                <div class="trace-type">${escapeHtml(typeLabel(e.type))}</div>
+                <div class="trace-type">${escapeHtml(traceEventTypeLabel(e.type))}</div>
                 <div class="trace-title">${escapeHtml(e.title || '')}</div>
                 <div class="trace-time">${escapeHtml(ts)}</div>
                 <div class="trace-caret">▾</div>
@@ -4333,7 +4356,7 @@
       } else {
         el.innerHTML = `
           <div class="trace-head">
-            <div class="trace-type">${escapeHtml(typeLabel(e.type))}</div>
+            <div class="trace-type">${escapeHtml(traceEventTypeLabel(e.type))}</div>
             <div class="trace-title">${escapeHtml(e.title || '')}</div>
             <div class="trace-time">${escapeHtml(ts)}</div>
           </div>

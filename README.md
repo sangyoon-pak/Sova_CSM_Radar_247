@@ -16,7 +16,7 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 The full **request routing**, **Workbench vs probe**, **API surface**, **Configure map**, and **mermaid** diagrams live in one place so they do not drift from the code:
 
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture)
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture, including the **Configure tab runtime diagram** that matches the web UI)
 
 Related deep dives:
 
@@ -103,7 +103,7 @@ Runbook: [docs/OPERATIONS_RUNBOOK.md](docs/OPERATIONS_RUNBOOK.md)
 ## Security And Release Hygiene
 
 - Do not commit secrets (`credentials.json`, API keys, local token stores)
-- Keep private/internal knowledge out of public distributions
+- Keep private/internal knowledge out of public distributions; **local KB uploads and SQLite** live under `data/` and **`knowledge-base/`** — both are listed in `.gitignore` and must not be force-added for a public tree
 - Validate docs, setup flow, and cross-platform host-install messaging before release
 
 Checklist: [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)

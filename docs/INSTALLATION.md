@@ -2,6 +2,8 @@
 
 Single path from **empty clone** to **running Sova** with models and (optional) Gmail. Host install only (venv + `python run.py`); this project does not ship as a Docker image—**`gog`** needs local OAuth and a file keyring.
 
+After the app is up, the **Configure** tab’s prompt/runtime layout is documented in [ARCHITECTURE.md](ARCHITECTURE.md) § **Configure tab: runtime diagram (UI)** (same structure as the in-app diagram).
+
 **Time:** ~15–30 minutes after you have API keys, longer if you set up Google Cloud OAuth for the first time.
 
 ---

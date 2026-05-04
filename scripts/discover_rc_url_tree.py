@@ -10,7 +10,7 @@ Features:
 
 Usage:
   .venv/bin/python scripts/discover_rc_url_tree.py \
-    --base-url https://docs.aiqua.appier.com/ \
+    --base-url https://docs.example.com/ \
     --max-urls 300 \
     --max-depth 2 \
     --store
@@ -47,7 +47,7 @@ def _print_tree(urls: list[str], base_url: str) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Discover RC sub-URLs for a base docs URL.")
-    ap.add_argument("--base-url", required=True, help="Base documentation URL (e.g. https://docs.aiqua.appier.com/)")
+    ap.add_argument("--base-url", required=True, help="Base documentation URL (e.g. https://docs.example.com/)")
     ap.add_argument("--max-urls", type=int, default=300, help="Maximum URLs to keep (default: 300)")
     ap.add_argument("--max-depth", type=int, default=2, help="BFS depth limit from base page (default: 2)")
     ap.add_argument("--timeout-s", type=int, default=10, help="Per-request timeout seconds (default: 10)")

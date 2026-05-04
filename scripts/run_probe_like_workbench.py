@@ -8,12 +8,12 @@ This is **not** the same as clicking **Scan inbox** (empty probe → ``get_probe
 Use this script to see structured **action cards** metadata from a pasted client email.
 
 Requires working LLM keys (Configure / .env) and, for real inbox tools, Gmail (gog).
-Optional: ``--seed-rc-url`` upserts one enabled RC URL before the run (e.g. AIQUA docs).
+Optional: ``--seed-rc-url`` upserts one enabled RC URL before the run (e.g. your hosted docs root).
 
 Usage (from repo root ``email_draft_agent``)::
 
   python scripts/run_probe_like_workbench.py --save-dir data/reports/probe_workbench_run
-  python scripts/run_probe_like_workbench.py --fixture path/to/email.txt --seed-rc-url 'https://docs.aiqua.appier.com/'
+  python scripts/run_probe_like_workbench.py --fixture path/to/email.txt --seed-rc-url 'https://docs.example.com/'
 """
 from __future__ import annotations
 

@@ -48,7 +48,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--url",
-        default="https://docs.aiqua.appier.com/",
+        default="https://docs.example.com/",
         help="Documentation base URL (domain filter for hosted search)",
     )
     parser.add_argument("--preset", choices=("openrouter", "openai", "both"), default="both")
