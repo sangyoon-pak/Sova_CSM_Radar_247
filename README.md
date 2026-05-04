@@ -89,7 +89,7 @@ Action cards should include enough metadata for practical execution:
 - status transitions (`not_started`, `in_progress`, `completed`); operators can fix miscategorisation from the UI
 - retrieval evidence metadata for follow-up Q&A
 
-**Configure** exposes assembled prompts by mode plus **Distilled learning rules** (feedback-derived text injected as `{learning_section}`), distinct from DB compaction. Reference: [docs/ACTION_CARD_SPEC.md](docs/ACTION_CARD_SPEC.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+**Configure** exposes assembled prompts by mode plus **Distilled learning rules** (single reinforcement pass over partitioned feedback → **`agent_learning_constraints`** + **`agent_learning_exemplars`**, injected as `{learning_section}`), distinct from DB compaction. Reference: [docs/ACTION_CARD_SPEC.md](docs/ACTION_CARD_SPEC.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) § Self-evolution and feedback.
 
 ## Troubleshooting Quick Map
 

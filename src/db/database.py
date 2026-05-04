@@ -10,6 +10,14 @@ from src.config import settings
 
 _WRITE_LOCK = Lock()
 
+# Split learning memory: negative-only LLM distill vs deterministic positive exemplars.
+KEY_AGENT_LEARNING_CONSTRAINTS = "agent_learning_constraints"
+KEY_AGENT_LEARNING_EXEMPLARS = "agent_learning_exemplars"
+# Legacy single-blob key (pre-split); cleared on refresh/reset — read as migration fallback only.
+KEY_AGENT_LEARNING_LEGACY = "agent_learning_instructions"
+# Last partitioned JSON (negative/endorsed) sent to the learning LLM; survives until clear/refresh overwrite.
+KEY_AGENT_LEARNING_LAST_PARTITION = "agent_learning_last_partition_json"
+
 
 def _utc_now_iso() -> str:
     """UTC instant for persisted timestamps; offset-aware so UIs parse as UTC."""
@@ -1182,7 +1190,7 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
-        SELECT created_at, interaction_id, verdict, note, correction, metadata
+        SELECT id, created_at, interaction_id, verdict, note, correction, metadata
         FROM agent_feedback
         WHERE (correction IS NOT NULL AND TRIM(correction) != '')
            OR (note IS NOT NULL AND TRIM(note) != '')
@@ -1195,24 +1203,75 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def get_runtime_learning_instructions() -> str:
-    return (get_app_setting("agent_learning_instructions", "") or "").strip()
-
-
-def get_agent_learning_instructions_snapshot() -> dict:
-    """Distilled feedback rules for Configure / GET /memory/learning (no LLM)."""
+def _fetch_app_setting_row(key: str) -> dict | None:
     conn = _conn()
     conn.row_factory = sqlite3.Row
     row = conn.execute(
         "SELECT value, updated_at FROM app_settings WHERE key = ?",
-        ("agent_learning_instructions",),
+        (key,),
     ).fetchone()
     conn.close()
-    if not row:
-        return {"instructions": "", "updated_at": None}
+    return dict(row) if row else None
+
+
+def _compose_runtime_learning_body(constraints: str, exemplars: str) -> str:
+    """Merge constraints + exemplars for `{learning_section}` inner body (no outer wrapper)."""
+    c = (constraints or "").strip()
+    e = (exemplars or "").strip()
+    parts: list[str] = []
+    if c:
+        parts.append(
+            "**Operator corrections** (from incorrect / noisy feedback and action-card corrections):\n"
+            + c
+        )
+    if e:
+        parts.append(
+            "**Operator-endorsed examples** (useful / correct runs; prefer this style when it does not "
+            "conflict with corrections above):\n"
+            + e
+        )
+    return "\n\n".join(parts).strip()
+
+
+def get_runtime_learning_instructions() -> str:
+    c_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_CONSTRAINTS)
+    e_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_EXEMPLARS)
+    leg_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_LEGACY)
+    constraints = ((c_row or {}).get("value") or "").strip()
+    exemplars = ((e_row or {}).get("value") or "").strip()
+    merged = _compose_runtime_learning_body(constraints, exemplars)
+    if merged:
+        return merged
+    legacy = ((leg_row or {}).get("value") or "").strip()
+    return legacy
+
+
+def get_agent_learning_instructions_snapshot() -> dict:
+    """Learning memory for Configure / GET /memory/learning (no LLM): constraints + exemplars."""
+    c_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_CONSTRAINTS) or {}
+    e_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_EXEMPLARS) or {}
+    leg_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_LEGACY) or {}
+    lp_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_LAST_PARTITION) or {}
+    constraints = (c_row.get("value") or "").strip()
+    exemplars = (e_row.get("value") or "").strip()
+    c_at = c_row.get("updated_at")
+    e_at = e_row.get("updated_at")
+    lp_at = lp_row.get("updated_at")
+    last_partition_json = (lp_row.get("value") or "").strip()
+    merged = _compose_runtime_learning_body(constraints, exemplars)
+    if not merged:
+        merged = ((leg_row.get("value") or "") or "").strip()
+    times = [t for t in (c_at, e_at, lp_at) if t]
+    updated_at = max(times) if times else None
     return {
-        "instructions": (row["value"] or "").strip(),
-        "updated_at": row["updated_at"],
+        "constraints": constraints,
+        "exemplars": exemplars,
+        "instructions": merged,
+        "constraints_updated_at": c_at,
+        "exemplars_updated_at": e_at,
+        "updated_at": updated_at,
+        "last_partition_json": last_partition_json,
+        "last_partition_updated_at": lp_at,
     }
 
 

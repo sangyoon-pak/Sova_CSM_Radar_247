@@ -16,7 +16,11 @@ from src.agent.email_agent import (
     is_inbox_probe_chat_intent,
     run_agent,
 )
-from src.agent.memory import clear_distilled_learning_instructions, compact_memory, refresh_learning_instructions
+from src.agent.memory import (
+    clear_distilled_learning_instructions,
+    compact_memory,
+    refresh_learning_instructions,
+)
 from src.agent.probe_actions import (
     build_action_review_runtime_hydration,
     format_action_review_chat_prefix,
@@ -801,13 +805,13 @@ class ThreadSendRequest(BaseModel):
 
 @router.get("/memory/learning")
 def memory_learning():
-    """Read-only distilled rules from Run history feedback (no LLM call)."""
+    """Read-only learning memory: negative constraints, positive exemplars, merged instructions (no LLM)."""
     return database.get_agent_learning_instructions_snapshot()
 
 
 @router.delete("/memory/learning")
 def memory_learning_reset():
-    """Clear distilled rules and delete all `agent_feedback` (Run history + Action dashboard)."""
+    """Clear learning memory keys and delete all `agent_feedback` (Run history + Action dashboard)."""
     return clear_distilled_learning_instructions()
 
 
@@ -830,6 +834,7 @@ def memory_compact(req: CompactMemoryRequest):
 
 @router.post("/memory/feedback")
 def memory_feedback(req: FeedbackRequest):
+    verdict = (req.verdict or "").strip().lower()
     meta = None
     if req.action_index is not None:
         meta = {"source": "action_dashboard", "action_index": int(req.action_index)}
@@ -837,7 +842,7 @@ def memory_feedback(req: FeedbackRequest):
         meta = dict(req.metadata)
     row = database.insert_feedback(
         interaction_id=req.interaction_id,
-        verdict=req.verdict,
+        verdict=verdict,
         note=req.note,
         correction=req.correction,
         metadata=meta,

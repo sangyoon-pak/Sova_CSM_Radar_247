@@ -3,20 +3,10 @@
 
 ### Agent utility / RAG
 
-- [ ] literally every action card is generated as prodct/technical. I think we should redifine the types of cards. brainstorming is needed. .
-1) external
-- product-related technical issues/troubleshoot
-- product-related queries 
 
-2) Internal 
-- ? 
 
-- [ ] feedback to agent as persistent agent memory. 
-1. verify and test the agent feedback memory part and do fine tuning ? Since this will be also part of the system prompt for agents, we are now collecting user's feedback from each of the action cards and run history for each agent run. 
-2. [ ] We should be able to curate all the feedbacks for agent to understand by LLM first and let users also see the curated feedback on the UI, ideally on configure or you pick the best location. users can give feedbacks on the action card by words or clicking the like/dislike buttons on the run history. Users should be able to see what agent has curated of user's feedback on the UI on configure. this memory should be loaded from database. 
-- [ ] how can we change the current agent prompt parts on configure more user friendly and easier to understand from the multi-agentic perspectives ? urrently it only shows what are the prompts for what but users can hardly understand which is for what agent or subagent. Do we need a diagram and differet user friendly workding ?
 - [ ] after all update all the md files for the implemented architectures and flows.
-
+1.update the md files to reflect the agent flow diagram on configure
 
 
 

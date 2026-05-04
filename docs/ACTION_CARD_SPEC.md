@@ -56,5 +56,7 @@ Move beyond binary like/dislike where possible:
 - Keep binary feedback optional for quick triage.
 - Prefer free-text feedback attached to the card.
 - Feed normalized feedback signals into agent evolution pipelines.
+- **Action dashboard UI** sends card textarea notes as `POST /memory/feedback` with **`verdict: incorrect`** and **`action_index`** so they contribute to **negative** learning (`agent_learning_constraints`), not to operator-endorsed exemplars (`useful` / `correct` only).
+- **Learning refresh sampling:** Reinforcement reads a **pool** of recent feedback rows, then passes a **fixed small batch** (five) to the distill LLM. The pipeline **reserves slots for dashboard rows** so a card note is still distilled even when many newer **run history** feedback rows exist (see [ARCHITECTURE.md](ARCHITECTURE.md) § Self-evolution and feedback).
 
 Guardrail and architecture context: [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md), [ARCHITECTURE.md](ARCHITECTURE.md).

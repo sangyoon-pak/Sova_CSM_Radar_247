@@ -14,8 +14,12 @@ So **`prompts.py` is the canonical default text in the repo**, but **an existing
 | `prompt_probe_user_message` | `PROBE_TRIGGER_MESSAGE` | Human turn text for inbox probe / cron |
 | `prompt_probe_mode_append` | `PROBE_MODE_SYSTEM_APPEND` | Extra system block appended when `probe=True` |
 | `prompt_action_review_append` | `ACTION_REVIEW_SYSTEM_APPEND` | Extra system block for “Discuss this action” threads |
+| `agent_learning_constraints` | — | **CONSTRAINTS** section from **`refresh_learning_instructions`**: negative feedback (`incorrect` / `noisy`), action-card corrections, and endorsed card preferences; hyphen bullets |
+| `agent_learning_exemplars` | — | **EXEMPLARS** section from the same refresh: endorsed **run_history** only (same single LLM pass as constraints) |
+| `agent_learning_last_partition_json` | — | Last **`negative` / `endorsed`** partition JSON fed to the reinforcement LLM (debug / transparency); cleared with learning reset |
+| `agent_learning_instructions` | — | **Legacy** single blob; cleared on refresh so split keys take precedence; `get_runtime_learning_instructions()` falls back to this only if split keys are empty |
 
-The main template must keep the **`{learning_section}`** placeholder. At runtime it is filled from **`agent_learning_instructions`** (distilled from Run history / Action dashboard feedback via `refresh_learning_instructions`), not from the Workbench profile form. Configure shows the current text under **Distilled learning rules**; `GET /memory/learning` and `GET /settings/runtime` → `distilled_learning` expose the same payload without an LLM call.
+The main template must keep the **`{learning_section}`** placeholder. At runtime it is filled from **`get_runtime_learning_instructions()`**, which merges **`agent_learning_constraints`** and **`agent_learning_exemplars`** (and falls back to legacy **`agent_learning_instructions`** if needed), not from the Workbench profile form. Configure shows the combined view under **Distilled learning rules**; `GET /memory/learning` and `GET /settings/runtime` → `distilled_learning` expose merged **`instructions`**, **`constraints`**, **`exemplars`**, and (on **`GET /memory/learning`**) **`last_partition_json`** — **no** LLM call.
 
 Implementation: `src/agent/prompt_seed.py` (`PROMPT_LIBRARY_KEYS`, `default_prompt_value()`, `seed_prompt_library_if_needed()`).
 
