@@ -6,6 +6,7 @@ This folder stays small. **Do not remove** items the app or install docs depend 
 |------|--------|
 | `gmail-get-decoded.py` | Invoked by `src/agent/tools/gmail_tool.py` for Gmail fetch (subprocess). Required at runtime when using Gmail. |
 | `install-gog-local.sh` | Bundled `gog` CLI installer (macOS). See [docs/INSTALLATION.md](../docs/INSTALLATION.md). |
+| `discover_rc_url_tree.py` | One-off RC URL crawler: discovers same-host sub-URLs from a base docs URL (sitemap + BFS), prints depth tree, and stores tree nodes in `rc_url_tree` (plus optional disabled upserts into `rc_urls`). |
 | `reset_configure_overrides.py` | Clears Configure DB overrides and local gog OAuth under effective `GOG_HOME`. See [docs/INSTALLATION.md](../docs/INSTALLATION.md) and [docs/GMAIL_SETUP.md](../docs/GMAIL_SETUP.md). |
 | `reset_local_data.py` | **Destructive:** removes local app SQLite, KB FTS DB, RAG dir, and uploaded KB files under `data/`, then runs `init_db()`. Use **before publishing or cloning for public distribution** so no trial DB/uploads ship (`python scripts/reset_local_data.py --yes`). **Stop the server first.** |
 

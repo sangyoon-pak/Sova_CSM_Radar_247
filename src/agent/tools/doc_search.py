@@ -60,6 +60,24 @@ _EMBEDDINGS = None
 _EMBED_CFG: tuple[str, str] | None = None
 _VECTORSTORE = None
 _VECTORSTORE_FP: str | None = None
+# LangGraph runs tools in a thread pool; parallel `search_product_docs` calls can hit FTS concurrently.
+_FTS_INDEX_LOCK = Lock()
+
+
+def _fts_sqlite_connect() -> sqlite3.Connection:
+    """Open the KB FTS database for multi-threaded tool use (WAL + busy timeout)."""
+    _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_FTS_DB_PATH), timeout=30.0, check_same_thread=False)
+    # Milliseconds busy_handler wait (belt-and-suspenders with connect timeout).
+    try:
+        conn.execute("PRAGMA busy_timeout=30000")
+    except sqlite3.Error:
+        pass
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.Error:
+        pass
+    return conn
 
 
 def run_grep(pattern: str, base_path: Path, max_results: int = 20, fixed: bool = False) -> list[dict]:
@@ -360,28 +378,37 @@ def _ensure_rag_index(base_path: Path, *, force_rebuild_when_stale: bool = False
 
 
 def _ensure_fts_index(base_path: Path):
+    """Rebuild FTS if KB registry state changed.
+
+    Fast path (index already matches) has **no** lock so parallel `search_product_docs` /
+    subqueries stay concurrent. The lock only wraps an actual full rebuild.
+    """
     global _LAST_FTS_STATE
     state = _registry_index_state(base_path)
     if _LAST_FTS_STATE == state:
         return
-    _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_FTS_DB_PATH))
-    conn.execute(
-        "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"
-    )
-    conn.execute("DELETE FROM fts_docs")
-    for p in _registry_rag_paths(base_path):
+    with _FTS_INDEX_LOCK:
+        if _LAST_FTS_STATE == state:
+            return
+        conn = _fts_sqlite_connect()
         try:
-            content = p.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
-        conn.execute(
-            "INSERT INTO fts_docs(path, file, content) VALUES (?, ?, ?)",
-            (str(p), p.name, content),
-        )
-    conn.commit()
-    conn.close()
-    _LAST_FTS_STATE = state
+            conn.execute(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"
+            )
+            conn.execute("DELETE FROM fts_docs")
+            for p in _registry_rag_paths(base_path):
+                try:
+                    content = p.read_text(encoding="utf-8", errors="replace")
+                except Exception:
+                    continue
+                conn.execute(
+                    "INSERT INTO fts_docs(path, file, content) VALUES (?, ?, ?)",
+                    (str(p), p.name, content),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        _LAST_FTS_STATE = state
 
 
 def _load_tombstones() -> set[str]:
@@ -440,7 +467,7 @@ def run_fts_search(query: str, base_path: Path, max_results: int = 20) -> list[d
     if not tokens:
         return []
     match_expr = " OR ".join(tokens[:10])
-    conn = sqlite3.connect(str(_FTS_DB_PATH))
+    conn = _fts_sqlite_connect()
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
@@ -558,8 +585,7 @@ def index_files(paths: list[Path]) -> dict:
     Incrementally index only the given files into FTS and (if available) FAISS.
     """
     # FTS upsert
-    _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_FTS_DB_PATH))
+    conn = _fts_sqlite_connect()
     conn.execute(
         "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"
     )
@@ -639,8 +665,7 @@ def tombstone_files(paths: list[Path]) -> dict:
     Also remove from FTS table.
     """
     # FTS delete
-    _FTS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_FTS_DB_PATH))
+    conn = _fts_sqlite_connect()
     try:
         conn.execute(
             "CREATE VIRTUAL TABLE IF NOT EXISTS fts_docs USING fts5(path UNINDEXED, file UNINDEXED, content, tokenize='unicode61')"

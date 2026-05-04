@@ -4,11 +4,19 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import Optional
+from typing import Optional, Sequence
 
 from src.config import settings
 
 _WRITE_LOCK = Lock()
+
+# Split learning memory: negative-only LLM distill vs deterministic positive exemplars.
+KEY_AGENT_LEARNING_CONSTRAINTS = "agent_learning_constraints"
+KEY_AGENT_LEARNING_EXEMPLARS = "agent_learning_exemplars"
+# Legacy single-blob key (pre-split); cleared on refresh/reset — read as migration fallback only.
+KEY_AGENT_LEARNING_LEGACY = "agent_learning_instructions"
+# Last partitioned JSON (negative/endorsed) sent to the learning LLM; survives until clear/refresh overwrite.
+KEY_AGENT_LEARNING_LAST_PARTITION = "agent_learning_last_partition_json"
 
 
 def _utc_now_iso() -> str:
@@ -118,6 +126,33 @@ def get_interaction_by_id(interaction_id: int) -> dict | None:
     ).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def get_interactions_by_ids(ids: Sequence[int]) -> dict[int, dict]:
+    """Batch-load interactions for learning distillation (Run history context)."""
+    uniq: list[int] = []
+    seen: set[int] = set()
+    for raw in ids:
+        try:
+            i = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if i <= 0 or i in seen:
+            continue
+        seen.add(i)
+        uniq.append(i)
+    if not uniq:
+        return {}
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    qmarks = ",".join("?" * len(uniq))
+    rows = conn.execute(
+        f"""SELECT id, created_at, trigger_type, input_text, output_text, status, error_message, metadata
+            FROM agent_interactions WHERE id IN ({qmarks})""",
+        uniq,
+    ).fetchall()
+    conn.close()
+    return {int(r["id"]): dict(r) for r in rows}
 
 
 def _parse_interaction_metadata(raw: str | None) -> dict:
@@ -298,6 +333,45 @@ def set_csm_dashboard_action_status(interaction_id: int, action_index: int, stat
         actions = list(actions)
         item = dict(actions[action_index] or {})
         item["status"] = st
+        actions[action_index] = item
+        md["csm_actions"] = actions
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), interaction_id),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
+def set_csm_dashboard_action_category(interaction_id: int, action_index: int, category: str) -> bool:
+    """Set one action `category` in metadata.csm_actions (canonical probe categories)."""
+    allowed = {"client_technical", "client_non_technical", "internal"}
+    cat = (category or "").strip().lower()
+    if cat not in allowed:
+        return False
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (interaction_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        actions = md.get("csm_actions")
+        if not isinstance(actions, list) or action_index < 0 or action_index >= len(actions):
+            conn.close()
+            return False
+        actions = list(actions)
+        item = dict(actions[action_index] or {})
+        item["category"] = cat
         actions[action_index] = item
         md["csm_actions"] = actions
         conn.execute(
@@ -876,6 +950,151 @@ def list_rc_urls(limit: int = 200, offset: int = 0, enabled_only: bool = False) 
     return [dict(r) for r in rows]
 
 
+def upsert_rc_url_tree_nodes(*, main_rc_url: str, nodes: list[dict]) -> int:
+    """
+    Upsert discovered URL tree nodes for one main RC URL.
+    Returns number of processed nodes.
+    """
+    main = (main_rc_url or "").strip()
+    if not main:
+        raise ValueError("main_rc_url is required")
+    if not nodes:
+        return 0
+    with _WRITE_LOCK:
+        conn = _conn()
+        now = _utc_now_iso()
+        count = 0
+        for n in nodes:
+            u = str((n or {}).get("url") or "").strip()
+            if not u:
+                continue
+            depth = int((n or {}).get("depth") or 0)
+            if depth < 0:
+                depth = 0
+            parent_url = str((n or {}).get("parent_url") or "").strip() or None
+            title = str((n or {}).get("title") or "").strip() or None
+            meta = (n or {}).get("metadata")
+            conn.execute(
+                """
+                INSERT INTO rc_url_tree (main_rc_url, url, depth, parent_url, title, metadata, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(main_rc_url, url) DO UPDATE SET
+                  depth=excluded.depth,
+                  parent_url=excluded.parent_url,
+                  title=COALESCE(excluded.title, rc_url_tree.title),
+                  metadata=COALESCE(excluded.metadata, rc_url_tree.metadata),
+                  updated_at=excluded.updated_at
+                """,
+                (
+                    main,
+                    u,
+                    depth,
+                    parent_url,
+                    title,
+                    json.dumps(meta) if isinstance(meta, dict) else None,
+                    now,
+                ),
+            )
+            count += 1
+        conn.commit()
+        conn.close()
+        return count
+
+
+def list_rc_url_tree(main_rc_url: str, limit: int = 2000, offset: int = 0) -> list[dict]:
+    main = (main_rc_url or "").strip()
+    if not main:
+        return []
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT id, created_at, updated_at, main_rc_url, url, depth, parent_url, title, metadata
+        FROM rc_url_tree
+        WHERE main_rc_url = ?
+        ORDER BY depth ASC, id ASC
+        LIMIT ? OFFSET ?
+        """,
+        (main, limit, offset),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def list_rc_url_tree_by_host(host: str, enabled_main_only: bool = True, limit: int = 5000) -> list[dict]:
+    h = (host or "").strip().lower()
+    if not h:
+        return []
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    if enabled_main_only:
+        rows = conn.execute(
+            """
+            SELECT t.id, t.created_at, t.updated_at, t.main_rc_url, t.url, t.depth, t.parent_url, t.title, t.metadata
+            FROM rc_url_tree t
+            JOIN rc_urls r ON r.url = t.main_rc_url
+            WHERE r.enabled = 1
+              AND lower(replace(replace(t.main_rc_url, 'https://', ''), 'http://', '')) LIKE ? || '%'
+            ORDER BY t.depth ASC, t.id ASC
+            LIMIT ?
+            """,
+            (h, limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT id, created_at, updated_at, main_rc_url, url, depth, parent_url, title, metadata
+            FROM rc_url_tree
+            WHERE lower(replace(replace(main_rc_url, 'https://', ''), 'http://', '')) LIKE ? || '%'
+            ORDER BY depth ASC, id ASC
+            LIMIT ?
+            """,
+            (h, limit),
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def clear_rc_url_tree(main_rc_url: str) -> int:
+    main = (main_rc_url or "").strip()
+    if not main:
+        raise ValueError("main_rc_url is required")
+    with _WRITE_LOCK:
+        conn = _conn()
+        cur = conn.execute("DELETE FROM rc_url_tree WHERE main_rc_url = ?", (main,))
+        conn.commit()
+        deleted = cur.rowcount or 0
+        conn.close()
+        return deleted
+
+
+def rc_url_tree_summary(main_rc_url: str) -> dict:
+    main = (main_rc_url or "").strip()
+    if not main:
+        return {"main_rc_url": "", "count": 0, "max_depth": 0, "updated_at": None}
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        """
+        SELECT
+          COUNT(*) AS cnt,
+          COALESCE(MAX(depth), 0) AS max_depth,
+          MAX(updated_at) AS updated_at
+        FROM rc_url_tree
+        WHERE main_rc_url = ?
+        """,
+        (main,),
+    ).fetchone()
+    conn.close()
+    d = dict(row) if row else {}
+    return {
+        "main_rc_url": main,
+        "count": int(d.get("cnt") or 0),
+        "max_depth": int(d.get("max_depth") or 0),
+        "updated_at": d.get("updated_at"),
+    }
+
+
 def set_rc_url_enabled(url: str, enabled: bool) -> None:
     u = (url or "").strip()
     if not u:
@@ -897,6 +1116,8 @@ def delete_rc_url(url: str) -> int:
         raise ValueError("url is required")
     with _WRITE_LOCK:
         conn = _conn()
+        # Cascade delete discovered URL-tree nodes for this main URL.
+        conn.execute("DELETE FROM rc_url_tree WHERE main_rc_url = ?", (u,))
         cur = conn.execute("DELETE FROM rc_urls WHERE url = ?", (u,))
         conn.commit()
         deleted = cur.rowcount or 0
@@ -937,6 +1158,17 @@ def insert_feedback(
         return dict(row) if row else {}
 
 
+def delete_all_agent_feedback() -> int:
+    """Delete every row in agent_feedback (Run history + Action dashboard learning inputs)."""
+    with _WRITE_LOCK:
+        conn = _conn()
+        cur = conn.execute("DELETE FROM agent_feedback")
+        conn.commit()
+        deleted = int(cur.rowcount or 0)
+        conn.close()
+        return deleted
+
+
 def list_feedback(limit: int = 100, offset: int = 0) -> list[dict]:
     conn = _conn()
     conn.row_factory = sqlite3.Row
@@ -958,7 +1190,7 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
-        SELECT created_at, verdict, note, correction
+        SELECT id, created_at, interaction_id, verdict, note, correction, metadata
         FROM agent_feedback
         WHERE (correction IS NOT NULL AND TRIM(correction) != '')
            OR (note IS NOT NULL AND TRIM(note) != '')
@@ -971,8 +1203,76 @@ def get_learning_feedback_samples(limit: int = 80) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _fetch_app_setting_row(key: str) -> dict | None:
+    conn = _conn()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT value, updated_at FROM app_settings WHERE key = ?",
+        (key,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def _compose_runtime_learning_body(constraints: str, exemplars: str) -> str:
+    """Merge constraints + exemplars for `{learning_section}` inner body (no outer wrapper)."""
+    c = (constraints or "").strip()
+    e = (exemplars or "").strip()
+    parts: list[str] = []
+    if c:
+        parts.append(
+            "**Operator corrections** (from incorrect / noisy feedback and action-card corrections):\n"
+            + c
+        )
+    if e:
+        parts.append(
+            "**Operator-endorsed examples** (useful / correct runs; prefer this style when it does not "
+            "conflict with corrections above):\n"
+            + e
+        )
+    return "\n\n".join(parts).strip()
+
+
 def get_runtime_learning_instructions() -> str:
-    return (get_app_setting("agent_learning_instructions", "") or "").strip()
+    c_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_CONSTRAINTS)
+    e_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_EXEMPLARS)
+    leg_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_LEGACY)
+    constraints = ((c_row or {}).get("value") or "").strip()
+    exemplars = ((e_row or {}).get("value") or "").strip()
+    merged = _compose_runtime_learning_body(constraints, exemplars)
+    if merged:
+        return merged
+    legacy = ((leg_row or {}).get("value") or "").strip()
+    return legacy
+
+
+def get_agent_learning_instructions_snapshot() -> dict:
+    """Learning memory for Configure / GET /memory/learning (no LLM): constraints + exemplars."""
+    c_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_CONSTRAINTS) or {}
+    e_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_EXEMPLARS) or {}
+    leg_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_LEGACY) or {}
+    lp_row = _fetch_app_setting_row(KEY_AGENT_LEARNING_LAST_PARTITION) or {}
+    constraints = (c_row.get("value") or "").strip()
+    exemplars = (e_row.get("value") or "").strip()
+    c_at = c_row.get("updated_at")
+    e_at = e_row.get("updated_at")
+    lp_at = lp_row.get("updated_at")
+    last_partition_json = (lp_row.get("value") or "").strip()
+    merged = _compose_runtime_learning_body(constraints, exemplars)
+    if not merged:
+        merged = ((leg_row.get("value") or "") or "").strip()
+    times = [t for t in (c_at, e_at, lp_at) if t]
+    updated_at = max(times) if times else None
+    return {
+        "constraints": constraints,
+        "exemplars": exemplars,
+        "instructions": merged,
+        "constraints_updated_at": c_at,
+        "exemplars_updated_at": e_at,
+        "updated_at": updated_at,
+        "last_partition_json": last_partition_json,
+        "last_partition_updated_at": lp_at,
+    }
 
 
 def db_stats() -> dict:

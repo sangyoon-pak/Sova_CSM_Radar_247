@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     probe_thread_intent_classifier: str = Field("llm", validation_alias="PROBE_THREAD_INTENT_CLASSIFIER")
     # RC web: kb_first = LLM gate may skip hosted web; always_augment = always run web after KB (higher cost).
     rc_web_retrieval_mode: str = Field("kb_first", validation_alias="RC_WEB_RETRIEVAL_MODE")
+    rc_url_tree_max_depth: int = Field(2, validation_alias="RC_URL_TREE_MAX_DEPTH")
+    rc_url_tree_max_urls: int = Field(300, validation_alias="RC_URL_TREE_MAX_URLS")
+    rc_web_visit_limit: int = Field(5, validation_alias="RC_WEB_VISIT_LIMIT")
     # JSON policy object for vendor-agnostic retrieval/rerank behavior.
     retrieval_ranking_policy: str = Field("", validation_alias="RETRIEVAL_RANKING_POLICY")
 

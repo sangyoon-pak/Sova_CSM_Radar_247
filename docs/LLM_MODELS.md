@@ -18,7 +18,7 @@ Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not
 | `LLM_MODEL_KB_WEB_GATE` | **RC path only:** JSON gate used after KB retrieval to decide web follow-up in `kb_first` mode (`proceed_web` / `reason`). **Separate** from `LLM_MODEL_SEARCH_JSON` — does **not** affect intent routers or retrieval sufficiency JSON. | `LLM_MODEL` (via `effective_llm_model()` when unset — see `effective_llm_model_kb_web_gate()`) |
 | `LLM_MODEL_SEARCH_RERANK` | Search: snippet rerank (1–5 scores) | `LLM_MODEL` |
 | `LLM_MODEL_MEMORY` | Memory compaction (summarize old interactions) | `LLM_MODEL` |
-| `RC_WEB_RETRIEVAL_MODE` | `kb_first` (default) or `always_augment` — controls whether orchestration adds hosted web follow-up after KB; **not** an LLM model (stored like other runtime keys / Knowledge UI). | `kb_first` |
+| `RC_WEB_RETRIEVAL_MODE` | One of `kb_first` (default), `always_augment`, `kb_only`, `web_only` — controls KB/web orchestration behavior; **not** an LLM model (stored like other runtime keys / Knowledge UI). | `kb_first` |
 | `RETRIEVAL_RANKING_POLICY` | Vendor-agnostic retrieval policy JSON consumed by policy-aware reranker (source order, glossary, constraints, actionable definition). | Built-in default policy JSON |
 
 Embedding / RAG vectors are separate: `RAG_EMBEDDING_PROVIDER` and `RAG_EMBEDDING_MODEL` (Configure, env, or defaults — see `src/agent/tools/doc_search.py`).
@@ -30,6 +30,8 @@ Web search is enabled **only** when the user has saved and enabled RC URLs in th
 - RC URLs are managed via the UI and stored in the local DB.
 - `search_product_docs()` is KB retrieval (local RAG pipeline), and `search_rc_web()` is hosted-web retrieval only (no KB chunks merged into that tool output).
 - In `always_augment`, orchestration emits a rule to call `search_rc_web` after `search_product_docs` so traces show two explicit tool calls.
+- In `kb_only`, orchestration returns KB retrieval only and never emits web follow-up.
+- In `web_only`, orchestration skips KB retrieval and forces `search_rc_web`; if no enabled RC URLs exist, it returns a clear unavailability message.
 - **KB→web gate:** In **`kb_first`** mode, a dedicated JSON step (`kb_web_gate.evaluate_kb_web_gate`, LangSmith name `search_rc_web.kb_web_gate`) runs on KB evidence from `search_product_docs` and decides whether web follow-up is needed.
 - Provider behavior follows Configure preset via hosted adapter (`hosted_web_search.py`): OpenRouter web plugin vs OpenAI Responses `web_search`, normalized to one internal output contract.
 

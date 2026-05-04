@@ -91,6 +91,36 @@ def _openai_response_implies_include_unsupported(body: str) -> bool:
     return False
 
 
+def _openai_response_implies_tool_choice_unsupported(body: str) -> bool:
+    try:
+        data = json.loads(body)
+        err = data.get("error") or {}
+        msg = str(err.get("message") or "").lower()
+        param = str(err.get("param") or "").lower()
+        if "tool_choice" in param:
+            return True
+        if "tool_choice" in msg and any(x in msg for x in ("unknown", "unsupported", "invalid", "unexpected")):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _openai_response_implies_search_context_unsupported(body: str) -> bool:
+    try:
+        data = json.loads(body)
+        err = data.get("error") or {}
+        msg = str(err.get("message") or "").lower()
+        param = str(err.get("param") or "").lower()
+        if "search_context_size" in param:
+            return True
+        if "search_context_size" in msg and any(x in msg for x in ("unknown", "unsupported", "invalid", "unexpected")):
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _urls_from_url_citation_annotation(ann: dict) -> list[str]:
     """Collect URLs from flat or nested ``url_citation`` annotation objects."""
     urls: list[str] = []
@@ -309,8 +339,17 @@ def _web_search_openai(
     mid = _model_id_for_openai_direct(model)
     hosts = _domain_hosts(url)
 
-    def _post(*, with_domain_filters: bool, include_web_search_sources: bool) -> requests.Response:
+    def _post(
+        *,
+        with_domain_filters: bool,
+        include_web_search_sources: bool,
+        force_tool_choice: bool,
+        include_search_context_size: bool,
+    ) -> requests.Response:
         tools: list[dict] = [{"type": "web_search"}]
+        if include_search_context_size:
+            # Bias toward deeper evidence retrieval in docs-heavy queries.
+            tools[0]["search_context_size"] = "high"
         if with_domain_filters and hosts:
             tools[0]["filters"] = {"allowed_domains": hosts}
         payload: dict[str, Any] = {
@@ -321,6 +360,10 @@ def _web_search_openai(
         }
         if include_web_search_sources:
             payload["include"] = ["web_search_call.action.sources"]
+        if force_tool_choice:
+            # OpenAI defaults to optional search in auto mode.
+            # Force web-search usage so behavior is closer to OpenRouter's web plugin flow.
+            payload["tool_choice"] = "required"
         return requests.post(
             endpoint,
             headers={
@@ -333,12 +376,45 @@ def _web_search_openai(
 
     use_filters = bool(hosts) and _openai_web_search_supports_allowed_domains(mid)
     wf = use_filters
-    resp = _post(with_domain_filters=wf, include_web_search_sources=True)
+    force_tc = True
+    use_sc = True
+    resp = _post(
+        with_domain_filters=wf,
+        include_web_search_sources=True,
+        force_tool_choice=force_tc,
+        include_search_context_size=use_sc,
+    )
     if resp.status_code >= 400 and wf and _openai_response_implies_filters_unsupported(resp.text):
         wf = False
-        resp = _post(with_domain_filters=False, include_web_search_sources=True)
+        resp = _post(
+            with_domain_filters=False,
+            include_web_search_sources=True,
+            force_tool_choice=force_tc,
+            include_search_context_size=use_sc,
+        )
+    if resp.status_code >= 400 and use_sc and _openai_response_implies_search_context_unsupported(resp.text):
+        use_sc = False
+        resp = _post(
+            with_domain_filters=wf,
+            include_web_search_sources=True,
+            force_tool_choice=force_tc,
+            include_search_context_size=False,
+        )
     if resp.status_code >= 400 and _openai_response_implies_include_unsupported(resp.text):
-        resp = _post(with_domain_filters=wf, include_web_search_sources=False)
+        resp = _post(
+            with_domain_filters=wf,
+            include_web_search_sources=False,
+            force_tool_choice=force_tc,
+            include_search_context_size=use_sc,
+        )
+    if resp.status_code >= 400 and force_tc and _openai_response_implies_tool_choice_unsupported(resp.text):
+        force_tc = False
+        resp = _post(
+            with_domain_filters=wf,
+            include_web_search_sources=True,
+            force_tool_choice=False,
+            include_search_context_size=use_sc,
+        )
     if resp.status_code >= 400:
         raise ValueError(resp.text[:2000])
     data = resp.json()

@@ -117,6 +117,7 @@ Inbox tools need **`gog`** and a one-time OAuth in the terminal — follow [GMAI
 ## 7. Verify
 
 - **Health:** `GET http://127.0.0.1:8000/health` → `{"status":"ok"}`
+- **Learning memory (API-only operators):** `GET http://127.0.0.1:8000/memory/learning` returns constraints, exemplars, merged **`instructions`**, timestamps, and optional **`last_partition_json`** / **`last_partition_updated_at`** (last distill input partition) from the app database (**no LLM**). **`DELETE /memory/learning`** clears those settings (including **last partition**), legacy **`agent_learning_instructions`**, **and** deletes all **`agent_feedback`** rows. The delete JSON includes **`feedback_deleted`** (row count). Use **GET** to read the same merged `{learning_section}` source (`get_runtime_learning_instructions()`). The **Configure** load (`GET /settings/runtime`) includes this under **`distilled_learning`**. After `POST /memory/feedback` or `POST /memory/refresh`, poll **GET** if you are not using the browser. Pipeline (pool sampling, single reinforcement LLM): [ARCHITECTURE.md](ARCHITECTURE.md) § Self-evolution and feedback.
 - **Gmail (if configured):**
 
 ```bash

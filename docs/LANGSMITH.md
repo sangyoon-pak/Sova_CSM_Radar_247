@@ -18,16 +18,30 @@ LANGSMITH_PROJECT=email_draft_agent
 
 For ad-hoc Python, export `LANGSMITH_*` in your shell (process env is not read from Configure DB unless the app loads it).
 
+**Project name matters:** Whatever you save under **Configure → LangSmith project** is written to the app database and **overrides** `LANGSMITH_PROJECT` from the process environment for agent runs. Traces are tagged to that name. If the UI still says `email_draft_agent` in docs but your Configure value is e.g. `sova_agent`, you must open **that** project in LangSmith to see new traces. Confirm the effective name via **`GET /settings/runtime`** (JSON includes **`langsmith_project`** and **`langsmith_tracing`**) or the Configure form after save.
+
 ## Verify Tracing
 
-Start the app (`python run.py`), enable LangSmith in **Configure**, then trigger any agent run (Workbench, **Scan inbox**, or **Run history** / API). Open [smith.langchain.com](https://smith.langchain.com) → **Projects** → `email_draft_agent` (or `default`) after a few seconds.
+Start the app (`python run.py`), enable LangSmith in **Configure**, then trigger any agent run (Workbench, **Scan inbox**, or **Run history** / API). Open [smith.langchain.com](https://smith.langchain.com) → **Projects** → **the same project name as Configure** (default example: `email_draft_agent`; yours may differ) after a few seconds.
 
 Each LLM span uses the resolved model id (see [LLM_MODELS.md](LLM_MODELS.md)); filter traces by model or by run name (e.g. `search_agent.split_focus_subqueries`, `search_agent.policy_rerank`, `retrieval.kb_web_gate`).
 
 ## No Traces Appearing?
 
-1. **Check both projects** — Traces may appear under `default` or `email_draft_agent`
-2. **Trigger an agent run** — Traces only appear when you run the agent (dashboard "Run" or `/agent/run` API)
-3. **Wait a few seconds** — Traces can take 5–30 seconds to show up
-4. **Check Configure vs env source** — In Configure, confirm LangSmith key status, then run the agent once to emit traces
-5. **API key** — Ensure the key is valid and has no typos (starts with `lsv2_pt_`)
+1. **Open the correct LangSmith project** — Must match **`langsmith_project`** from Configure / **`GET /settings/runtime`** (not necessarily `email_draft_agent`). This is the most common “suddenly empty” confusion after renaming the project in Configure or using a different workspace.
+2. **Tracing toggle** — **Configure → LangSmith tracing** = **true**. If a DB row exists with `false`, it overrides a `true` in `.env` until you change it.
+3. **API key present** — Configure shows “key stored in database” / env; `_ensure_langsmith_env` sends nothing to LangSmith if tracing is on but the key is missing.
+4. **Trigger an agent run** — Traces appear only when the agent runs (Workbench, **Scan inbox**, probe, or `/agent/run`). Inbox-peek short paths still invoke tools but parent traces use `email_agent.run_agent` when routing runs the full agent.
+5. **Wait a few seconds** — Ingestion can take ~5–30s; refresh the project view.
+6. **Org / filters in LangSmith** — Check workspace, date filter, and that you are not in a different LangSmith account than the API key.
+7. **API key validity** — Keys start with `lsv2_pt_`; rotate if revoked.
+
+### Quick local check (developers)
+
+From repo root with the same `data/agent.db` as the running server:
+
+```bash
+.venv/bin/python -c "from src.runtime_config import effective_langsmith_project, effective_langsmith_tracing; print(effective_langsmith_project(), effective_langsmith_tracing())"
+```
+
+You should see the project name to select in the LangSmith UI and `True` if tracing is enabled.

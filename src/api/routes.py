@@ -1,6 +1,7 @@
 """API routes for agent and dashboard."""
 from pathlib import Path
 from threading import Thread
+from threading import Lock
 
 from fastapi import HTTPException, File, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -15,7 +16,11 @@ from src.agent.email_agent import (
     is_inbox_probe_chat_intent,
     run_agent,
 )
-from src.agent.memory import compact_memory, refresh_learning_instructions
+from src.agent.memory import (
+    clear_distilled_learning_instructions,
+    compact_memory,
+    refresh_learning_instructions,
+)
 from src.agent.probe_actions import (
     build_action_review_runtime_hydration,
     format_action_review_chat_prefix,
@@ -26,6 +31,7 @@ from src.agent.prompts import get_action_review_append, get_probe_trigger_messag
 from src.agent.tools.doc_upload import ingest_upload
 from src.agent.tools import doc_search
 from src.agent.tools.hosted_web_search import run_web_search
+from src.agent.tools.rc_url_tree_discovery import discover_url_tree, normalize_url
 from src.config import settings
 from src.runtime_config import (
     clear_gog_local_oauth_files,
@@ -46,6 +52,8 @@ from fastapi import APIRouter
 router = APIRouter()
 
 _RUNTIME_SETTINGS_NO_CACHE = {"Cache-Control": "no-store, max-age=0"}
+_RC_TREE_STATUS_LOCK = Lock()
+_RC_TREE_DISCOVERY_STATUS: dict[str, dict] = {}
 
 
 def _guardrail_policy_metadata() -> dict[str, str]:
@@ -310,6 +318,9 @@ class RuntimeSettingsPatch(BaseModel):
     prompt_probe_user_message: str | None = None
     prompt_probe_mode_append: str | None = None
     prompt_action_review_append: str | None = None
+    rc_url_tree_max_depth: str | None = None
+    rc_url_tree_max_urls: str | None = None
+    rc_web_visit_limit: str | None = None
 
 
 @router.get("/settings/runtime")
@@ -496,65 +507,117 @@ def delete_rc_url(url: str):
 class RCDiscoverRequest(BaseModel):
     base_url: str
     max_urls: int = 10
+    max_depth: int = 2
 
 
 @router.post("/rc/discover")
 def discover_rc_urls(req: RCDiscoverRequest):
     """
-    Discover up to N sub-URLs under the same domain using OpenRouter web search.
-    This is a best-effort approximation (not a full crawler).
+    Backward-compatible endpoint. Runs synchronous URL-tree discovery.
+    Prefer /rc/tree/discover for background mode.
     """
     try:
         base = (req.base_url or "").strip()
         if not base.startswith(("http://", "https://")):
             raise ValueError("base_url must start with http:// or https://")
-        n = max(1, min(int(req.max_urls or 10), 10))
-        prompt = (
-            "Find up to {n} important child documentation pages under this base URL. "
-            "Return ONLY a JSON object: {{\"urls\": [\"https://...\", ...]}}. "
-            "Prefer URLs on the same domain and within the same docs section/path.\n"
-            "Base URL: {base}"
-        ).format(n=n, base=base)
-        res = run_web_search(query=prompt, model=effective_llm_model_main(), url=base, max_output_tokens=1200)
-        import json as _json
-        import re as _re
-        raw = (res.text or "").strip()
-        if "```" in raw:
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        urls: list[str] = []
-        try:
-            data = _json.loads(raw)
-            cand = data.get("urls") or []
-            if isinstance(cand, list):
-                urls = [str(u).strip() for u in cand if str(u).strip().startswith(("http://", "https://"))]
-        except Exception:
-            # fallback: extract urls from text/citations
-            urls = _re.findall(r"https?://\\S+", raw)
-        # Include citations as additional candidates
-        urls.extend(res.citations or [])
-        # Dedup + keep under same host
         from urllib.parse import urlparse
         host = urlparse(base).netloc
-        seen = set()
-        out: list[str] = []
-        for u in urls:
-            pu = urlparse(u)
-            if host and pu.netloc != host:
-                continue
-            if u in seen:
-                continue
-            seen.add(u)
-            out.append(u)
-            if len(out) >= n:
-                break
-        # Upsert discovered urls as disabled by default (user can toggle on)
-        for u in out:
-            database.upsert_rc_url(url=u, enabled=False)
-        return {"base_url": base, "discovered": out}
+        base_norm = normalize_url(base, host=host) or base
+        n = max(1, min(int(req.max_urls or 10), 5000))
+        d = max(0, min(int(req.max_depth or 2), 8))
+        nodes, by_depth = discover_url_tree(
+            base_url=base_norm,
+            max_urls=n,
+            max_depth=d,
+            timeout_s=10,
+        )
+        database.clear_rc_url_tree(base_norm)
+        database.upsert_rc_url_tree_nodes(main_rc_url=base_norm, nodes=nodes)
+        discovered: list[str] = [str((x or {}).get("url") or "").strip() for x in nodes if str((x or {}).get("url") or "").strip()]
+        return {"base_url": base_norm, "discovered": discovered, "depth_histogram": by_depth}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/rc/tree/discover")
+def discover_rc_url_tree_background(req: RCDiscoverRequest):
+    base = (req.base_url or "").strip()
+    if not base.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="base_url must start with http:// or https://")
+    from urllib.parse import urlparse
+    host = urlparse(base).netloc
+    base_norm = normalize_url(base, host=host) or base
+    max_urls = max(1, min(int(req.max_urls or 300), 5000))
+    max_depth = max(0, min(int(req.max_depth or 2), 8))
+
+    with _RC_TREE_STATUS_LOCK:
+        cur = _RC_TREE_DISCOVERY_STATUS.get(base_norm) or {}
+        if cur.get("status") == "running":
+            return {"base_url": base_norm, "status": "running"}
+        _RC_TREE_DISCOVERY_STATUS[base_norm] = {"status": "running", "error": None, "started_at": datetime.utcnow().isoformat()}
+
+    def _worker() -> None:
+        try:
+            nodes, by_depth = discover_url_tree(
+                base_url=base_norm,
+                max_urls=max_urls,
+                max_depth=max_depth,
+                timeout_s=10,
+            )
+            database.clear_rc_url_tree(base_norm)
+            database.upsert_rc_url_tree_nodes(main_rc_url=base_norm, nodes=nodes)
+            with _RC_TREE_STATUS_LOCK:
+                _RC_TREE_DISCOVERY_STATUS[base_norm] = {
+                    "status": "ready",
+                    "error": None,
+                    "count": len(nodes),
+                    "depth_histogram": by_depth,
+                    "finished_at": datetime.utcnow().isoformat(),
+                }
+        except Exception as e:
+            with _RC_TREE_STATUS_LOCK:
+                _RC_TREE_DISCOVERY_STATUS[base_norm] = {
+                    "status": "error",
+                    "error": str(e),
+                    "finished_at": datetime.utcnow().isoformat(),
+                }
+
+    Thread(target=_worker, daemon=True).start()
+    return {"base_url": base_norm, "status": "running", "max_urls": max_urls, "max_depth": max_depth}
+
+
+@router.get("/rc/tree/status")
+def rc_url_tree_status(base_url: str):
+    base = (base_url or "").strip()
+    if not base:
+        raise HTTPException(status_code=400, detail="base_url is required")
+    from urllib.parse import urlparse
+    host = urlparse(base).netloc
+    base_norm = normalize_url(base, host=host) or base
+    summary = database.rc_url_tree_summary(base_norm)
+    with _RC_TREE_STATUS_LOCK:
+        mem = dict(_RC_TREE_DISCOVERY_STATUS.get(base_norm) or {})
+    if not mem:
+        mem = {"status": ("ready" if int(summary.get("count") or 0) > 0 else "idle"), "error": None}
+    mem["base_url"] = base_norm
+    mem["tree_count"] = int(summary.get("count") or 0)
+    mem["tree_max_depth"] = int(summary.get("max_depth") or 0)
+    mem["tree_updated_at"] = summary.get("updated_at")
+    return mem
+
+
+@router.get("/rc/tree")
+def list_rc_url_tree(base_url: str, limit: int = 5000, offset: int = 0):
+    base = (base_url or "").strip()
+    if not base:
+        raise HTTPException(status_code=400, detail="base_url is required")
+    from urllib.parse import urlparse
+    host = urlparse(base).netloc
+    base_norm = normalize_url(base, host=host) or base
+    lim = max(1, min(int(limit or 5000), 20000))
+    off = max(0, int(offset or 0))
+    items = database.list_rc_url_tree(base_norm, limit=lim, offset=off)
+    return {"base_url": base_norm, "items": items, "limit": lim, "offset": off}
 
 
 @router.get("/interactions")
@@ -636,6 +699,26 @@ def set_dashboard_probe_action_status(interaction_id: int, action_index: int, re
     return {"ok": True}
 
 
+class DashboardActionCategoryRequest(BaseModel):
+    category: str
+
+
+@router.patch("/dashboard/probe-runs/{interaction_id}/actions/{action_index}/category")
+def set_dashboard_probe_action_category(
+    interaction_id: int, action_index: int, req: DashboardActionCategoryRequest
+):
+    """Update one dashboard action category: client_technical | client_non_technical | internal."""
+    if action_index < 0:
+        raise HTTPException(status_code=400, detail="Invalid action index.")
+    ok = database.set_csm_dashboard_action_category(interaction_id, action_index, req.category)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Interaction/action not found, not a probe run, or invalid category.",
+        )
+    return {"ok": True}
+
+
 @router.delete("/dashboard/probe-runs/{interaction_id}")
 def dismiss_dashboard_probe_run(interaction_id: int):
     """Hide an inbox review run from the Action dashboard (metadata); row remains in Run history."""
@@ -677,6 +760,8 @@ class FeedbackRequest(BaseModel):
     correction: str | None = None
     # When set, feedback is scoped to one Action dashboard card (stored in feedback metadata).
     action_index: int | None = None
+    # Optional client metadata (e.g. {"source": "run_history"}); ignored when action_index is set.
+    metadata: dict | None = None
 
 
 class OptimizeRequest(BaseModel):
@@ -718,6 +803,18 @@ class ThreadSendRequest(BaseModel):
     ui_locale: str | None = None
 
 
+@router.get("/memory/learning")
+def memory_learning():
+    """Read-only learning memory: negative constraints, positive exemplars, merged instructions (no LLM)."""
+    return database.get_agent_learning_instructions_snapshot()
+
+
+@router.delete("/memory/learning")
+def memory_learning_reset():
+    """Clear learning memory keys and delete all `agent_feedback` (Run history + Action dashboard)."""
+    return clear_distilled_learning_instructions()
+
+
 @router.post("/memory/compact")
 def memory_compact(req: CompactMemoryRequest):
     """
@@ -737,12 +834,15 @@ def memory_compact(req: CompactMemoryRequest):
 
 @router.post("/memory/feedback")
 def memory_feedback(req: FeedbackRequest):
+    verdict = (req.verdict or "").strip().lower()
     meta = None
     if req.action_index is not None:
         meta = {"source": "action_dashboard", "action_index": int(req.action_index)}
+    elif req.metadata and isinstance(req.metadata, dict):
+        meta = dict(req.metadata)
     row = database.insert_feedback(
         interaction_id=req.interaction_id,
-        verdict=req.verdict,
+        verdict=verdict,
         note=req.note,
         correction=req.correction,
         metadata=meta,

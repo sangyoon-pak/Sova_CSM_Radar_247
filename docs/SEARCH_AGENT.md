@@ -127,24 +127,34 @@ Retrieval output is a prerequisite for reliable action-card drafting when a thre
 
 - If `kb_relevant=true`, behavior is unchanged: KB snippets and source tags flow through as normal.
 - If `kb_relevant=false`, `search_product_docs` emits a KB gap marker (`KB relevance: false | reason: ...`) and does **not** pass KB source-tag blocks to the final synthesis/citation stage.
-- This rule is mode-agnostic: it applies in both `kb_first` and `always_augment`. Web follow-up policy still follows mode settings.
+- This rule is mode-agnostic: it applies in `kb_first`, `always_augment`, and `kb_only`. In `web_only`, KB retrieval is skipped entirely.
 
 ---
 
 ## 3) RC web tool (`search_rc_web`)
 
-`search_rc_web` is a **web-native tool**:
+`search_rc_web` uses **URL-tree-first retrieval** when a tree exists for the host; otherwise it uses **provider-hosted web search** per host.
 
-1. Resolve **enabled** RC URLs from Knowledge settings and **group by host** (multiple enabled URLs on the same domain are all kept — not collapsed to a single landing URL).
-2. Call provider-hosted web search (`run_web_search`) **once per host** (domain filter still comes from the host’s primary URL).
-3. **Hybrid depth:** providers only receive a **domain** filter from `url=` — not a full path. The tool therefore injects **seed URLs** (enabled paths for that host, **deeper paths first**) into the hosted-web **prompt** so retrieval is steered past generic home pages.
-4. **Quality gate (medium budget):** if the first pass looks weak (very short text, **no citations**, or explicit “not found” phrasing), the tool runs **one retry** per host with a stricter “API / reference / citations required” prompt. If the retry is still weak, it merges the two passes for transparency.
-5. Return web findings + citations only (no local KB chunk merge in this tool output).
-6. **Diagnostics:** every invocation appends a compact line `_RC web meta:_ host:…` (attempt counts, final citation count, retry/weak flags). Set env **`RC_WEB_DIAGNOSTICS=1`** for a verbose per-attempt breakdown.
+### When `rc_url_tree` has rows for the host
+
+1. Resolve **enabled** RC URLs and **group by host** as before.
+2. Load stored tree nodes (`url`, optional `title`, depth) for that host.
+3. **Semantic URL selection (LLM):** the model compares the user query to batched candidates (URL + optional title), shortlists, then picks up to **`rc_web_visit_limit`** URLs. There is no separate heuristic URL ranker; empty LLM output does not fall back to URL substring scoring.
+4. **Fetch + synthesize:** selected pages are fetched; an LLM synthesizes an answer from excerpts.
+5. **Strict drop-on-weak:** if no URLs were selected, fetch fails for all selections, or the post-synthesis **weak** gate fires, the tool returns an explicit **no-evidence** message and **does not** call provider web search for that host (no citation list on that weak drop path).
+
+### When no tree exists yet
+
+1. Same host grouping.
+2. **Agentic hosted web:** plan → `run_web_search` → bounded steps with seed URLs in prompts, then validated citations.
+
+Output is web-only (no KB merge inside this tool). **Diagnostics:** `_RC web meta:_` plus optional **`RC_WEB_DIAGNOSTICS=1`** block (includes `weak_drop_reason`, `selector_final_pick`, and strict-tree flag when applicable).
 
 Mode policy is orchestrated by `search_product_docs` in `email_agent.py`:
 - **`always_augment`**: after KB retrieval, emit a tool rule to call `search_rc_web` as a second explicit tool call.
 - **`kb_first`**: run `evaluate_kb_web_gate(query, final_matches)` on KB evidence from the same KB retrieval call; only emit web follow-up rule if gate says proceed.
+- **`kb_only`**: run KB retrieval only; never emit web follow-up.
+- **`web_only`**: skip KB retrieval and force `search_rc_web`. If no enabled RC URLs exist, return a clear unavailability message.
 - **Gate JSON failure** remains fail-open (`proceed_web: true`) to avoid silently skipping web fallback.
 
 Details and operator controls: [ARCHITECTURE.md](ARCHITECTURE.md) (retrieval section), [LLM_MODELS.md](LLM_MODELS.md) (`LLM_MODEL_KB_WEB_GATE`).

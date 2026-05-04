@@ -733,6 +733,115 @@
     .configure-details__body {
       padding: 0.75rem 0.85rem 0.85rem;
     }
+    .configure-legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+      margin: 0.5rem 0 0.85rem;
+      max-width: 52rem;
+    }
+    @media (max-width: 720px) {
+      .configure-legend-grid { grid-template-columns: 1fr; }
+    }
+    .configure-legend-box {
+      margin: 0;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .configure-legend-box--editable {
+      border-left: 4px solid #22c55e;
+    }
+    .configure-legend-box--system {
+      border-left: 4px solid var(--muted);
+    }
+    .configure-legend-box strong {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.82rem;
+      line-height: 1.35;
+    }
+    .configure-legend-box > ul {
+      margin-top: 0.35rem !important;
+    }
+    .configure-legend-box--not-editable-foot {
+      margin: 0.4rem 0 0 0;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .configure-prompt-fold {
+      margin-bottom: 0.55rem;
+      max-width: 52rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .configure-prompt-fold > summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .configure-prompt-fold > summary::-webkit-details-marker {
+      display: none;
+    }
+    .configure-prompt-fold > summary::after {
+      content: '▸';
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      opacity: 0.65;
+      margin-top: 0.12rem;
+    }
+    .configure-prompt-fold[open] > summary::after {
+      content: '▾';
+    }
+    .configure-prompt-fold__body {
+      padding: 0 0.65rem 0.65rem;
+    }
+    .configure-prompt-fold__body .configure-field {
+      margin-bottom: 0;
+      position: relative;
+    }
+    .configure-prompt-fold__body textarea {
+      min-height: 5rem;
+    }
+    .configure-sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .configure-prompt-svg-wrap {
+      margin: 0.5rem 0 1rem;
+      padding: 0.55rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface2);
+      overflow-x: auto;
+    }
+    .configure-prompt-svg {
+      display: block;
+      width: 100%;
+      max-width: 44rem;
+      height: auto;
+      margin: 0 auto;
+      color: var(--text);
+    }
     .configure-env-table {
       width: 100%;
       border-collapse: collapse;
@@ -763,7 +872,9 @@
       font-weight: 700;
       color: var(--muted);
     }
-    .configure-field input {
+    .configure-field input,
+    .configure-field select,
+    .configure-field textarea {
       padding: 0.45rem 0.55rem;
       border-radius: 8px;
       border: 1px solid var(--border);
@@ -771,6 +882,10 @@
       color: var(--text);
       font-family: var(--mono);
       font-size: 0.8rem;
+    }
+    .configure-field select.configure-timezone-select {
+      max-width: 52rem;
+      width: 100%;
     }
     .configure-env {
       display: block;
@@ -1730,8 +1845,6 @@
               <p class="configure-hint" id="cfg_base_url_hint" style="margin:0.25rem 0 0 0;font-size:0.78rem;"></p>
             </div>
             <div class="configure-field"><label for="cfg_openrouter_api_key" id="cfg_chat_api_key_label">API key</label><input id="cfg_openrouter_api_key" type="password" autocomplete="new-password" placeholder="" /><p class="configure-hint" id="cfg_chat_api_key_hint" style="margin:0.25rem 0 0 0;font-size:0.78rem;"></p></div>
-            <p class="configure-hint" style="margin-top:0.55rem;">Use a valid IANA zone (e.g. Asia/Seoul). Thread list, message times, action cards, run traces, and cron summaries all display in this timezone. LangSmith emits traces for new runs only when tracing is on and a key is set.</p>
-            <div class="configure-field"><label for="cfg_scheduler_timezone">Scheduler / UI timezone</label><input id="cfg_scheduler_timezone" type="text" placeholder="Asia/Seoul" /><span class="configure-env" id="cfg_env_scheduler_timezone"></span></div>
             <div class="configure-field"><label for="cfg_langsmith_tracing">LangSmith tracing</label>
               <select id="cfg_langsmith_tracing">
                 <option value="false">off</option>
@@ -1742,6 +1855,19 @@
             <div class="configure-field"><label for="cfg_langsmith_api_key">LangSmith API key</label><input id="cfg_langsmith_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
             <p id="cfg_langsmith_key_status" class="configure-hint"></p>
             <p id="cfg_key_status" class="configure-hint"></p>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureTimezoneBlockTitle">Scheduler &amp; display timezone</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n-html="configureTimezoneBlockHintHtml">
+              Choose a <strong>GMT offset</strong> and region below (each row maps to one standard zone id for daylight-saving correctness). Thread list, message times, action cards, run traces, cron summaries, and <strong>distilled learning “last updated”</strong> all use this zone.
+            </p>
+            <div class="configure-field">
+              <label for="cfg_scheduler_timezone" data-i18n="configureTimezoneFieldLabel">Scheduler / UI timezone</label>
+              <select id="cfg_scheduler_timezone" class="configure-timezone-select" autocomplete="off"></select>
+              <span class="configure-env" id="cfg_env_scheduler_timezone"></span>
+            </div>
           </div>
         </details>
         <details class="configure-details">
@@ -1796,16 +1922,115 @@
             <div class="configure-field"><label for="cfg_guardrail_team_guidance">Team guidance</label><textarea id="cfg_guardrail_team_guidance" rows="3" placeholder="Internal policy notes for what to surface/ignore."></textarea></div>
           </div>
         </details>
-        <details class="configure-details">
-          <summary>Agent prompts (database)</summary>
+        <details class="configure-details" open>
+          <summary data-i18n="configureAgentPromptsSurfacesTitle">Agent prompts · runtime surfaces</summary>
           <div class="configure-details__body">
-            <p class="configure-hint"><strong>Source of truth:</strong> these four prompts live in the <strong>app database</strong> (<code>app_settings</code>). The agent reads them from there at runtime. Bundled text in <code>src/agent/prompts.py</code> is only used to <strong>fill or repair</strong> empty rows.</p>
-            <p class="configure-hint" style="margin-top:0.35rem;">On server start or when you open Configure, any prompt row that is missing or blank is <strong>back-filled</strong> with the current bundled default and saved to the database. If you <strong>clear a field</strong> (all whitespace) and click <strong>Save configuration</strong>, that row is reset to the bundled default and <strong>written to the database</strong> again—so you always see the full text here after save or reload, not an invisible fallback.</p>
-            <p class="configure-hint" style="margin-top:0.35rem;"><strong>Curly braces <code>{…}</code></strong> are <strong>runtime placeholders</strong>—do not paste your vendor name or product list in place of them. Keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code> exactly as written. At run time, the first three are filled from <strong>Workbench → Agent profile</strong> (vendor, product scope, role title). <code>{learning_section}</code> is filled from <strong>learning memory</strong> (distilled from Run history feedback), not from the profile form. <strong>Everything else</strong> in the template is yours to edit—rules, tone, and instructions—without changing those four placeholder names.</p>
-            <div class="configure-field"><label for="cfg_prompt_email_agent_system_template">Main system prompt template <span class="configure-hint" id="cfg_prompt_email_agent_system_template_sync"></span></label><textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea></div>
-            <div class="configure-field"><label for="cfg_prompt_probe_user_message">Probe user message (Scan inbox / cron) <span class="configure-hint" id="cfg_prompt_probe_user_message_sync"></span></label><textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea></div>
-            <div class="configure-field"><label for="cfg_prompt_probe_mode_append">Probe mode system append <span class="configure-hint" id="cfg_prompt_probe_mode_append_sync"></span></label><textarea id="cfg_prompt_probe_mode_append" rows="8" style="width:100%;max-width:52rem;" placeholder="Appended to system prompt when probe=True."></textarea></div>
-            <div class="configure-field"><label for="cfg_prompt_action_review_append">Action review system append <span class="configure-hint" id="cfg_prompt_action_review_append_sync"></span></label><textarea id="cfg_prompt_action_review_append" rows="5" style="width:100%;max-width:52rem;" placeholder="“Discuss this action” threads."></textarea></div>
+            <p class="configure-hint" data-i18n-html="configureAgentPromptsSurfacesIntroHtml">Overview, <strong>what you can edit here</strong>, and the <strong>four database-backed templates</strong> in one place. See <strong>Effective prompts by mode</strong> below for assembled previews.</p>
+            <div class="configure-legend-grid">
+              <div class="configure-legend-box configure-legend-box--editable" data-i18n-html="configureLegendEditableHtml"></div>
+              <div class="configure-legend-box configure-legend-box--system" data-i18n-html="configureLegendNotEditableHtml"></div>
+            </div>
+            <div class="configure-prompt-svg-wrap">
+              <svg class="configure-prompt-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 286" role="img" aria-labelledby="configurePromptSvgTitle">
+                <title id="configurePromptSvgTitle">Simplified prompt and tool surfaces</title>
+                <defs>
+                  <marker id="cfgArr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                    <polygon points="0 0, 7 3.5, 0 7" fill="currentColor" opacity="0.85"/>
+                  </marker>
+                </defs>
+                <text x="360" y="22" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">Simplified runtime (one process)</text>
+                <rect x="12" y="40" width="168" height="162" rx="10" fill="currentColor" fill-opacity="0.06" stroke="#22c55e" stroke-width="1.5"/>
+                <text x="96" y="60" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">Operator-editable</text>
+                <text x="96" y="76" text-anchor="middle" font-size="9.5" fill="currentColor" opacity="0.75" font-family="ui-sans-serif,system-ui,sans-serif">app_settings · this page</text>
+                <text x="24" y="98" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">main template</text>
+                <text x="24" y="114" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">probe user msg</text>
+                <text x="24" y="130" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">probe append</text>
+                <text x="24" y="146" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">action review</text>
+                <text x="96" y="172" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">Save configuration → DB</text>
+                <line x1="180" y1="121" x2="218" y2="121" stroke="currentColor" stroke-width="1.5" marker-end="url(#cfgArr)" opacity="0.9"/>
+                <rect x="220" y="40" width="200" height="162" rx="10" fill="currentColor" fill-opacity="0.07" stroke="currentColor" stroke-width="1.2" opacity="0.95"/>
+                <text x="320" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">LangChain agent</text>
+                <text x="320" y="82" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.75" font-family="ui-sans-serif,system-ui,sans-serif">workbench_chat · inbox_probe</text>
+                <text x="320" y="98" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.75" font-family="ui-sans-serif,system-ui,sans-serif">· action_review</text>
+                <text x="320" y="126" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72" font-family="ui-sans-serif,system-ui,sans-serif">Templates above + profile</text>
+                <text x="320" y="152" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72" font-family="ui-sans-serif,system-ui,sans-serif">+ learning + guardrails</text>
+                <line x1="420" y1="121" x2="458" y2="121" stroke="currentColor" stroke-width="1.5" marker-end="url(#cfgArr)" opacity="0.9"/>
+                <rect x="460" y="40" width="248" height="162" rx="10" fill="currentColor" fill-opacity="0.06" stroke="currentColor" stroke-width="1.2"/>
+                <text x="584" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="ui-sans-serif,system-ui,sans-serif">Tools &amp; retrieval</text>
+                <text x="472" y="86" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">search_product_docs</text>
+                <text x="472" y="102" font-size="8.5" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">Knowledge base (uploads + index)</text>
+                <text x="472" y="126" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">search_rc_web</text>
+                <text x="472" y="142" font-size="8.5" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">RC docs web (enabled URLs)</text>
+                <text x="472" y="166" font-size="9.5" fill="currentColor" font-family="ui-monospace,monospace">Gmail tools</text>
+                <text x="472" y="182" font-size="8.5" fill="currentColor" opacity="0.7" font-family="ui-sans-serif,system-ui,sans-serif">fetch_inbox / thread …</text>
+                <rect x="100" y="218" width="520" height="54" rx="8" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="5 4" opacity="0.75"/>
+                <text x="360" y="240" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor" opacity="0.85" font-family="ui-sans-serif,system-ui,sans-serif">Sidecar JSON / code (not on this screen)</text>
+                <text x="360" y="258" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.72" font-family="ui-sans-serif,system-ui,sans-serif">Intent route · probe-thread intent · KB planner · rerank · KB→web gate · RC synthesis</text>
+              </svg>
+            </div>
+            <p class="configure-hint" data-i18n-html="configureAgentPromptsDbHintHtml"><strong>Source of truth:</strong> the four templates live in the <strong>app database</strong> (<code>app_settings</code>). Bundled defaults in <code>src/agent/prompts.py</code> only <strong>fill or repair</strong> empty rows.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;" data-i18n="configureAgentPromptsBackfillHint">On server start or when you open Configure, missing or blank prompt rows are back-filled from bundled defaults and saved. Clearing a field (whitespace only) and saving resets that row to the bundled default.</p>
+            <p class="configure-hint" style="margin-top:0.35rem;" data-i18n-html="configureAgentPromptsPlaceholdersHint"><strong>Curly braces <code>{…}</code></strong> are runtime placeholders — keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code>. Profile fills the first three; <code>{learning_section}</code> comes from distilled learning (Run history and Action dashboard feedback), not the profile form.</p>
+            <details class="configure-prompt-fold">
+              <summary data-i18n="configurePromptFoldMainSummary">Main system prompt template — saved in app database</summary>
+              <div class="configure-prompt-fold__body">
+                <div class="configure-field">
+                  <label for="cfg_prompt_email_agent_system_template" class="configure-sr-only" data-i18n="configurePromptTemplateLabelMain">Main system prompt template</label>
+                  <p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByMain">Used by: main LangChain agent — Workbench chat when <code>probe=false</code>, and shared base for other modes.</p>
+                  <p class="configure-hint" id="cfg_prompt_email_agent_system_template_sync_wrap" style="margin:0 0 0.35rem 0;min-height:0;"><span id="cfg_prompt_email_agent_system_template_sync"></span></p>
+                  <textarea id="cfg_prompt_email_agent_system_template" rows="12" style="width:100%;max-width:52rem;" placeholder="Template with {vendor_name}, {role_title}, …"></textarea>
+                </div>
+              </div>
+            </details>
+            <details class="configure-prompt-fold">
+              <summary data-i18n="configurePromptFoldProbeUserSummary">Probe user message (Scan inbox / cron) — saved in app database</summary>
+              <div class="configure-prompt-fold__body">
+                <div class="configure-field">
+                  <label for="cfg_prompt_probe_user_message" class="configure-sr-only" data-i18n="configurePromptTemplateLabelProbeUser">Probe user message (Scan inbox / cron)</label>
+                  <p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByProbeUser">Used by: inbox probe — human-style turn for <strong>inbox_probe</strong> mode (see Effective prompts by mode).</p>
+                  <p class="configure-hint" id="cfg_prompt_probe_user_message_sync_wrap" style="margin:0 0 0.35rem 0;min-height:0;"><span id="cfg_prompt_probe_user_message_sync"></span></p>
+                  <textarea id="cfg_prompt_probe_user_message" rows="6" style="width:100%;max-width:52rem;" placeholder="Human turn for inbox probe runs."></textarea>
+                </div>
+              </div>
+            </details>
+            <details class="configure-prompt-fold">
+              <summary data-i18n="configurePromptFoldProbeAppendSummary">Probe mode system append — saved in app database</summary>
+              <div class="configure-prompt-fold__body">
+                <div class="configure-field">
+                  <label for="cfg_prompt_probe_mode_append" class="configure-sr-only" data-i18n="configurePromptTemplateLabelProbeAppend">Probe mode system append</label>
+                  <p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByProbeAppend">Used by: <strong>inbox_probe</strong> — appended to the system prompt when the agent runs with <code>probe=true</code> (Scan inbox / cron).</p>
+                  <p class="configure-hint" id="cfg_prompt_probe_mode_append_sync_wrap" style="margin:0 0 0.35rem 0;min-height:0;"><span id="cfg_prompt_probe_mode_append_sync"></span></p>
+                  <textarea id="cfg_prompt_probe_mode_append" rows="8" style="width:100%;max-width:52rem;" placeholder="Appended to system prompt when probe=True."></textarea>
+                </div>
+              </div>
+            </details>
+            <details class="configure-prompt-fold">
+              <summary data-i18n="configurePromptFoldActionReviewSummary">Action review system append — saved in app database</summary>
+              <div class="configure-prompt-fold__body">
+                <div class="configure-field">
+                  <label for="cfg_prompt_action_review_append" class="configure-sr-only" data-i18n="configurePromptTemplateLabelActionReview">Action review system append</label>
+                  <p class="configure-hint" style="margin:0 0 0.25rem 0;" data-i18n="configurePromptUsedByActionReview">Used by: <strong>action_review</strong> — “Discuss this action” threads scoped to one dashboard card.</p>
+                  <p class="configure-hint" id="cfg_prompt_action_review_append_sync_wrap" style="margin:0 0 0.35rem 0;min-height:0;"><span id="cfg_prompt_action_review_append_sync"></span></p>
+                  <textarea id="cfg_prompt_action_review_append" rows="5" style="width:100%;max-width:52rem;" placeholder="“Discuss this action” threads."></textarea>
+                </div>
+              </div>
+            </details>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureDistilledLearningTitle">Distilled learning rules</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n-html="configureDistilledLearningHintHtml">Read-only text injected into the main template as <code>{learning_section}</code> (from Run history feedback). Separate from interaction compaction (<code>agent_memory</code>).</p>
+            <p class="configure-hint" style="margin-top:0.35rem;" data-i18n-html="configureDistilledLearningQualityHintHtml"></p>
+            <p class="configure-hint" id="cfg_distilled_learning_updated" style="margin-top:0.25rem;"></p>
+            <pre id="cfg_distilled_learning_body" style="white-space:pre-wrap;max-height:18rem;overflow:auto;font-size:0.85rem;padding:0.55rem;border:1px solid var(--border);border-radius:8px;background:var(--surface2);margin:0.35rem 0 0.5rem 0;"></pre>
+            <div class="row" style="gap:0.5rem;align-items:center;flex-wrap:wrap;">
+              <button type="button" class="ghost btn-compact" onclick="refreshDistilledLearningFromServer()" data-i18n="configureDistilledLearningReload">Reload from server</button>
+              <button type="button" class="ghost btn-compact" onclick="rerunLearningDistillation()" data-i18n="configureDistilledLearningRerun">Re-run distillation</button>
+              <button type="button" class="danger btn-compact" onclick="resetDistilledLearningRules()" data-i18n="configureDistilledLearningReset">Reset distilled rules</button>
+              <span id="cfg_distilled_learning_status" style="font-size:0.78rem;color:var(--muted);"></span>
+            </div>
+            <p class="configure-hint" style="margin-top:0.45rem;" data-i18n-html="configureDistilledLearningResetFootHtml"></p>
           </div>
         </details>
         <details class="configure-details">
@@ -2006,6 +2231,15 @@
               <option value="low" data-i18n="dashboardPriorityLow">Low</option>
             </select>
           </div>
+          <div class="filter-field">
+            <label for="dashboardCategoryFilter" data-i18n="dashboardCategoryFilter">Action category</label>
+            <select id="dashboardCategoryFilter" onchange="rerenderActionBoardFromCache()">
+              <option value="all" data-i18n="dashboardCategoryAll">All categories</option>
+              <option value="client_technical" data-i18n="dashCatClientTechnical">Client · technical</option>
+              <option value="client_non_technical" data-i18n="dashCatClientNonTechnical">Client · non-technical</option>
+              <option value="internal" data-i18n="dashCatInternal">Internal</option>
+            </select>
+          </div>
           <div class="filter-field" style="min-width:11rem;flex:1;">
             <label for="dashboardDomainFilter" data-i18n="dashboardDomainFilter">Customer domain</label>
             <input type="text" id="dashboardDomainFilter" data-i18n-placeholder="dashboardDomainPlaceholder" placeholder="Filter by domain…" oninput="scheduleRerenderActionBoard()" />
@@ -2076,6 +2310,23 @@
   </div>
 
   <div class="tab-pane" id="tab-knowledge">
+    <section style="margin-bottom:0.75rem;">
+      <div style="padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
+        <label for="rcWebRetrievalMode" style="display:block;font-size:0.88rem;margin-bottom:0.35rem;font-weight:600;" data-i18n="rcWebModeLabel">RC web retrieval mode</label>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+          <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
+            <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
+            <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
+            <option value="kb_only" data-i18n="rcWebModeKbOnly">KB only</option>
+            <option value="web_only" data-i18n="rcWebModeWebOnly">Web only</option>
+          </select>
+          <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
+          <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+        </div>
+        <p style="margin:0.5rem 0 0 0;font-size:0.78rem;color:var(--muted);line-height:1.4;" data-i18n-html="rcWebModeWarnHtml"></p>
+      </div>
+    </section>
+
     <div class="subnav">
       <button type="button" class="subnav-btn active" data-subtab="subtab-upload" onclick="showSubtab('subtab-upload')" data-i18n="subtabUpload">Upload</button>
       <button type="button" class="subnav-btn" data-subtab="subtab-rc" onclick="showSubtab('subtab-rc')" data-i18n="subtabRc">RC URLs</button>
@@ -2109,25 +2360,33 @@
     <div id="subtab-rc" class="subtab-pane">
       <section>
         <h2 data-i18n="rcTitle">RC URLs (web sources)</h2>
+        <p style="margin:0 0 0.55rem 0;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcTreeMethodHelpHtml">
+          URL-tree discovery lists same-domain doc URLs (with optional titles). For each query, an LLM picks the best-matching URLs (up to your visit limit), we fetch those pages and synthesize. If evidence is still weak, we return a clear no-evidence message and do not fall back to provider web search for that host.
+        </p>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.55rem;">
+          <label style="font-size:0.8rem;color:var(--muted);" for="rcTreeMaxDepth" data-i18n="rcTreeMaxDepthLabel">Max depth</label>
+          <input id="rcTreeMaxDepth" type="number" min="0" max="8" value="2" style="width:90px;">
+          <label style="font-size:0.8rem;color:var(--muted);" for="rcTreeMaxUrls" data-i18n="rcTreeMaxUrlsLabel">Max URLs</label>
+          <input id="rcTreeMaxUrls" type="number" min="10" max="5000" value="300" style="width:110px;">
+          <label style="font-size:0.8rem;color:var(--muted);" for="rcWebVisitLimit" data-i18n="rcWebVisitLimitLabel">Visit limit</label>
+          <input id="rcWebVisitLimit" type="number" min="1" max="50" value="5" style="width:90px;">
+          <button type="button" class="ghost" onclick="saveRcTreeSettings()" data-i18n="rcTreeSettingsSave">Save limits</button>
+          <span id="rcTreeSettingsSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+        </div>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
           <input id="rcUrlInput" type="text" data-i18n-placeholder="rcUrlPh" placeholder="https://docs.example.com/..." style="flex:1;min-width:320px;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
           <button type="button" onclick="addRcUrl()" data-i18n="rcAdd">Add</button>
-          <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Discover subpages (≤10)</button>
+          <button type="button" onclick="discoverRcUrls()" data-i18n="rcDiscover">Rebuild selected tree</button>
         </div>
         <div id="rcUrlResult" class="result-box" style="display:none; margin-top:0.75rem;"></div>
-        <div id="rcUrlList" style="margin-top:0.75rem;"></div>
-        <div style="margin-top:1rem;padding:0.65rem 0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--surface2);">
-          <label for="rcWebRetrievalMode" style="display:block;font-size:0.88rem;margin-bottom:0.35rem;font-weight:600;" data-i18n="rcWebModeLabel">RC web retrieval mode</label>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-            <select id="rcWebRetrievalMode" style="padding:0.45rem 0.5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);">
-              <option value="kb_first" data-i18n="rcWebModeKbFirst">KB first (gate may skip web)</option>
-              <option value="always_augment" data-i18n="rcWebModeAugment">Always augment with web</option>
-            </select>
-            <button type="button" onclick="saveRcWebRetrievalSettings()" data-i18n="rcWebModeSave">Save</button>
-            <span id="rcWebModeSaveStatus" style="font-size:0.78rem;color:var(--muted);"></span>
-          </div>
-          <p style="margin:0.5rem 0 0 0;font-size:0.78rem;color:var(--muted);line-height:1.4;" data-i18n-html="rcWebModeWarnHtml"></p>
+        <div style="margin-top:0.55rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <label for="rcTreeMainUrlSelect" style="font-size:0.8rem;color:var(--muted);" data-i18n="rcTreeMainUrlLabel">Tree main URL</label>
+          <select id="rcTreeMainUrlSelect" onchange="loadRcTreePanel()" style="min-width:360px;"></select>
+          <span id="rcTreeStatus" style="font-size:0.78rem;color:var(--muted);"></span>
+          <button type="button" class="ghost btn-compact" onclick="loadRcTreePanel()" data-i18n="rcTreeRefresh">Refresh tree</button>
         </div>
+        <div id="rcTreeViewer" class="result-box" style="display:block; max-height:260px; overflow:auto; margin-top:0.45rem;"></div>
+        <div id="rcUrlList" style="margin-top:0.75rem;"></div>
         <p style="margin-top:0.75rem;color:var(--muted);font-size:0.82rem;line-height:1.45;" data-i18n-html="rcHintHtml">
           When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.
         </p>
@@ -2409,16 +2668,30 @@
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web sources)',
+        rcTreeMethodHelpHtml: 'Purpose: stable, query-aligned RC docs. We build a same-domain URL tree from your main URL; each query uses an LLM to pick the best-matching URLs (visit limit), then we fetch and synthesize. Weak or empty evidence returns an explicit no-evidence message—no provider web fallback for that host.',
+        rcTreeMaxDepthLabel: 'Max depth',
+        rcTreeMaxUrlsLabel: 'Max URLs',
+        rcWebVisitLimitLabel: 'Visit limit',
+        rcTreeSettingsSave: 'Save limits',
+        rcTreeMainUrlLabel: 'Tree main URL',
+        rcTreeRefresh: 'Refresh tree',
+        rcTreeIdle: 'Tree status: idle',
+        rcTreeRunning: 'Tree status: building…',
+        rcTreeReady: 'Tree ready: {count} urls, max depth {depth}',
+        rcTreeError: 'Tree error: {msg}',
+        rcTreeNoData: 'No discovered URL tree yet.',
         rcUrlPh: 'https://docs.example.com/…',
         rcAdd: 'Add',
-        rcDiscover: 'Discover subpages (≤10)',
+        rcDiscover: 'Rebuild selected tree',
         rcHintHtml: 'When an RC URL is <strong>enabled</strong>, the agent may use web search for that domain during runs.',
         rcWebModeLabel: 'RC web retrieval mode',
         rcWebModeKbFirst: 'KB first (LLM gate may skip web)',
         rcWebModeAugment: 'Always augment with web',
+        rcWebModeKbOnly: 'KB only',
+        rcWebModeWebOnly: 'Web only',
         rcWebModeSave: 'Save',
         rcWebModeWarnHtml:
-          '<strong>Always augment</strong> runs hosted web after KB on every call → <strong>higher token and inference cost</strong> (provider billing). <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
+          '<strong>KB only</strong> never runs hosted web. <strong>Web only</strong> skips KB and requires enabled RC URLs. <strong>Always augment</strong> runs hosted web after KB on every call → higher token and inference cost. <strong>KB first</strong> uses a small JSON gate to skip web when local snippets look sufficient.',
         rcWebModeSaving: 'Saving…',
         rcWebModeSaved: 'Saved.',
         rcWebModeSaveFail: 'Save failed',
@@ -2445,7 +2718,8 @@
         optVacuum: 'Vacuum database',
         optPurgeMemory: 'Purge memory table',
         maintenanceStatsFail: 'Could not load database stats.',
-        historyTip: 'Tip: expand a run and submit feedback. Feedback updates learning memory.',
+        historyTip:
+          'Tip: expand a run and use OK / NG / Good / Noise. Each click saves a short note so it can be distilled into learning rules. Open Configure → Distilled learning rules to read or re-run distillation.',
         historyTriggerFilter: 'Run type',
         historyTriggerAll: 'All',
         historyTriggerCronAdmin: 'Cron admin (Workbench)',
@@ -2491,6 +2765,7 @@
         clearHistoryConfirm: 'Delete all run history?',
         compactConfirm: 'Summarize and trim interactions older than 7 days?',
         feedbackSaved: 'Feedback saved. Learning memory updated.',
+        feedbackDistillFailed: 'Warning: distilling learning rules failed (feedback is still saved): ',
         feedbackFail: 'Could not save feedback.',
         optimizeFail: 'Optimize failed.',
         deleteFail: 'Delete failed.',
@@ -2501,7 +2776,8 @@
         actionBoardTitle: 'Action dashboard',
         actionBoardLead: 'Structured actions for CSM review after each inbox probe. Full model output stays in Run history.',
         actionBoardRefresh: 'Refresh',
-        actionBoardHelp: 'Card notes are sent to learning memory; Discuss opens a scoped Workbench thread.',
+        actionBoardHelp:
+          'Card feedback is saved as corrections (negative learning rules). Discuss opens a scoped Workbench thread.',
         actionBoardEmpty: 'No inbox reviews yet. Run Scan inbox, a thread probe, or a cron job.',
         actionBoardFail: 'Could not load action board',
         dashboardFilterSource: 'Source',
@@ -2541,8 +2817,9 @@
         dashboardClientEmail: 'Client email',
         dashboardEmailSubject: 'Subject',
         dashboardFeedbackLabel: 'Give feedback for Sova to learn',
-        dashboardFeedbackPlaceholder: 'What should improve for this kind of action? Tell your agent to learn from your feedback.',
-        dashboardFeedbackSend: 'Send note',
+        dashboardFeedbackPlaceholder:
+          'What should change or be avoided for actions like this? (Saved as a correction — updates constraint rules, not “endorsed examples”.)',
+        dashboardFeedbackSend: 'Send correction',
         dashboardFeedbackSaved: 'Feedback saved.',
         dashboardFeedbackFail: 'Could not save feedback',
         dashboardFeedbackEmpty: 'Enter a short note first.',
@@ -2571,6 +2848,10 @@
         dashboardDiscussFail: 'Could not open action chat',
         dashboardActionStatusLabel: 'Action status',
         dashboardStatusUpdateFail: 'Could not update action status',
+        dashboardCategoryFilter: 'Action category',
+        dashboardCategoryAll: 'All categories',
+        dashboardActionCategoryLabel: 'Category',
+        dashboardCategoryUpdateFail: 'Could not update category',
         dashboardThreadTitle: 'Thread',
         dashboardClientId: 'Client',
         dashboardClientDomain: 'Domain',
@@ -2581,9 +2862,67 @@
         dashboardGmailThread: 'Gmail thread',
         dashboardRunStatusRunning: 'Running',
         dashboardRunStatusQueued: 'Queued',
-        dashCatGeneral: 'General',
-        dashCatProductTechnical: 'Product · technical',
-        dashCatAccount: 'Account',
+        dashCatClientTechnical: 'Client · technical',
+        dashCatClientNonTechnical: 'Client · non-technical',
+        dashCatInternal: 'Internal',
+        dashCatGeneral: 'General (legacy)',
+        dashCatProductTechnical: 'Product · technical (legacy)',
+        dashCatAccount: 'Account (legacy)',
+        configureAgentPromptsSurfacesTitle: 'Agent prompts · runtime surfaces',
+        configureAgentPromptsSurfacesIntroHtml:
+          'Single place for the <strong>visual map</strong>, <strong>what is editable vs not</strong>, and the <strong>four prompt templates</strong> stored in the app database. Open <strong>Effective prompts by mode</strong> below for assembled previews.',
+        configureTimezoneBlockTitle: 'Scheduler & display timezone',
+        configureTimezoneBlockHintHtml:
+          'Choose a <strong>GMT offset</strong> and region below (each row maps to one standard zone id for daylight-saving correctness). Thread list, message times, action cards, run traces, cron summaries, and <strong>distilled learning “last updated”</strong> all use this zone.',
+        configureTimezoneFieldLabel: 'Scheduler / UI timezone',
+        configureTimezoneUnknownSaved: 'saved value — pick a listed zone',
+        configureLegendEditableHtml:
+          '<strong>Editable on this screen</strong><ul><li>The four <code>prompt_*</code> text areas (main system template, probe user message, probe mode append, action review append)</li><li>Saved to SQLite <code>app_settings</code> when you click <strong>Save configuration</strong></li><li><strong>Distilled learning</strong> is not typed here — it comes from Run history / Action dashboard feedback; see <strong>Distilled learning rules</strong> below</li></ul>',
+        configureLegendNotEditableHtml:
+          '<strong>Not editable in these text areas</strong><ul><li><strong>Code</strong>: intent routing, probe-thread intent classifier, KB subquery planner, rerank/sufficiency, KB→web gate, RC web synthesis — in modules such as <code>email_agent.py</code>, <code>search_agent.py</code>, <code>kb_web_gate.py</code>, <code>rc_web_search.py</code> (changes need a deploy).</li><li><strong>Other Configure sections</strong>: model roles, <code>RETRIEVAL_RANKING_POLICY</code>, guardrails, Gmail paths.</li><li><strong>Knowledge tab</strong>: uploads, reindex, RC URLs, <code>rc_web_retrieval_mode</code>.</li></ul><div class="configure-legend-box--not-editable-foot">Full map: <code>docs/ARCHITECTURE.md</code></div>',
+        configureAgentPromptsDbHintHtml:
+          '<strong>Source of truth:</strong> the four templates live in the <strong>app database</strong> (<code>app_settings</code>). Bundled text in <code>src/agent/prompts.py</code> only <strong>fills or repairs</strong> empty rows.',
+        configureAgentPromptsBackfillHint:
+          'On server start or when you open Configure, missing or blank prompt rows are back-filled from bundled defaults and saved. Clearing a field (whitespace only) and saving resets that row to the bundled default.',
+        configureAgentPromptsPlaceholdersHint:
+          '<strong>Curly braces <code>{…}</code></strong> are runtime placeholders — keep <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, and <code>{learning_section}</code>. Profile fills the first three; <code>{learning_section}</code> comes from distilled learning (Run history and Action dashboard feedback), not the profile form.',
+        configurePromptFoldMainSummary: 'Main system prompt template — saved in app database',
+        configurePromptFoldProbeUserSummary: 'Probe user message (Scan inbox / cron) — saved in app database',
+        configurePromptFoldProbeAppendSummary: 'Probe mode system append — saved in app database',
+        configurePromptFoldActionReviewSummary: 'Action review system append — saved in app database',
+        configurePromptTemplateLabelMain: 'Main system prompt template',
+        configurePromptTemplateLabelProbeUser: 'Probe user message (Scan inbox / cron)',
+        configurePromptTemplateLabelProbeAppend: 'Probe mode system append',
+        configurePromptTemplateLabelActionReview: 'Action review system append',
+        configurePromptBundledUntilSave: 'Using bundled default until you save to the app database.',
+        configurePromptUsedByMain:
+          'Used by: main LangChain agent — Workbench chat when probe=false, and shared base for other modes.',
+        configurePromptUsedByProbeUser:
+          'Used by: inbox probe — human-style turn for inbox_probe mode (see Effective prompts by mode).',
+        configurePromptUsedByProbeAppend:
+          'Used by: inbox_probe — appended to the system prompt when the agent runs with probe=true (Scan inbox / cron).',
+        configurePromptUsedByActionReview:
+          'Used by: action_review — “Discuss this action” threads scoped to one dashboard card.',
+        configureDistilledLearningTitle: 'Distilled learning rules',
+        configureDistilledLearningHintHtml:
+          'Read-only text injected into the main template as <code>{learning_section}</code>. <strong>Incorrect / noisy</strong> feedback and action-card corrections are <strong>LLM-distilled</strong> into constraint bullets (<code>agent_learning_constraints</code>). <strong>Useful / correct</strong> feedback becomes <strong>verbatim excerpts</strong> from the saved run output (<code>agent_learning_exemplars</code>) — no second distill pass. Rows need a <strong>note</strong> or <strong>correction</strong> in <code>agent_feedback</code>. Separate from interaction compaction (<code>agent_memory</code>).',
+        configureDistilledLearningQualityHintHtml:
+          '<strong>Sanity check:</strong> negative distillation can still over-generalize — keep feedback specific (sender, subject, card title). Endorsed examples are truncated excerpts only. If results look wrong, <strong>Reset</strong> and re-submit feedback, then <strong>Re-run distillation</strong>.',
+        configureDistilledLearningEmpty: '(No learning memory yet. Submit feedback from Run history or the Action dashboard.)',
+        configureDistilledLearningReload: 'Reload from server',
+        configureDistilledLearningRerun: 'Re-run distillation',
+        configureDistilledLearningReset: 'Reset distilled rules',
+        configureDistilledLearningResetConfirm:
+          'Delete ALL saved learning feedback (Run history + Action dashboard) and clear distilled rules? This cannot be undone. The system prompt learning block will be empty until you submit new feedback and re-run distillation.',
+        configureDistilledLearningResetDone: 'Reset complete: cleared distilled rules and removed {n} feedback row(s) (Run history + Action dashboard).',
+        configureDistilledLearningResetFail: 'Reset failed: ',
+        configureDistilledLearningResetFootHtml:
+          '<strong>Reset</strong> clears <code>agent_learning_constraints</code>, <code>agent_learning_exemplars</code>, legacy <code>agent_learning_instructions</code>, and deletes every row in <code>agent_feedback</code>. Run history <strong>interaction</strong> rows are not deleted. Use <strong>Re-run distillation</strong> after new feedback.',
+        configureDistilledLearningUpdated: 'Last updated: {t}',
+        configureDistilledLearningRerunning: 'Running distillation…',
+        configureDistilledLearningRerunDone: 'Distillation finished.',
+        configureDistilledLearningFail: 'Could not load: ',
+        configureDistilledLearningRerunFail: 'Distillation failed: ',
         relReasonModelIncludeDashboard: 'Model flagged include on dashboard',
         relReasonPermissiveAmbiguous: 'Permissive mode — ambiguous intent surfaced',
         relReasonStrictAmbiguous: 'Strict mode — ambiguous intent not surfaced as action',
@@ -2754,16 +3093,30 @@
         subtabUpload: 'Upload',
         subtabRc: 'RC URLs',
         rcTitle: 'RC URLs (web)',
+        rcTreeMethodHelpHtml: '목적: 질의에 맞는 RC 문서 안정 확보. 메인 URL로 동일 도메인 URL 트리를 구축하고, 질의마다 LLM이 최적 URL(방문 제한)을 선택한 뒤 페이지를 가져와 요약합니다. 증거가 약하거나 비면 명시적 무증거 메시지를 반환하며 해당 호스트에 대해 제공자 웹 검색으로 대체하지 않습니다.',
+        rcTreeMaxDepthLabel: '최대 depth',
+        rcTreeMaxUrlsLabel: '최대 URL 수',
+        rcWebVisitLimitLabel: '방문 URL 제한',
+        rcTreeSettingsSave: '제한 저장',
+        rcTreeMainUrlLabel: '트리 기준 URL',
+        rcTreeRefresh: '트리 새로고침',
+        rcTreeIdle: '트리 상태: 대기',
+        rcTreeRunning: '트리 상태: 생성 중…',
+        rcTreeReady: '트리 준비됨: URL {count}개, 최대 depth {depth}',
+        rcTreeError: '트리 오류: {msg}',
+        rcTreeNoData: '아직 생성된 URL 트리가 없습니다.',
         rcUrlPh: 'https://docs.example.com/…',
         rcAdd: 'Add',
-        rcDiscover: 'Discover subpages (≤10)',
+        rcDiscover: '선택 트리 재생성',
         rcHintHtml: 'RC URL이 <strong>enabled</strong>면 Run 중 해당 도메인 web search를 쓸 수 있어요.',
         rcWebModeLabel: 'RC 웹 검색 모드',
         rcWebModeKbFirst: 'KB 우선 (게이트가 web 생략 가능)',
         rcWebModeAugment: '항상 web으로 보강',
+        rcWebModeKbOnly: 'KB만 사용',
+        rcWebModeWebOnly: 'Web만 사용',
         rcWebModeSave: '저장',
         rcWebModeWarnHtml:
-          '<strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 <strong>토큰·추론 비용이 커집니다</strong>(과금). <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
+          '<strong>KB만 사용</strong>은 hosted web을 실행하지 않습니다. <strong>Web만 사용</strong>은 KB를 건너뛰며 활성화된 RC URL이 필요합니다. <strong>항상 보강</strong>은 호출마다 KB 뒤에 hosted web을 돌려 토큰·추론 비용이 커집니다. <strong>KB 우선</strong>은 로컬 스니펫이 충분해 보이면 web을 건너뛰는 JSON 게이트를 씁니다.',
         rcWebModeSaving: '저장 중…',
         rcWebModeSaved: '저장됨.',
         rcWebModeSaveFail: '저장 실패',
@@ -2793,7 +3146,8 @@
         optVacuum: 'VACUUM',
         optPurgeMemory: 'Memory 테이블 purge',
         maintenanceStatsFail: 'DB stats 로드 실패',
-        historyTip: 'Run을 펼쳐 피드백 — learning memory 반영',
+        historyTip:
+          '팁: Run을 펼쳐 OK/NG/Good/Noise를 누르면 짧은 메모가 함께 저장되어 정제(learning rules)에 포함됩니다. 설정 → Distilled learning rules에서 확인하거나 정제를 다시 실행하세요.',
         historyTriggerFilter: 'Run 유형',
         historyTriggerAll: '전체',
         historyTriggerCronAdmin: 'Cron 관리 (Workbench)',
@@ -2839,6 +3193,7 @@
         clearHistoryConfirm: 'Run history 전부 삭제?',
         compactConfirm: '7일 지난 interaction 요약·정리?',
         feedbackSaved: 'Saved. Learning memory 갱신됨',
+        feedbackDistillFailed: '알림: 학습 규칙 정제에 실패했습니다(피드백은 저장됨): ',
         feedbackFail: '피드백 저장 실패',
         optimizeFail: 'Optimize 실패',
         deleteFail: '삭제 실패',
@@ -2849,7 +3204,7 @@
         actionBoardTitle: 'Action dashboard',
         actionBoardLead: 'Inbox Probe마다 CSM 검토용 구조화 액션이 쌓입니다. 전체 모델 출력은 Run history에 있습니다.',
         actionBoardRefresh: '새로고침',
-        actionBoardHelp: '카드 메모는 학습 메모리로 저장되며, 논의는 Workbench 스레드로 열립니다.',
+        actionBoardHelp: '카드 피드백은 수정(제약 규칙)으로 저장됩니다. 논의는 Workbench 스레드로 열립니다.',
         actionBoardEmpty: '아직 inbox 리뷰가 없습니다. Inbox 스캔, 스레드 Probe, 또는 Cron을 실행하세요.',
         actionBoardFail: 'Action dashboard를 불러오지 못했습니다',
         dashboardFilterSource: '출처',
@@ -2889,8 +3244,9 @@
         dashboardClientEmail: '고객 이메일',
         dashboardEmailSubject: '제목',
         dashboardFeedbackLabel: 'Sova 학습을 위한 피드백 남기기',
-        dashboardFeedbackPlaceholder: '이 유형의 액션에서 무엇을 바꾸면 좋을지 적어 주세요. 에이전트가 이 피드백에서 학습하도록 알려주세요.',
-        dashboardFeedbackSend: '보내기',
+        dashboardFeedbackPlaceholder:
+          '이 유형의 액션에서 바꾸거나 피하고 싶은 점을 적어 주세요. (수정 피드백으로 저장되어 제약 규칙에 반영되며, “추천 예시”로 분류되지 않습니다.)',
+        dashboardFeedbackSend: '수정 반영',
         dashboardFeedbackSaved: '피드백을 저장했습니다.',
         dashboardFeedbackFail: '피드백을 저장하지 못했습니다',
         dashboardFeedbackEmpty: '메모를 먼저 입력하세요.',
@@ -2929,9 +3285,96 @@
         dashboardGmailThread: 'Gmail 스레드',
         dashboardRunStatusRunning: '실행 중',
         dashboardRunStatusQueued: '대기 중',
-        dashCatGeneral: '일반',
-        dashCatProductTechnical: '제품 · 기술',
-        dashCatAccount: '계정',
+        dashCatClientTechnical: '고객 · 기술',
+        dashCatClientNonTechnical: '고객 · 비기술',
+        dashCatInternal: '내부',
+        dashCatGeneral: '일반(레거시)',
+        dashCatProductTechnical: '제품 · 기술(레거시)',
+        dashCatAccount: '계정(레거시)',
+        dashboardCategoryFilter: '액션 분류',
+        dashboardCategoryAll: '모든 분류',
+        dashboardActionCategoryLabel: '분류',
+        dashboardCategoryUpdateFail: '분류를 바꾸지 못했습니다',
+        configureAgentPromptsSurfacesTitle: '에이전트 프롬프트 · 런타임 표면',
+        configureAgentPromptsSurfacesIntroHtml:
+          '<strong>다이어그램</strong>, <strong>편집 가능/불가 구분</strong>, <strong>DB에 저장된 네 프롬프트</strong>를 한 섹션에 모았습니다. 조합된 미리보기는 아래 <strong>Effective prompts by mode</strong>를 여세요.',
+        configureTimezoneBlockTitle: '스케줄러·표시 시간대',
+        configureTimezoneBlockHintHtml:
+          '아래에서 <strong>GMT(UTC) 기준 오프셋</strong>과 주요 지역을 고르세요(각 행은 서머타임을 반영하는 표준 구역 id로 저장됩니다). 스레드 목록, 메시지 시각, 액션 카드, 실행 기록, Cron 요약, <strong>정제된 학습 규칙의 “마지막 갱신”</strong> 표시에 모두 이 시간대를 씁니다.',
+        configureTimezoneFieldLabel: '스케줄러 / UI 시간대',
+        configureTimezoneUnknownSaved: '저장된 값 — 목록에서 선택',
+        configureTimezoneChoiceLabelsKo: {
+          'Pacific/Midway': 'UTC−11 — 미국령 사모아(미드웨이)',
+          'Pacific/Honolulu': 'UTC−10 — 하와이(미)',
+          'America/Anchorage': 'UTC−9 — 알래스카(미)',
+          'America/Los_Angeles': 'UTC−8/−7 — 미·캐나다 태평양(로스앤젤레스, 밴쿠버)',
+          'America/Denver': 'UTC−7/−6 — 미·캐나다 산악(덴버)',
+          'America/Chicago': 'UTC−6/−5 — 미·캐나다 중부(시카고)',
+          'America/New_York': 'UTC−5/−4 — 미·캐나다 동부(뉴욕, 토론토)',
+          'America/Halifax': 'UTC−4/−3 — 캐나다 대서양(핼리팩스)',
+          'America/Sao_Paulo': 'UTC−3 — 브라질·아르헨티나 등(상파울루)',
+          'Atlantic/Azores': 'UTC−1 — 아조레스(포르투갈)',
+          'UTC': 'UTC±0 — 협정 세계시(UTC)',
+          'Europe/London': 'UTC±0/+1 — 영국·아일랜드(런던)',
+          'Europe/Paris': 'UTC+1/+2 — 서·중유럽(파리, 베를린, 로마)',
+          'Africa/Johannesburg': 'UTC+2 — 남아프리카 등(요하네스버그)',
+          'Asia/Riyadh': 'UTC+3 — 사우디 등(리야드)',
+          'Asia/Dubai': 'UTC+4 — UAE(두바이)',
+          'Asia/Kolkata': 'UTC+5:30 — 인도·스리랑카(콜카타)',
+          'Asia/Bangkok': 'UTC+7 — 태국·베트남 등(방콕)',
+          'Asia/Shanghai': 'UTC+8 — 중국·싱가포르·홍콩·필리핀 등(상하이)',
+          'Asia/Seoul': 'UTC+9 — 한국·일본(서울, 도쿄)',
+          'Australia/Sydney': 'UTC+10/+11 — 호주 동부(시드니)',
+          'Pacific/Auckland': 'UTC+12/+13 — 뉴질랜드(오클랜드)',
+          'America/Phoenix': 'UTC−7(일광절약 없음) — 미국 애리조나(피닉스)',
+        },
+        configureLegendEditableHtml:
+          '<strong>이 화면에서 편집 가능</strong><ul><li>아래 네 <code>prompt_*</code> 텍스트 영역(메인 시스템, 프로브 사용자 메시지, 프로브 모드 덧붙임, 액션 리뷰 덧붙임)</li><li><strong>Save configuration</strong> 시 SQLite <code>app_settings</code>에 저장</li><li><strong>정제된 학습(Distilled learning)</strong>은 여기서 입력하지 않으며 Run history / Action dashboard 피드백에서 생성; 아래 <strong>Distilled learning rules</strong> 참고</li></ul>',
+        configureLegendNotEditableHtml:
+          '<strong>이 텍스트 영역으로는 편집되지 않음</strong><ul><li><strong>코드</strong>: 인텐트 라우팅, 프로브 스레드 인텐트 분류, KB 서브쿼리 플래너, 리랭크/충분성, KB→웹 게이트, RC 웹 합성 등 — <code>email_agent.py</code>, <code>search_agent.py</code>, <code>kb_web_gate.py</code>, <code>rc_web_search.py</code> 등(배포가 필요).</li><li><strong>설정의 다른 섹션</strong>: 모델 역할, <code>RETRIEVAL_RANKING_POLICY</code>, 가드레일, Gmail 경로.</li><li><strong>Knowledge 탭</strong>: 업로드, 재색인, RC URL, <code>rc_web_retrieval_mode</code>.</li></ul><div class="configure-legend-box--not-editable-foot">전체 구조: <code>docs/ARCHITECTURE.md</code></div>',
+        configureAgentPromptsDbHintHtml:
+          '<strong>저장 원본:</strong> 네 템플릿은 <strong>앱 DB</strong>(<code>app_settings</code>)에 있습니다. <code>src/agent/prompts.py</code>의 번들 문구는 <strong>비어 있을 때만 채움/복구</strong>에 쓰입니다.',
+        configureAgentPromptsBackfillHint:
+          '서버 기동 또는 Configure를 열 때 비어 있는 프롬프트 행은 번들 기본값으로 채워져 저장됩니다. 필드를 비우고(공백만) 저장하면 해당 행이 번들 기본값으로 초기화됩니다.',
+        configureAgentPromptsPlaceholdersHint:
+          '<strong>중괄호 <code>{…}</code></strong>는 런타임 플레이스홀더입니다. <code>{vendor_name}</code>, <code>{product_context}</code>, <code>{role_title}</code>, <code>{learning_section}</code> 이름을 유지하세요. 앞 세 개는 프로필에서, <code>{learning_section}</code>은 정제된 학습(Run history·Action dashboard 피드백)에서 채워집니다.',
+        configurePromptFoldMainSummary: '메인 시스템 프롬프트 템플릿 — 앱 DB에 저장',
+        configurePromptFoldProbeUserSummary: '프로브 사용자 메시지(인박스 스캔 / cron) — 앱 DB에 저장',
+        configurePromptFoldProbeAppendSummary: '프로브 모드 시스템 덧붙임 — 앱 DB에 저장',
+        configurePromptFoldActionReviewSummary: '액션 리뷰 시스템 덧붙임 — 앱 DB에 저장',
+        configurePromptTemplateLabelMain: '메인 시스템 프롬프트 템플릿',
+        configurePromptTemplateLabelProbeUser: '프로브 사용자 메시지(인박스 스캔 / cron)',
+        configurePromptTemplateLabelProbeAppend: '프로브 모드 시스템 덧붙임',
+        configurePromptTemplateLabelActionReview: '액션 리뷰 시스템 덧붙임',
+        configurePromptBundledUntilSave: '저장 전까지는 번들 기본값이 적용될 수 있습니다.',
+        configurePromptUsedByMain:
+          '사용처: 메인 LangChain 에이전트 — probe=false일 때 Workbench 채팅, 기타 모드의 공통 베이스.',
+        configurePromptUsedByProbeUser:
+          '사용처: 인박스 프로브 — inbox_probe 모드의 사람 발화 턴(Effective prompts by mode 참고).',
+        configurePromptUsedByProbeAppend:
+          '사용처: inbox_probe — 에이전트가 probe=true로 실행될 때(Scan inbox / cron) 시스템 프롬프트에 덧붙는 문구.',
+        configurePromptUsedByActionReview:
+          '사용처: action_review — 대시보드 카드 하나에 한정된 “이 작업 논의” 스레드.',
+        configureDistilledLearningTitle: '정제된 학습 규칙',
+        configureDistilledLearningHintHtml:
+          '메인 템플릿의 <code>{learning_section}</code>에 주입되는 읽기 전용 텍스트입니다. <strong>Incorrect / noisy</strong> 및 카드 수정 피드백은 LLM으로 <strong>제약 불릿</strong>(<code>agent_learning_constraints</code>)으로 정제하고, <strong>Useful / correct</strong>는 저장된 Run 출력의 <strong>발췌</strong>(<code>agent_learning_exemplars</code>)로만 반영합니다(별도 정제 없음). DB에는 <strong>note</strong> 또는 <strong>correction</strong>이 있는 <code>agent_feedback</code> 행만 사용합니다. 상호작용 요약(<code>agent_memory</code>)과는 별개입니다.',
+        configureDistilledLearningQualityHintHtml:
+          '<strong>점검:</strong> 부정 피드백 정제는 여전히 과일반화될 수 있으니 피드백은 구체적으로(발신자·제목 등) 작성하세요. 추천 예시는 발췌·길이 제한만 적용됩니다. 이상하면 <strong>Reset</strong> 후 피드백을 다시 남기고 <strong>정제 다시 실행</strong>하세요.',
+        configureDistilledLearningEmpty: '(아직 학습 메모리가 없습니다. Run history 또는 Action dashboard에서 피드백을 남기세요.)',
+        configureDistilledLearningReload: '서버에서 다시 불러오기',
+        configureDistilledLearningRerun: '정제(distillation) 다시 실행',
+        configureDistilledLearningUpdated: '마지막 갱신: {t}',
+        configureDistilledLearningRerunning: '정제 실행 중…',
+        configureDistilledLearningRerunDone: '정제가 완료되었습니다.',
+        configureDistilledLearningFail: '불러오기 실패: ',
+        configureDistilledLearningRerunFail: '정제 실패: ',
+        configureDistilledLearningReset: '정제 규칙 초기화',
+        configureDistilledLearningResetConfirm:
+          '저장된 학습 피드백(Run history + Action dashboard)을 모두 삭제하고 정제 규칙도 지울까요? 되돌릴 수 없습니다. 새 피드백 후 정제를 다시 실행해야 학습 블록이 채워집니다.',
+        configureDistilledLearningResetDone: '초기화 완료: 정제 규칙을 지우고 피드백 {n}건을 삭제했습니다(Run history + Action dashboard).',
+        configureDistilledLearningResetFail: '초기화 실패: ',
+        configureDistilledLearningResetFootHtml:
+          '<strong>Reset</strong>은 <code>agent_learning_constraints</code>, <code>agent_learning_exemplars</code>, 레거시 <code>agent_learning_instructions</code>를 비우고 <code>agent_feedback</code>의 모든 행을 삭제합니다. Run history의 <strong>interaction</strong> 기록은 삭제되지 않습니다. 새 피드백 후 <strong>정제 다시 실행</strong>을 사용하세요.',
         relReasonModelIncludeDashboard: '모델이 대시보드 포함으로 표시',
         relReasonPermissiveAmbiguous: '허용 모드 — 모호한 의도도 노출',
         relReasonStrictAmbiguous: '엄격 모드 — 모호한 의도는 액션으로 노출 안 함',
@@ -3036,6 +3479,13 @@
         dpf.options[3].text = uiText('dashboardPriorityMedium');
         dpf.options[4].text = uiText('dashboardPriorityLow');
       }
+      const dcf = document.getElementById('dashboardCategoryFilter');
+      if (dcf && dcf.options && dcf.options.length >= 4) {
+        dcf.options[0].text = uiText('dashboardCategoryAll');
+        dcf.options[1].text = uiText('dashCatClientTechnical');
+        dcf.options[2].text = uiText('dashCatClientNonTechnical');
+        dcf.options[3].text = uiText('dashCatInternal');
+      }
       const das = document.getElementById('dashboardActionSort');
       if (das && das.options && das.options.length >= 5) {
         das.options[0].text = uiText('dashboardSortUpdatedDesc');
@@ -3064,6 +3514,7 @@
           if (k && en[k] !== undefined) node.setAttribute('title', en[k]);
         });
       }
+      refreshSchedulerTimezoneSelectLabels();
     }
 
     function setUiLang(code) {
@@ -3101,6 +3552,86 @@
     /** Default matches server `SCHEDULER_TIMEZONE` / Configure until runtime settings load. */
     const DEFAULT_DISPLAY_TIMEZONE = 'Asia/Seoul';
     let _configuredTimeZone = DEFAULT_DISPLAY_TIMEZONE;
+
+    /**
+     * Curated display rows: GMT/UTC offset + cities (label). `iana` is what we store (ZoneInfo-safe).
+     * Offsets shown are typical; many rows use DST so slash means winter/summer in that zone.
+     */
+    const SCHEDULER_TIMEZONE_CHOICES = [
+      { iana: 'Pacific/Midway', labelEn: 'UTC−11 — American Samoa (Midway)' },
+      { iana: 'Pacific/Honolulu', labelEn: 'UTC−10 — Hawaii (US)' },
+      { iana: 'America/Anchorage', labelEn: 'UTC−9 — Alaska (US)' },
+      { iana: 'America/Los_Angeles', labelEn: 'UTC−8 / −7 — US & Canada Pacific (Los Angeles, Vancouver)' },
+      { iana: 'America/Phoenix', labelEn: 'UTC−7 (no DST) — US Arizona (Phoenix)' },
+      { iana: 'America/Denver', labelEn: 'UTC−7 / −6 — US & Canada Mountain (Denver)' },
+      { iana: 'America/Chicago', labelEn: 'UTC−6 / −5 — US & Canada Central (Chicago)' },
+      { iana: 'America/New_York', labelEn: 'UTC−5 / −4 — US & Canada Eastern (New York, Toronto)' },
+      { iana: 'America/Halifax', labelEn: 'UTC−4 / −3 — Canada Atlantic (Halifax)' },
+      { iana: 'America/Sao_Paulo', labelEn: 'UTC−3 — Brazil, Argentina (São Paulo)' },
+      { iana: 'Atlantic/Azores', labelEn: 'UTC−1 — Azores (Portugal)' },
+      { iana: 'UTC', labelEn: 'UTC±0 — Coordinated Universal Time (UTC)' },
+      { iana: 'Europe/London', labelEn: 'UTC±0 / +1 — UK & Ireland (London)' },
+      { iana: 'Europe/Paris', labelEn: 'UTC+1 / +2 — Western & Central Europe (Paris, Berlin, Rome)' },
+      { iana: 'Africa/Johannesburg', labelEn: 'UTC+2 — South Africa & neighbors (Johannesburg)' },
+      { iana: 'Asia/Riyadh', labelEn: 'UTC+3 — Saudi Arabia & Gulf (Riyadh)' },
+      { iana: 'Asia/Dubai', labelEn: 'UTC+4 — UAE (Dubai)' },
+      { iana: 'Asia/Kolkata', labelEn: 'UTC+5:30 — India & Sri Lanka (Kolkata)' },
+      { iana: 'Asia/Bangkok', labelEn: 'UTC+7 — Thailand, Vietnam, etc. (Bangkok)' },
+      { iana: 'Asia/Shanghai', labelEn: 'UTC+8 — China, Singapore, Hong Kong, Philippines (Shanghai)' },
+      { iana: 'Asia/Seoul', labelEn: 'UTC+9 — Korea & Japan (Seoul, Tokyo)' },
+      { iana: 'Australia/Sydney', labelEn: 'UTC+10 / +11 — Eastern Australia (Sydney)' },
+      { iana: 'Pacific/Auckland', labelEn: 'UTC+12 / +13 — New Zealand (Auckland)' },
+    ];
+
+    function _schedulerTimezoneOptionLabel(iana, labelEn) {
+      if (_uiLang === 'ko' && typeof I18N !== 'undefined' && I18N.ko && I18N.ko.configureTimezoneChoiceLabelsKo) {
+        const ko = I18N.ko.configureTimezoneChoiceLabelsKo[iana];
+        if (ko) return ko;
+      }
+      return labelEn;
+    }
+
+    function refreshSchedulerTimezoneSelectLabels() {
+      const sel = document.getElementById('cfg_scheduler_timezone');
+      if (!sel || sel.tagName !== 'SELECT' || sel.dataset.tzOptionsBuilt !== '1') return;
+      const byIana = new Map(SCHEDULER_TIMEZONE_CHOICES.map((c) => [c.iana, c.labelEn]));
+      Array.from(sel.options).forEach((o) => {
+        const le = byIana.get(o.value);
+        if (le) o.textContent = _schedulerTimezoneOptionLabel(o.value, le);
+      });
+    }
+
+    function ensureSchedulerTimezoneSelectOptions() {
+      const sel = document.getElementById('cfg_scheduler_timezone');
+      if (!sel || sel.tagName !== 'SELECT' || sel.dataset.tzOptionsBuilt === '1') return;
+      sel.textContent = '';
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < SCHEDULER_TIMEZONE_CHOICES.length; i++) {
+        const row = SCHEDULER_TIMEZONE_CHOICES[i];
+        const o = document.createElement('option');
+        o.value = row.iana;
+        o.textContent = _schedulerTimezoneOptionLabel(row.iana, row.labelEn);
+        frag.appendChild(o);
+      }
+      sel.appendChild(frag);
+      sel.dataset.tzOptionsBuilt = '1';
+    }
+
+    function setSchedulerTimezoneSelectValue(raw) {
+      const sel = document.getElementById('cfg_scheduler_timezone');
+      if (!sel || sel.tagName !== 'SELECT') return;
+      ensureSchedulerTimezoneSelectOptions();
+      const v = String(raw || '').trim() || DEFAULT_DISPLAY_TIMEZONE;
+      const has = Array.from(sel.options).some((o) => o.value === v);
+      if (!has) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = `${v} — ${uiText('configureTimezoneUnknownSaved')}`;
+        sel.insertBefore(o, sel.firstChild);
+      }
+      sel.value = v;
+    }
+
     const TAB_TO_HASH = {
       [DASHBOARD_TAB_ID]: DASHBOARD_HASH,
       [CONFIGURE_TAB_ID]: CONFIGURE_HASH,
@@ -3456,81 +3987,6 @@
     }
     // (Removed) askWebUrl(): ad-hoc one-off web search is no longer shown in the UI.
     let _selectedKbDocIds = new Set();
-    /** RC URL strings (decoded) selected for bulk delete only — not the same as "enabled" toggles. */
-    let _selectedRcUrls = new Set();
-
-    function rcUrlUpdateBulkDeleteBtn() {
-      const bulkBtn = document.getElementById('rcBulkDeleteBtn');
-      if (!bulkBtn) return;
-      const n = _selectedRcUrls.size;
-      bulkBtn.disabled = n === 0;
-      bulkBtn.textContent = n > 0 ? `${uiText('rcDeleteSelected')} (${n})` : uiText('rcDeleteSelected');
-    }
-
-    function syncRcSelectAllMaster() {
-      const root = document.getElementById('rcUrlList');
-      const master = document.getElementById('rcSelectAllMaster');
-      if (!root || !master) return;
-      const boxes = root.querySelectorAll('.rc-url-select');
-      const n = boxes.length;
-      const c = Array.from(boxes).filter((b) => b.checked).length;
-      master.checked = n > 0 && c === n;
-      master.indeterminate = c > 0 && c < n;
-    }
-
-    function onRcUrlSelectChange(cb) {
-      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
-      if (!url) return;
-      if (cb.checked) _selectedRcUrls.add(url);
-      else _selectedRcUrls.delete(url);
-      rcUrlUpdateBulkDeleteBtn();
-      syncRcSelectAllMaster();
-    }
-
-    function rcUrlToggleSelectAll(checked) {
-      const root = document.getElementById('rcUrlList');
-      if (!root) return;
-      const boxes = root.querySelectorAll('.rc-url-select');
-      _selectedRcUrls = new Set();
-      boxes.forEach((el) => {
-        el.checked = !!checked;
-        const u = decodeURIComponent(el.getAttribute('data-rc') || '');
-        if (checked && u) _selectedRcUrls.add(u);
-      });
-      rcUrlUpdateBulkDeleteBtn();
-      syncRcSelectAllMaster();
-    }
-
-    async function onRcUrlEnabledToggle(cb) {
-      const url = decodeURIComponent(cb.getAttribute('data-rc') || '');
-      if (!url) return;
-      const enabled = cb.checked;
-      try {
-        await fetchJson('/rc/urls', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled }) });
-      } catch (e) {
-        alert('Error: ' + e.message);
-        cb.checked = !enabled;
-      }
-    }
-
-    async function deleteSelectedRcUrls() {
-      const urls = Array.from(_selectedRcUrls);
-      if (!urls.length) {
-        alert(uiText('rcNoneSelected'));
-        return;
-      }
-      if (!confirm(uiFmt('rcBulkDeleteConfirm', { n: String(urls.length) }))) return;
-      try {
-        for (const url of urls) {
-          await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
-        }
-        _selectedRcUrls = new Set();
-        await loadRcUrls();
-      } catch (e) {
-        alert('Error: ' + e.message);
-        await loadRcUrls();
-      }
-    }
 
     function toggleKbDocSelected(docId, checked) {
       const id = Number(docId);
@@ -3620,59 +4076,57 @@
       }
     }
     async function loadRcUrls() {
-      const data = await fetchJson('/rc/urls?limit=200');
+      const data = await fetchJson('/rc/urls?limit=200&enabled_only=true');
       const el = document.getElementById('rcUrlList');
+      const treeSel = document.getElementById('rcTreeMainUrlSelect');
+      if (treeSel) {
+        const options = (data || []).map((r) => String(r.url || '').trim()).filter(Boolean);
+        treeSel.innerHTML = options.length
+          ? options.map((u) => `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('')
+          : '';
+      }
       if (!data.length) {
-        _selectedRcUrls = new Set();
         el.innerHTML = `<div class="empty">${escapeHtml(uiText('noRcUrls'))}</div>`;
-        rcUrlUpdateBulkDeleteBtn();
+        const treeView = document.getElementById('rcTreeViewer');
+        if (treeView) treeView.textContent = uiText('rcTreeNoData');
+        const treeSt = document.getElementById('rcTreeStatus');
+        if (treeSt) treeSt.textContent = uiText('rcTreeIdle');
         return;
       }
-      const valid = new Set(data.map((r) => String(r.url || '').trim()).filter(Boolean));
-      _selectedRcUrls = new Set(Array.from(_selectedRcUrls).filter((u) => valid.has(u)));
-      const selAria = escapeHtml(uiText('rcSelectRowAria'));
       const rows = data.map((r) => {
         const url = String(r.url || '').trim();
         const enc = encodeURIComponent(url);
-        const enChecked = r.enabled ? 'checked' : '';
-        const rowSel = _selectedRcUrls.has(url) ? 'checked' : '';
-        return `<div class="cron-item rc-url-row" style="display:grid;grid-template-columns:auto auto 1fr auto;gap:0.55rem;align-items:center;">
-          <input type="checkbox" class="rc-url-select" data-rc="${enc}" aria-label="${selAria}" ${rowSel}
-            onclick="event.stopPropagation()" onchange="onRcUrlSelectChange(this)" />
-          <label style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;margin:0;font-size:0.8rem;color:var(--muted);cursor:pointer;">
-            <input type="checkbox" class="rc-url-enabled" data-rc="${enc}" ${enChecked}
-              onclick="event.stopPropagation()" onchange="onRcUrlEnabledToggle(this)" />
-            <span>${escapeHtml(uiText('enabled'))}</span>
-          </label>
+        return `<div class="cron-item rc-url-row" style="display:grid;grid-template-columns:1fr auto;gap:0.55rem;align-items:center;">
           <code style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(url)}</code>
           <button type="button" class="danger btn-compact" style="padding:0.2rem 0.42rem;border-radius:7px;line-height:1;"
             onclick="deleteRcUrlEncoded('${enc}')">${escapeHtml(uiText('remove'))}</button>
         </div>`;
       }).join('');
-      const controls = `<div style="display:flex;align-items:center;justify-content:space-between;gap:0.35rem;margin:0 0 0.45rem 0;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:var(--muted);cursor:pointer;">
-          <input type="checkbox" id="rcSelectAllMaster" onchange="rcUrlToggleSelectAll(this.checked)" />
-          ${escapeHtml(uiText('rcSelectAll'))}
-        </label>
-        <button id="rcBulkDeleteBtn" type="button" class="danger btn-compact" style="padding:0.25rem 0.5rem;border-radius:7px;" onclick="deleteSelectedRcUrls()" ${_selectedRcUrls.size ? '' : 'disabled'}>
-          ${_selectedRcUrls.size ? `${escapeHtml(uiText('rcDeleteSelected'))} (${_selectedRcUrls.size})` : escapeHtml(uiText('rcDeleteSelected'))}
-        </button>
-      </div>`;
-      el.innerHTML = controls + rows;
-      syncRcSelectAllMaster();
-      rcUrlUpdateBulkDeleteBtn();
+      el.innerHTML = rows;
+      loadRcTreePanel();
     }
     async function addRcUrl() {
       const url = document.getElementById('rcUrlInput').value.trim();
       if (!url) { alert(uiText('enterUrl')); return; }
       const el = document.getElementById('rcUrlResult');
       el.style.display = 'block';
-      el.textContent = uiText('saving');
+      el.textContent = `${uiText('saving')} / ${uiText('rcTreeRunning')}`;
       try {
         await fetchJson('/rc/urls', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, enabled: true }) });
+        const max_urls = Number(document.getElementById('rcTreeMaxUrls')?.value || 300);
+        const max_depth = Number(document.getElementById('rcTreeMaxDepth')?.value || 2);
+        await fetchJson('/rc/tree/discover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_url: url, max_urls, max_depth }),
+        });
         document.getElementById('rcUrlInput').value = '';
-        el.textContent = uiText('saved');
-        loadRcUrls();
+        el.textContent = uiText('rcTreeRunning');
+        await loadRcUrls();
+        for (let i = 0; i < 10; i += 1) {
+          await new Promise((r) => setTimeout(r, 1000));
+          await loadRcTreePanel();
+        }
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
       }
@@ -3682,24 +4136,75 @@
       if (!confirm(uiText('removeUrlConfirm'))) return;
       try {
         await fetchJson('/rc/urls?url=' + encodeURIComponent(url), { method: 'DELETE' });
-        _selectedRcUrls.delete(url);
       } catch (e) {
         alert('Error: ' + e.message);
       }
       loadRcUrls();
     }
     async function discoverRcUrls() {
-      const base_url = document.getElementById('rcUrlInput').value.trim();
+      const base_url = document.getElementById('rcUrlInput').value.trim() || (document.getElementById('rcTreeMainUrlSelect')?.value || '').trim();
       if (!base_url) { alert(uiText('enterBaseUrl')); return; }
       const el = document.getElementById('rcUrlResult');
       el.style.display = 'block';
       el.textContent = uiText('discoverShort');
       try {
-        const res = await fetchJson('/rc/discover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base_url, max_urls: 10 }) });
-        el.textContent = uiFmt('discoveredUrls', { n: String((res.discovered || []).length) }) + '\n' + (res.discovered || []).join('\n');
+        const max_urls = Number(document.getElementById('rcTreeMaxUrls')?.value || 300);
+        const max_depth = Number(document.getElementById('rcTreeMaxDepth')?.value || 2);
+        await fetchJson('/rc/tree/discover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_url, max_urls, max_depth }),
+        });
+        el.textContent = uiText('rcTreeRunning');
         loadRcUrls();
+        // Poll readiness a few times for quick UX.
+        for (let i = 0; i < 8; i += 1) {
+          await new Promise((r) => setTimeout(r, 1000));
+          await loadRcTreePanel();
+        }
       } catch (e) {
         el.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function loadRcTreePanel() {
+      const sel = document.getElementById('rcTreeMainUrlSelect');
+      const base_url = (sel?.value || '').trim();
+      const treeView = document.getElementById('rcTreeViewer');
+      const treeSt = document.getElementById('rcTreeStatus');
+      if (!base_url) {
+        if (treeView) treeView.textContent = uiText('rcTreeNoData');
+        if (treeSt) treeSt.textContent = uiText('rcTreeIdle');
+        return;
+      }
+      try {
+        const st = await fetchJson('/rc/tree/status?base_url=' + encodeURIComponent(base_url));
+        if (treeSt) {
+          if (st.status === 'running') treeSt.textContent = uiText('rcTreeRunning');
+          else if (st.status === 'ready') treeSt.textContent = uiFmt('rcTreeReady', { count: String(st.tree_count || 0), depth: String(st.tree_max_depth || 0) });
+          else if (st.status === 'error') treeSt.textContent = uiFmt('rcTreeError', { msg: String(st.error || '') });
+          else treeSt.textContent = uiText('rcTreeIdle');
+        }
+        const res = await fetchJson('/rc/tree?base_url=' + encodeURIComponent(base_url) + '&limit=5000');
+        const items = Array.isArray(res.items) ? res.items : [];
+        if (!items.length) {
+          if (treeView) treeView.textContent = uiText('rcTreeNoData');
+          return;
+        }
+        const lines = [];
+        let curDepth = -1;
+        for (const it of items) {
+          const d = Number(it.depth || 0);
+          const u = String(it.url || '');
+          if (d !== curDepth) {
+            curDepth = d;
+            lines.push(`\n## Depth ${d}`);
+          }
+          lines.push(u);
+        }
+        if (treeView) treeView.textContent = lines.join('\n').trim();
+      } catch (e) {
+        if (treeSt) treeSt.textContent = uiFmt('rcTreeError', { msg: String(e.message || e) });
       }
     }
     async function addCron() {
@@ -4118,8 +4623,11 @@
       ];
       for (const [spanId, key] of pairs) {
         const el = document.getElementById(spanId);
+        const wrap = document.getElementById(spanId.replace(/_sync$/, '_sync_wrap'));
         if (!el) continue;
-        el.textContent = st[key] ? ' — saved in app database' : '';
+        const msg = st[key] ? '' : configureUiText('configurePromptBundledUntilSave');
+        el.textContent = msg;
+        if (wrap) wrap.style.display = msg ? '' : 'none';
       }
     }
 
@@ -4353,7 +4861,7 @@
         setv('cfg_gog_keyring_password', '');
         setv('cfg_xdg_config_home', eff.xdg_config_home != null ? String(eff.xdg_config_home) : '');
         setv('cfg_gog_credentials_path', eff.gog_credentials_path != null ? String(eff.gog_credentials_path) : '');
-        setv('cfg_scheduler_timezone', eff.scheduler_timezone != null ? String(eff.scheduler_timezone) : 'Asia/Seoul');
+        setSchedulerTimezoneSelectValue(eff.scheduler_timezone != null ? String(eff.scheduler_timezone) : 'Asia/Seoul');
         setv('cfg_langsmith_tracing', eff.langsmith_tracing != null ? String(eff.langsmith_tracing) : 'false');
         setv('cfg_langsmith_project', eff.langsmith_project != null ? String(eff.langsmith_project) : 'email_draft_agent');
         setv('cfg_langsmith_api_key', '');
@@ -4389,7 +4897,14 @@
           eff.user_inbox_peek_max_results != null ? String(eff.user_inbox_peek_max_results) : '5'
         );
         const rcModeEl = document.getElementById('rcWebRetrievalMode');
-        if (rcModeEl) rcModeEl.value = eff.rc_web_retrieval_mode === 'always_augment' ? 'always_augment' : 'kb_first';
+        if (rcModeEl) {
+          const allowedModes = new Set(['kb_first', 'always_augment', 'kb_only', 'web_only']);
+          const rcMode = allowedModes.has(eff.rc_web_retrieval_mode) ? eff.rc_web_retrieval_mode : 'kb_first';
+          rcModeEl.value = rcMode;
+        }
+        setv('rcTreeMaxDepth', String(eff.rc_url_tree_max_depth || '2'));
+        setv('rcTreeMaxUrls', String(eff.rc_url_tree_max_urls || '300'));
+        setv('rcWebVisitLimit', String(eff.rc_web_visit_limit || '5'));
         setv('cfg_prompt_email_agent_system_template', String(eff.prompt_email_agent_system_template || ''));
         setv('cfg_prompt_probe_user_message', String(eff.prompt_probe_user_message || ''));
         setv('cfg_prompt_probe_mode_append', String(eff.prompt_probe_mode_append || ''));
@@ -4426,6 +4941,7 @@
         renderConfigureEnvTable(data);
         renderGogSetupStatus(data);
         renderPromptEffectiveByMode(data.prompt_effective_by_mode);
+        updateDistilledLearningPanel(data.distilled_learning || {});
         const ks = document.getElementById('cfg_key_status');
         if (ks) {
           const preset = eff.llm_provider_preset || 'openrouter';
@@ -4570,6 +5086,29 @@
       }
     }
 
+    async function saveRcTreeSettings() {
+      const st = document.getElementById('rcTreeSettingsSaveStatus');
+      const depth = (document.getElementById('rcTreeMaxDepth')?.value || '2').trim();
+      const maxUrls = (document.getElementById('rcTreeMaxUrls')?.value || '300').trim();
+      const visit = (document.getElementById('rcWebVisitLimit')?.value || '5').trim();
+      try {
+        if (st) st.textContent = uiText('rcWebModeSaving');
+        await fetchJson('/settings/runtime', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rc_url_tree_max_depth: depth,
+            rc_url_tree_max_urls: maxUrls,
+            rc_web_visit_limit: visit,
+          }),
+        });
+        if (st) st.textContent = uiText('rcWebModeSaved');
+        await loadRuntimeSettings();
+      } catch (e) {
+        if (st) st.textContent = `${uiText('rcWebModeSaveFail')}: ${e.message}`;
+      }
+    }
+
     function _stopDashboardPolling() {
       if (_dashboardPollTimer) {
         clearInterval(_dashboardPollTimer);
@@ -4702,9 +5241,25 @@
       return k ? uiText(k) : String(raw || '').trim();
     }
 
+    function canonicalDashboardActionCategory(raw) {
+      let c = String(raw || '').trim().toLowerCase();
+      const leg = {
+        product_technical: 'client_technical',
+        account: 'client_non_technical',
+        other: 'client_non_technical',
+        general: 'client_non_technical',
+      };
+      if (leg[c]) c = leg[c];
+      if (c === 'client_technical' || c === 'client_non_technical' || c === 'internal') return c;
+      return 'client_non_technical';
+    }
+
     function formatActionCategoryLabel(raw) {
-      const c = String(raw || 'general').trim().toLowerCase();
+      const c = canonicalDashboardActionCategory(raw);
       const map = {
+        client_technical: 'dashCatClientTechnical',
+        client_non_technical: 'dashCatClientNonTechnical',
+        internal: 'dashCatInternal',
         general: 'dashCatGeneral',
         product_technical: 'dashCatProductTechnical',
         account: 'dashCatAccount',
@@ -4891,11 +5446,25 @@
       const statusControl = Number.isFinite(iid)
         ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionStatusLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionStatus(${iid}, ${Number(actionIndex)}, this.value)">${statusOptions}</select></div>`
         : '';
+      const catCanon = canonicalDashboardActionCategory(action.category);
+      const categoryOptions = [
+        ['client_technical', uiText('dashCatClientTechnical')],
+        ['client_non_technical', uiText('dashCatClientNonTechnical')],
+        ['internal', uiText('dashCatInternal')],
+      ]
+        .map(
+          ([v, label]) =>
+            `<option value="${escapeHtml(v)}"${v === catCanon ? ' selected' : ''}>${escapeHtml(label)}</option>`
+        )
+        .join('');
+      const categoryControl = Number.isFinite(iid)
+        ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionCategoryLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionCategory(${iid}, ${Number(actionIndex)}, this.value)">${categoryOptions}</select></div>`
+        : '';
       const gmailTid = String(action.gmail_thread_id || '').trim();
       const subj = String(action.email_subject || '').trim();
       const from = String(action.email_from || '').trim();
       const customerEmail = String(action.customer_email || '').trim();
-      const metaLine = `${statusControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      const metaLine = `${statusControl}${categoryControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
 
       const clientId = String(action.customer_identifier || '').trim();
       const clientDomain =
@@ -5059,6 +5628,12 @@
       return ['all', 'not_started', 'in_progress', 'completed'].includes(v) ? v : 'all';
     }
 
+    function getDashboardCategoryFilter() {
+      const el = document.getElementById('dashboardCategoryFilter');
+      const v = (el && el.value) || 'all';
+      return ['all', 'client_technical', 'client_non_technical', 'internal'].includes(v) ? v : 'all';
+    }
+
     function getDashboardActionSortMode() {
       const el = document.getElementById('dashboardActionSort');
       const v = (el && el.value) || 'updated_desc';
@@ -5112,6 +5687,12 @@
             cd.includes(domQ) || em.includes(domQ) || (dom2 && dom2.includes(domQ))
           );
         });
+      }
+      const catF = getDashboardCategoryFilter();
+      if (catF !== 'all') {
+        filtered = filtered.filter(
+          (x) => canonicalDashboardActionCategory(x.action && x.action.category) === catF
+        );
       }
       const sortMode = getDashboardActionSortMode();
       filtered.sort((a, b) => {
@@ -5211,6 +5792,109 @@
         await loadActionBoard(true);
       } catch (e) {
         alert(`${uiText('dashboardStatusUpdateFail')}: ${e.message}`);
+      }
+    }
+
+    async function setDashboardActionCategory(interactionId, actionIndex, category) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      if (!id || !Number.isFinite(idx) || idx < 0) return;
+      try {
+        const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}/category`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: String(category || '') }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardCategoryUpdateFail')}: ${e.message}`);
+      }
+    }
+
+    function updateDistilledLearningPanel(dl) {
+      const pre = document.getElementById('cfg_distilled_learning_body');
+      const stamp = document.getElementById('cfg_distilled_learning_updated');
+      if (!pre) return;
+      const c = dl && dl.constraints != null ? String(dl.constraints).trim() : '';
+      const e = dl && dl.exemplars != null ? String(dl.exemplars).trim() : '';
+      const merged = dl && dl.instructions != null ? String(dl.instructions).trim() : '';
+      let display = '';
+      if (c && e) {
+        display =
+          '— Operator corrections (negative distill) —\n\n' +
+          c +
+          '\n\n— Operator-endorsed examples —\n\n' +
+          e;
+      } else if (c) {
+        display = '— Operator corrections (negative distill) —\n\n' + c;
+      } else if (e) {
+        display = '— Operator-endorsed examples —\n\n' + e;
+      } else {
+        display = merged;
+      }
+      const trimmed = display.trim();
+      pre.textContent = trimmed ? trimmed : configureUiText('configureDistilledLearningEmpty');
+      if (stamp) {
+        const ua = dl && dl.updated_at != null ? String(dl.updated_at) : '';
+        if (!ua) {
+          stamp.textContent = '';
+        } else {
+          const formatted = _fmtTime(ua);
+          const tz = _safeTimeZone();
+          stamp.textContent = uiText('configureDistilledLearningUpdated')
+            .split('{t}')
+            .join(formatted + (tz ? ` · ${tz}` : ''));
+        }
+      }
+    }
+
+    async function refreshDistilledLearningFromServer() {
+      const st = document.getElementById('cfg_distilled_learning_status');
+      try {
+        const data = await fetchJson('/memory/learning', { cache: 'no-store' });
+        updateDistilledLearningPanel(data);
+        if (st) st.textContent = '';
+      } catch (e) {
+        if (st) st.textContent = configureUiText('configureDistilledLearningFail') + e.message;
+      }
+    }
+
+    async function rerunLearningDistillation() {
+      const st = document.getElementById('cfg_distilled_learning_status');
+      if (st) st.textContent = configureUiText('configureDistilledLearningRerunning');
+      try {
+        await fetchJson('/memory/refresh', { method: 'POST' });
+        await refreshDistilledLearningFromServer();
+        if (st) st.textContent = configureUiText('configureDistilledLearningRerunDone');
+      } catch (e) {
+        if (st) st.textContent = configureUiText('configureDistilledLearningRerunFail') + e.message;
+      }
+    }
+
+    async function resetDistilledLearningRules() {
+      if (!confirm(configureUiText('configureDistilledLearningResetConfirm'))) return;
+      const st = document.getElementById('cfg_distilled_learning_status');
+      if (st) st.textContent = '';
+      try {
+        const data = await fetchJson('/memory/learning', { method: 'DELETE' });
+        updateDistilledLearningPanel(data);
+        if (_lastRuntimePayload && typeof _lastRuntimePayload === 'object') {
+          _lastRuntimePayload.distilled_learning = {
+            instructions: data.instructions,
+            updated_at: data.updated_at,
+            constraints: data.constraints != null ? data.constraints : '',
+            exemplars: data.exemplars != null ? data.exemplars : '',
+            constraints_updated_at: data.constraints_updated_at,
+            exemplars_updated_at: data.exemplars_updated_at,
+          };
+        }
+        if (st) {
+          const n = data && data.feedback_deleted != null ? Number(data.feedback_deleted) : 0;
+          st.textContent = configureUiText('configureDistilledLearningResetDone').split('{n}').join(String(n));
+        }
+      } catch (e) {
+        if (st) st.textContent = configureUiText('configureDistilledLearningResetFail') + e.message;
       }
     }
 
@@ -5349,18 +6033,23 @@
         return;
       }
       try {
-        await fetchJson('/memory/feedback', {
+        const res = await fetchJson('/memory/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             interaction_id: id,
-            verdict: 'useful',
+            verdict: 'incorrect',
             note: text,
             action_index: idx,
           }),
         });
         if (ta) ta.value = '';
-        alert(uiText('dashboardFeedbackSaved'));
+        const lr = res && res.learning_refresh;
+        if (lr && lr.error) {
+          alert(uiText('dashboardFeedbackSaved') + '\n' + uiText('feedbackDistillFailed') + lr.error);
+        } else {
+          alert(uiText('dashboardFeedbackSaved'));
+        }
       } catch (e) {
         alert(`${uiText('dashboardFeedbackFail')}: ${e.message}`);
       }
@@ -5551,13 +6240,40 @@
     async function submitRunFeedback(interactionId, verdict) {
       const needsText = verdict === 'incorrect' || verdict === 'noisy';
       const correction = needsText ? (prompt(uiText('correctionPrompt')) || '').trim() : '';
+      const vLabel =
+        verdict === 'correct'
+          ? uiText('feedbackCorrect')
+          : verdict === 'incorrect'
+            ? uiText('feedbackIncorrect')
+            : verdict === 'useful'
+              ? uiText('feedbackUseful')
+              : uiText('feedbackNoisy');
+      // Learning distillation only ingests rows with non-empty note or correction; verdict-only
+      // POSTs used to send neither, so Run history OK/Good never reached distilled rules.
+      let note = `[Run history] run #${interactionId}: ${vLabel}`;
+      if (needsText && correction) {
+        note = `${note}\n${correction}`;
+      } else if (needsText && !correction) {
+        note = `${note} (no extra text provided)`;
+      }
       try {
-        await fetchJson('/memory/feedback', {
+        const res = await fetchJson('/memory/feedback', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ interaction_id: interactionId, verdict, correction })
+          body: JSON.stringify({
+            interaction_id: interactionId,
+            verdict,
+            note,
+            correction: correction || null,
+            metadata: { source: 'run_history' },
+          }),
         });
-        alert(uiText('feedbackSaved'));
+        const lr = res && res.learning_refresh;
+        if (lr && lr.error) {
+          alert(uiText('feedbackSaved') + '\n' + uiText('feedbackDistillFailed') + lr.error);
+        } else {
+          alert(uiText('feedbackSaved'));
+        }
       } catch (e) {
         alert(uiText('feedbackFail') + ': ' + e.message);
       }

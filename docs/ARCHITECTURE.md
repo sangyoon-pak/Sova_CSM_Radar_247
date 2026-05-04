@@ -12,7 +12,7 @@ End-to-end view of **Sova - CSM Radar Agent 24/7**: how the UI, API, agent, retr
 | Search orchestration | `src/agent/tools/search_agent.py` |
 | Retrieval engines | `src/agent/tools/doc_search.py`, `src/agent/search_terms_extractor.py` |
 | Gmail | `src/agent/tools/gmail_tool.py` → subprocess `scripts/gmail-get-decoded.py` + local `gog` |
-| RC web | `src/agent/tools/rc_web_search.py` (hosted web only on enabled RC URLs; no local KB retrieval in this tool) |
+| RC web | `src/agent/tools/rc_web_search.py` (URL-tree: LLM URL pick + fetch + synthesize; strict drop-on-weak with no provider fallback; provider web only if no tree) |
 | Cron | `src/scheduler/`, `src/api/cron_routes.py` |
 | DB + settings | `src/db/database.py`, `src/runtime_config.py`, `src/config.py` |
 | Learning / memory | `src/agent/memory.py` + `/memory/*` routes |
@@ -53,7 +53,8 @@ Common entrypoints (not exhaustive; see `src/api/routes.py`):
 | `POST /threads/bulk-delete` | Deletes many threads + messages + linked run rows (Workbench cleanup) |
 | `POST /agent/run` | Manual agent or probe from API / older clients |
 | `GET/POST` cron + scheduler | Scheduled inbox probes and job management |
-| `POST /memory/feedback`, `/memory/refresh`, `/memory/compact` | Feedback and learning-memory maintenance |
+| `POST /memory/feedback`, `GET /memory/learning`, `DELETE /memory/learning`, `/memory/refresh`, `/memory/compact` | Feedback, read/clear distilled rules, learning refresh, compaction |
+| `PATCH /dashboard/probe-runs/{id}/actions/{i}/category` | Operator override for one action’s `category` on the current probe row |
 | `PATCH /settings/runtime` | **Configure** saves overrides into `app_settings` (via runtime config) |
 
 ## Workbench threads vs full inbox probe
@@ -86,9 +87,11 @@ Order matters early in `run_agent` (`src/agent/email_agent.py`):
 ## Tools vs retrieval orchestration
 
 - **`search_product_docs`** -> `search_with_agent_structured` in `search_agent.py` (subquery split, policy-aware rerank, sufficiency, optional refine). Returns KB context and mode-aware web follow-up rules.
-- **`search_rc_web`** -> hosted web only (`run_web_search`) per enabled RC URL **host**; prompts include **all enabled URLs on that host** as path seeds plus a **weak-result retry**; no local KB rerank/subquery loop in this tool.
+- **`search_rc_web`** -> Per host: if `rc_url_tree` exists, **LLM semantic URL selection** from tree (URL + optional title), fetch up to `rc_web_visit_limit`, synthesize; on weak/empty/fetch-fail return **no-evidence** and **no** provider fallback. If no tree rows, use hosted provider web search (agentic loop).
 - **`always_augment`**: after KB tool, orchestrator instructs explicit second tool call to `search_rc_web` (separate traces).
 - **`kb_first`**: after KB tool, optional **KB web gate** (`src/agent/tools/kb_web_gate.py`) decides whether web follow-up is needed.
+- **`kb_only`**: run KB retrieval only; no hosted web follow-up.
+- **`web_only`**: skip KB retrieval and force hosted web follow-up (`search_rc_web`). If no enabled RC URLs exist, return a clear unavailability message (no KB fallback).
 - **Gmail** reads via **`gmail-get-decoded.py`**; never sends mail.
 - Retrieval ranking policy is operator-configurable via `RETRIEVAL_RANKING_POLICY` (Configure), not hardcoded vendor boosts.
 
@@ -106,13 +109,15 @@ flowchart TB
   MODE{rc_web_retrieval_mode}
   RCURL{enabled_RC_URLs_exist}
   GATE[kb_web_gate_JSON_on_KB_evidence]
-  WEB[search_rc_web<br/>provider_web_search_only]
+  WEB[search_rc_web<br/>tree_llm_pick_or_provider_if_no_tree]
   OUTKB[Finalize with KB evidence]
   OUTBOTH[Finalize with KB + web evidence]
 
   Q --> KB --> MODE
   MODE -->|always_augment| RCURL
   MODE -->|kb_first| GATE
+  MODE -->|kb_only| OUTKB
+  MODE -->|web_only| RCURL
   RCURL -->|yes| WEB
   RCURL -->|no| OUTKB
   GATE -->|proceed_web true or parse-fail default| RCURL
@@ -122,7 +127,7 @@ flowchart TB
 
 - **Gate model separation:** `effective_llm_model_kb_web_gate()` / `LLM_MODEL_KB_WEB_GATE` is dedicated to KB->web gating, separate from `LLM_MODEL_SEARCH_JSON`.
 - **Safe default:** on malformed gate JSON, proceed with web to avoid silently suppressing fallback evidence.
-- **Operator controls:** Configure sets gate model; Knowledge -> RC URLs sets `rc_web_retrieval_mode` (`kb_first` default, `always_augment` higher token/inference cost).
+- **Operator controls:** Configure sets gate model; Knowledge -> RC URLs sets `rc_web_retrieval_mode` (`kb_first` default, `always_augment`, `kb_only`, `web_only`).
 
 ## Why retrieval is foundational
 
@@ -135,9 +140,17 @@ Tuning and file-level behavior: [SEARCH_AGENT.md](SEARCH_AGENT.md).
 
 ## Self-evolution and feedback
 
-- **UI:** **Run history** (per-run feedback: useful / noisy / correct / incorrect, plus notes where offered) and **Action dashboard** (card-level signals; see [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md) for fields like `feedback_notes` and the feedback contract).
-- **API:** `POST /memory/feedback` stores verdicts and optional corrections; `POST /memory/refresh` refreshes distilled learning instructions; `POST /memory/compact` summarizes older interactions.
-- **Code:** `src/agent/memory.py` (compaction, learning text surfaced into the system prompt via `get_runtime_learning_instructions()` / Configure-backed prompts—see [PROMPTS.md](PROMPTS.md)).
+- **UI:** **Run history** (per-run feedback: OK / NG / Good / Noise — each submit stores a short **note** so the row is eligible for learning refresh) and **Action dashboard** (card-level text + optional `action_index`; see [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md)). **Configure → Distilled learning rules** shows merged **`{learning_section}`** payload (same as `GET /memory/learning` and `GET /settings/runtime` → **`distilled_learning`**), including split fields **`constraints`** / **`exemplars`** plus legacy **`instructions`** (combined view for migration).
+
+- **Learning reinforcement** (`refresh_learning_instructions` in `src/agent/memory.py`):
+  - **Eligibility:** Learning refresh uses feedback rows with non-empty **note** or **correction** (`get_learning_feedback_samples`).
+  - **Sampling:** The DB returns up to **40** newest eligible rows (`LEARNING_FEEDBACK_SAMPLE_POOL`). From that pool, **5** rows are chosen for the distill prompt (`MAX_LEARNING_FEEDBACK_FOR_DISTILL`) so token use stays bounded. Selection **reserves up to two** **`action_dashboard`** rows (newest in the pool first), then fills the rest with the newest rows overall. That way **card feedback is not starved** when many newer run-history notes would otherwise occupy all five slots.
+  - **Partition:** Each selected row is turned into structured JSON (including **`distillation_payload`** with operator text, `metadata`, and optional **`interaction_id`** context from **`agent_interactions`** — probe **input** excerpts omit the shared probe preamble). Rows are split into **`negative`** vs **`endorsed`** arrays. That partition is saved as **`app_settings.agent_learning_last_partition_json`** for debugging (also returned as **`last_partition_json`** from **`GET /memory/learning`**).
+  - **Distill:** A **single** LLM call (**`LEARNING_REINFORCEMENT_SYSTEM`**) emits **`===CONSTRAINTS===`** (from **negative** rows plus endorsed **action_dashboard** preferences) and **`===EXEMPLARS===`** (only **endorsed** + **`run_history`**; dashboard cards never go here). Stored in **`agent_learning_constraints`** and **`agent_learning_exemplars`**; legacy **`agent_learning_instructions`** is cleared on refresh. Constraint lines are normalized (`*`, `•` → `- `) before persistence so the model cannot accidentally write an “empty” constraints column.
+
+- **API:** `POST /memory/feedback` stores verdicts and optional corrections (metadata may include `source`, `action_index` for dashboard-scoped feedback). **`POST /memory/refresh`** runs the full reinforcement pipeline above. **`GET /memory/learning`** returns merged **`instructions`** plus **`constraints`**, **`exemplars`**, timestamps, **`last_partition_json`**, **`last_partition_updated_at`** — **no LLM**. **`DELETE /memory/learning`** clears constraints, exemplars, legacy instructions, **last partition JSON**, **and** deletes all **`agent_feedback`** rows. **`POST /memory/compact`** is separate: it summarizes older **`agent_interactions`** into **`agent_memory`** and does **not** update **`{learning_section}`**.
+
+- **Code:** `src/agent/memory.py` (`refresh_learning_instructions`, `compact_memory`); runtime injection via `get_runtime_learning_instructions()` in `render_email_agent_system` / agent bootstrap (see [PROMPTS.md](PROMPTS.md)).
 
 ## Configure map (UI tab → what to edit)
 
@@ -147,16 +160,16 @@ Operators tune behavior primarily from the **Configure** tab (values persist in 
 |---------|-----------------------------|
 | **Configure** | Provider preset, `LLM_MODEL` / role overrides (`LLM_MODEL_MAIN`, `LLM_MODEL_SEARCH_JSON`, `LLM_MODEL_KB_WEB_GATE`, …), `RETRIEVAL_RANKING_POLICY` (JSON), API keys, embedding provider/model, Gmail / `gog` paths, guardrail lists, **probe inbox** Gmail query + max results, **LangSmith**, `PROBE_THREAD_INTENT_CLASSIFIER` |
 | **Workbench** | Agent profile (vendor / product / role) stored for prompts; threads; **Scan inbox** button (`probe: true`); NL cron when message matches cron admin intent |
-| **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment`) |
+| **Knowledge** | Uploads, reindex; RC URLs (enable domains for `search_rc_web`) + RC web retrieval mode (`kb_first` / `always_augment` / `kb_only` / `web_only`) |
 | **Cron** | Scheduled probe jobs (presets + expressions) |
-| **Action dashboard** | Card status, filters, bulk dismiss; “Discuss this action” spawns scoped threads |
+| **Action dashboard** | Card **status** and **category** (operator edits persist on the row), filters, bulk dismiss; “Discuss this action” spawns scoped threads |
 | **Run history** | Traces, feedback, learning loop inputs |
 
 Prompt **text** keys (`prompt_email_agent_system_template`, `prompt_probe_mode_append`, …) live in the DB, not only in `src/agent/prompts.py`—see [PROMPTS.md](PROMPTS.md).
 
 ## Data and persistence
 
-- SQLite (path from `DATABASE_PATH`) holds threads, messages, interactions, cron, RC URLs, feedback, and Configure overrides.
+- SQLite (path from `DATABASE_PATH`) holds threads, messages, interactions, cron, RC URLs, RC URL tree nodes, feedback, and Configure overrides.
 - RAG / FTS artifacts and uploaded files live under **`data/`** (see `.gitignore`; not shipped in git). For a **clean tree before distribution**, use [scripts/README.md](../scripts/README.md) (`reset_local_data.py`, `reset_configure_overrides.py`).
 
 ## Operational interfaces
