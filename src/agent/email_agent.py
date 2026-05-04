@@ -67,6 +67,22 @@ class _CancelPatrolCallback(BaseCallbackHandler):
         self._maybe_cancel()
 
 
+def _invalidate_langsmith_utils_caches() -> None:
+    """LangSmith `get_env_var` / `get_tracer_project` use functools.lru_cache.
+
+    If those functions run once at import time before Configure-driven env is applied,
+    mutating `os.environ` in `_ensure_langsmith_env` would otherwise be ignored and
+    LangChain would skip attaching `LangChainTracer` (no runs in the LangSmith UI).
+    """
+    try:
+        from langsmith.utils import get_env_var, get_tracer_project
+
+        get_env_var.cache_clear()
+        get_tracer_project.cache_clear()
+    except Exception:
+        pass
+
+
 def _ensure_langsmith_env():
     """Set LangSmith env vars from runtime config so tracing works in uvicorn workers."""
     if effective_langsmith_tracing() and effective_langsmith_api_key():
@@ -86,6 +102,7 @@ def _ensure_langsmith_env():
         os.environ.pop("LANGCHAIN_TRACING_V2", None)
         os.environ.pop("LANGCHAIN_API_KEY", None)
         os.environ.pop("LANGCHAIN_PROJECT", None)
+    _invalidate_langsmith_utils_caches()
 
 
 def _langsmith_parent_trace(*, input_text: str, probe: bool):
