@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     # LangSmith
     langsmith_tracing: bool = Field(False, validation_alias="LANGSMITH_TRACING")
     langsmith_api_key: str | None = Field(None, validation_alias="LANGSMITH_API_KEY")
-    langsmith_project: str = Field("email_draft_agent", validation_alias="LANGSMITH_PROJECT")
+    langsmith_project: str = Field("Sova_CSM_Radar_247", validation_alias="LANGSMITH_PROJECT")
 
     model_config = {
         "extra": "ignore",
@@ -143,7 +143,7 @@ class Settings(BaseSettings):
 
     @property
     def gog_home_resolved(self) -> Path | None:
-        """Resolve GOG_HOME to absolute path (e.g. email_draft_agent/scripts/.local)."""
+        """Resolve GOG_HOME to absolute path (e.g. Sova_CSM_Radar_247/scripts/.local)."""
         if not self.gog_home:
             return None
         p = Path(self.gog_home)

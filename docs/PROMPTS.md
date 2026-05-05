@@ -6,6 +6,8 @@ At **runtime**, the agent does **not** read `src/agent/prompts.py` directly for 
 
 So **`prompts.py` is the canonical default text in the repo**, but **an existing database may still hold older copies** that were seeded or edited earlier.
 
+How those keys sit in the **Configure** UI (operator-editable column → agent → tools) is summarized in [ARCHITECTURE.md](ARCHITECTURE.md) § **Configure tab: runtime diagram (UI)**.
+
 ## Database keys (Configure / `app_settings`)
 
 | Key | Constant in `prompts.py` | Role |

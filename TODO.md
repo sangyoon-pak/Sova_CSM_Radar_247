@@ -1,28 +1,13 @@
 # Project TODO
 
 
-### Agent utility / RAG
-
-
-
-- [ ] after all update all the md files for the implemented architectures and flows.
-1.update the md files to reflect the agent flow diagram on configure
-
-
-
-
-### Pre-distribution
-- [ ] Final UI touch. both light and dark mode not too good for readability. Text and wordings is worth being refined. UI design could look better more with the enterprise feel. Run Trace part looks quite dev look and tacky. This requires UI enhancement. Also on the UI run trace part, still it says 'assistant'. this should change to 'Sova Agent' 
-- [ ] ensure there is no Appier-internal-only documents in the public repo
-- [ ] Remove irrelevant scratch/test artifacts from the tree where appropriate
-- [ ] **Knowledge base** content not pushed to public GitHub (`.gitignore` / policy); verify
-- [ ] No secrets/tokens committed
+**Manual review before merge:** follow [docs/UI_REVIEW_CHECKLIST.md](docs/UI_REVIEW_CHECKLIST.md) (themes; Landing → Configure → Workbench with Run trace → Run history).
 
 ### Distribution
 
-- [ ] change the project folder name to Sova_CSM_Radar_247 when ready 
-- [ ] **Host install** story: mac/linux/windows via venv + `run.py` (not container-first); `gog`/OAuth need a normal OS env (`docs/GMAIL_SETUP.md`)
-- [ ] **Public docs UX**: canonical `docs/INSTALLATION.md`; README links; optional future docs site; landing links when published
+
+- [x] **Host install** story: mac/linux/windows via venv + `run.py` (not container-first); `gog`/OAuth need a normal OS env (`docs/GMAIL_SETUP.md`)
+- [x] **Public docs UX**: canonical `docs/INSTALLATION.md`; README links; optional future docs site; landing links when published
 
 ### Post-distribution
 

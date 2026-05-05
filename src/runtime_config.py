@@ -497,7 +497,7 @@ def effective_langsmith_project() -> str:
     v = _db_str("langsmith_project")
     if v is not None and v.strip():
         return v.strip()
-    return str(getattr(settings, "langsmith_project", None) or "email_draft_agent").strip()
+    return str(getattr(settings, "langsmith_project", None) or "Sova_CSM_Radar_247").strip()
 
 
 def gog_credentials_path_resolved() -> Path | None:
@@ -704,7 +704,7 @@ def _recommended_ui_hints_for_preset(preset: str) -> dict[str, str]:
         "rag_embedding_model": embed_model,
         "openrouter_base_url": base_url,
         "scheduler_timezone": (getattr(s, "scheduler_timezone", None) or "Asia/Seoul").strip(),
-        "langsmith_project": (getattr(s, "langsmith_project", None) or "email_draft_agent").strip(),
+        "langsmith_project": (getattr(s, "langsmith_project", None) or "Sova_CSM_Radar_247").strip(),
         "guardrail_strictness": "balanced",
         "probe_inbox_max_results": _bounded_int_str(
             getattr(s, "probe_inbox_max_results", 10), default=10, min_v=1, max_v=100

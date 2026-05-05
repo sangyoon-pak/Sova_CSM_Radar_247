@@ -2,7 +2,13 @@
 
 Sova is an inbox-aware CSM copilot that turns customer email threads into evidence-backed follow-up actions using retrieval over product knowledge.
 
-> Repository folder naming may still use `email_draft_agent`; product naming should remain **Sova - CSM Radar Agent 24/7** across docs and UI.
+> Clone or rename the project folder as **`Sova_CSM_Radar_247`** (or your preferred name). Product naming should remain **Sova - CSM Radar Agent 24/7** across docs and UI.
+
+## Walkthrough Video
+
+<video src="docs/Sova_walkthrough.mp4" controls muted playsinline width="100%"></video>
+
+If inline playback is not available in your viewer, open the file directly: [docs/Sova_walkthrough.mp4](docs/Sova_walkthrough.mp4).
 
 ## What Sova Does
 
@@ -16,7 +22,7 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 The full **request routing**, **Workbench vs probe**, **API surface**, **Configure map**, and **mermaid** diagrams live in one place so they do not drift from the code:
 
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture)
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture, including the **Configure tab runtime diagram** that matches the web UI)
 
 Related deep dives:
 
@@ -26,9 +32,10 @@ Related deep dives:
 
 ## Install And First Run
 
-Use the full A-Z guide:
+Use the full A-Z guide (canonical):
 
 - **[docs/INSTALLATION.md](docs/INSTALLATION.md)** (canonical install path)
+- **[docs/README.md](docs/README.md)** (full documentation index)
 
 Quick local bootstrap:
 
@@ -103,7 +110,7 @@ Runbook: [docs/OPERATIONS_RUNBOOK.md](docs/OPERATIONS_RUNBOOK.md)
 ## Security And Release Hygiene
 
 - Do not commit secrets (`credentials.json`, API keys, local token stores)
-- Keep private/internal knowledge out of public distributions
+- Keep private/internal knowledge out of public distributions; **local KB uploads and SQLite** live under `data/` and **`knowledge-base/`** — both are listed in `.gitignore` and must not be force-added for a public tree
 - Validate docs, setup flow, and cross-platform host-install messaging before release
 
 Checklist: [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)

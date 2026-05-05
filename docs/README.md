@@ -4,7 +4,7 @@ This index is the canonical map for implementing and operating **Sova - CSM Rada
 
 ## Start Here
 
-- New users: [INSTALLATION.md](INSTALLATION.md)
+- New users: [INSTALLATION.md](INSTALLATION.md) (**canonical install guide**)
 - Product overview: [../README.md](../README.md)
 - Retrieval foundation: [SEARCH_AGENT.md](SEARCH_AGENT.md)
 
@@ -24,14 +24,19 @@ This index is the canonical map for implementing and operating **Sova - CSM Rada
 - Tracing/observability: [LANGSMITH.md](LANGSMITH.md)
 - Troubleshooting and failure-mode playbook: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
 
+## Demo content
+
+- [DEMO_INBOX_SEED_EMAILS.md](DEMO_INBOX_SEED_EMAILS.md) — five fictional emails for inbox/probe demos (safe to commit; no customer data).
+
 ## Release And Distribution
 
 - Pre-release and public distribution checklist: [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)
+- **UI review** (themes, Configure, Workbench trace): [UI_REVIEW_CHECKLIST.md](UI_REVIEW_CHECKLIST.md)
 - **Local data wipe / scripts inventory:** [../scripts/README.md](../scripts/README.md) (`reset_local_data.py`, `reset_configure_overrides.py`, and other helpers)
 
 ## Automated tests
 
-This repository does **not** ship a `tests/` pytest suite; quality relies on manual runs, **Run history**, and operator checklists. When changing agent or retrieval behavior, exercise Workbench probe + chat and review traces.
+The repo includes a **`tests/`** pytest suite (e.g. `python -m pytest`). Run it after behavioral changes; also exercise Workbench probe + chat and **Run history** for integration-style checks.
 
 ## Ownership Expectations
 

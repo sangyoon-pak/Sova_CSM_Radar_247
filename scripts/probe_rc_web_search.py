@@ -5,7 +5,7 @@ Compare hosted web search (OpenRouter vs OpenAI) for a long prompt + single RC d
 Loads repo .env into os.environ before importing app settings. Does not use DB overrides
 for keys (reads OPENROUTER_* / OPENAI_* / LLM_MODEL* from env only).
 
-Usage (from repo root email_draft_agent):
+Usage (from repo root Sova_CSM_Radar_247):
   python scripts/probe_rc_web_search.py --preset openrouter --max-results 10
   python scripts/probe_rc_web_search.py --preset openai
   python scripts/probe_rc_web_search.py --preset both --max-results 5
@@ -48,7 +48,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--url",
-        default="https://docs.aiqua.appier.com/",
+        default="https://docs.example.com/",
         help="Documentation base URL (domain filter for hosted search)",
     )
     parser.add_argument("--preset", choices=("openrouter", "openai", "both"), default="both")

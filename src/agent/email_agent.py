@@ -973,6 +973,17 @@ def delete_cron_job(name: str) -> str:
     cron_manager.remove_job(nm)
     return f"Deleted cron job '{nm}'."
 
+
+def _should_bind_search_rc_web_tool() -> bool:
+    """Bind `search_rc_web` only when KB-only mode is off and at least one RC URL is enabled."""
+    if effective_rc_web_retrieval_mode() == "kb_only":
+        return False
+    try:
+        return bool(database.list_rc_urls(limit=1, offset=0, enabled_only=True))
+    except Exception:
+        return False
+
+
 def create_agent_executor(
     *,
     probe: bool = False,
@@ -983,12 +994,13 @@ def create_agent_executor(
         fetch_inbox_emails,
         fetch_gmail_thread,
         search_product_docs,
-        search_rc_web,
         list_cron_jobs,
         upsert_cron_job,
         set_cron_job_enabled,
         delete_cron_job,
     ]
+    if _should_bind_search_rc_web_tool():
+        tools.insert(3, search_rc_web)
     profile = database.get_agent_profile_settings()
     learning = database.get_runtime_learning_instructions()
     system_prompt = render_email_agent_system(
@@ -1000,6 +1012,22 @@ def create_agent_executor(
     team_g = (effective_guardrail_team_guidance() or "").strip()
     if team_g:
         system_prompt = system_prompt.rstrip() + "\n\n## Team guidance (Configure)\n" + team_g
+    if not _should_bind_search_rc_web_tool():
+        if effective_rc_web_retrieval_mode() == "kb_only":
+            system_prompt = (
+                system_prompt.rstrip()
+                + "\n\n## RC web (current configuration: KB-only)\n"
+                + "Hosted RC/doc web retrieval is off. The **`search_rc_web` tool is not available** in this run. "
+                + "Use **`search_product_docs`** for product evidence. "
+                + "Ignore any template text that tells you to call `search_rc_web`.\n"
+            )
+        else:
+            system_prompt = (
+                system_prompt.rstrip()
+                + "\n\n## RC web (current configuration: no enabled RC URLs)\n"
+                + "No RC documentation URLs are enabled. The **`search_rc_web` tool is not available** in this run. "
+                + "Use **`search_product_docs`** only. Ignore template text that tells you to call `search_rc_web`.\n"
+            )
     if probe:
         system_prompt = system_prompt.rstrip() + "\n\n" + get_probe_mode_system_append()
     extra = (system_append or "").strip()
@@ -1136,7 +1164,24 @@ def _run_agent_impl(
             "Threads outside that slice never appear in `fetch_inbox_emails` (and `category:primary` hides other tabs). "
             "Widen `newer_than:` or drop `category:primary` in `search` if needed, or use `fetch_gmail_thread` when the id is known.\n"
             f"For `fetch_inbox_emails`, use max_results={probe_limit} unless the user explicitly asks otherwise.\n"
-            "If any action is `client_technical`, you MUST call `search_product_docs` (Knowledge base retrieval) before final JSON; follow `rc_web_retrieval_mode` for `search_rc_web` when required. "
+        )
+        if _should_bind_search_rc_web_tool():
+            probe_hint += (
+                "If any action is `client_technical`, you MUST call `search_product_docs` (Knowledge base retrieval) before final JSON; "
+                "when tool output or `rc_web_retrieval_mode` requires it, call `search_rc_web` afterward. "
+            )
+        else:
+            if effective_rc_web_retrieval_mode() == "kb_only":
+                probe_hint += (
+                    "If any action is `client_technical`, you MUST call `search_product_docs` (Knowledge base retrieval) before final JSON. "
+                    "RC hosted web is **KB-only** — do **not** call `search_rc_web`. "
+                )
+            else:
+                probe_hint += (
+                    "If any action is `client_technical`, you MUST call `search_product_docs` (Knowledge base retrieval) before final JSON. "
+                    "There are **no enabled RC URLs** — do **not** call `search_rc_web`; use the KB only. "
+                )
+        probe_hint += (
             "If docs are truly unavailable, keep `references` and `retrieval_evidence` empty rather than fabricating sources.\n"
             "Language: follow the inferred-language note per thread. Do not default to English for dashboard strings "
             "just because the latest reply is an internal English ping — read who actually asked for help and in which language."

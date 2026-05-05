@@ -14,7 +14,7 @@
       --border: #e4e2dc;
       --border-subtle: #eceae6;
       --text: #2d2c29;
-      --muted: #6f6e69;
+      --muted: #585651;
       --accent: #1d6fc4;
       --accent-hover: #185ea8;
       --accent-soft: rgba(29, 111, 196, 0.1);
@@ -37,7 +37,7 @@
       --border: #e4e2dc;
       --border-subtle: #eceae6;
       --text: #2d2c29;
-      --muted: #6f6e69;
+      --muted: #585651;
       --accent: #1d6fc4;
       --accent-hover: #185ea8;
       --accent-soft: rgba(29, 111, 196, 0.1);
@@ -53,7 +53,7 @@
       --border: #3a3935;
       --border-subtle: #32312e;
       --text: #e8e7e3;
-      --muted: #9c9a94;
+      --muted: #b0ada7;
       --accent: #6ba3e0;
       --accent-hover: #8bb8e8;
       --accent-soft: rgba(107, 163, 224, 0.14);
@@ -303,11 +303,20 @@
       overflow-wrap: anywhere;    /* prevent long URLs/tokens from overflowing */
       word-break: break-word;
     }
-    /* Trace inspector: flat list (no card boxes) */
-    .trace-item { padding: 0.35rem 0; margin: 0; border-bottom: 1px solid var(--border); background: transparent; }
-    .trace-head { display:flex; justify-content:flex-start; gap: 0.75rem; align-items:baseline; padding: 0.15rem 0; }
-    .trace-type { color: var(--muted); font-size: 0.78rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.05em; min-width: 84px; }
-    .trace-title { font-weight: 850; flex: 1; font-size: 0.92rem; line-height: 1.25; }
+    /* Trace inspector: readable rows, product tone (detail stays mono) */
+    .trace-item { padding: 0.4rem 0; margin: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; }
+    .trace-item:last-child { border-bottom: 0; }
+    .trace-head { display:flex; justify-content:flex-start; gap: 0.75rem; align-items: baseline; padding: 0.12rem 0; }
+    .trace-type {
+      color: color-mix(in srgb, var(--muted) 88%, var(--text));
+      font-size: 0.71rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      min-width: 6.5rem;
+      flex-shrink: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    .trace-title { font-weight: 600; flex: 1; font-size: 0.9rem; line-height: 1.3; font-family: ui-sans-serif, system-ui, sans-serif; }
     .trace-time { color: var(--muted); font-size: 0.78rem; font-weight: 850; white-space: nowrap; }
     .trace-detail { padding: 0.55rem 0 0.65rem 0; font-size: 0.88rem; color: var(--text); font-family: var(--mono); white-space: pre-wrap; line-height: 1.35; }
     .trace-caret { color: var(--muted); font-size: 0.95rem; font-weight: 950; margin-left: 0.15rem; user-select:none; }
@@ -433,16 +442,16 @@
       padding: 0.45rem 0.55rem;
       font-family: var(--mono);
     }
-    /* Flat trace list container (avoid "big box" look) */
+    /* Trace list: contained panel, sans for row chrome; mono only in .trace-detail */
     .trace-list {
       margin-top: 0.65rem;
-      padding: 0.25rem 0;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
+      padding: 0.45rem 0.6rem 0.55rem;
+      background: var(--surface-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
       max-height: 520px;
       overflow-y: auto;
-      font-family: var(--mono);
+      font-family: ui-sans-serif, system-ui, sans-serif;
     }
     .run-queue-list { margin-top: 0.45rem; display:flex; flex-direction:column; gap:0.4rem; }
     .run-queue-item { border:1px solid var(--border); border-radius:10px; padding:0.5rem 0.6rem; background:var(--surface); }
@@ -1744,7 +1753,7 @@
   <div class="tab-pane active" id="tab-landing">
     <section>
       <h2 data-i18n="landingTitle">Welcome to Sova</h2>
-      <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.</p>
+      <p class="section-lead" data-i18n-html="landingLead">CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required. For more depth—how the agent works, architecture, and installation—see the <a href="https://github.com/sangyoon-pak/Sova_CSM_Radar_247#readme" target="_blank" rel="noopener noreferrer">README on GitHub</a>.</p>
       <details class="landing-panel landing-next-steps">
         <summary>
           <span class="section-caret">▸</span>
@@ -1764,7 +1773,7 @@
         </div>
         <p class="landing-copy landing-docs-line landing-next-steps__docs">
           <span data-i18n-html="landingDocsGithubBefore"></span>
-          <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/email_draft_agent/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
+          <a id="docsGithubRootLink" href="https://github.com/sangyoon-pak/Sova_CSM_Radar_247/tree/main/docs" target="_blank" rel="noopener noreferrer" data-i18n="landingDocsGithubLinkLabel">Documentation on GitHub</a>
           <span data-i18n-html="landingDocsGithubAfter"></span>
         </p>
         <p class="landing-copy landing-docs-line landing-next-steps__docs" data-i18n-html="landingDocsArchitectureLine"></p>
@@ -1789,7 +1798,7 @@
         <div class="landing-panel">
           <div class="landing-title" data-i18n="landingQuickStartTitle">Quick start</div>
           <div class="landing-list">
-            <div class="item" data-i18n-html="landingStep1"><strong>1) Configure agent profile</strong><br/>Set vendor, role, and product scope in Workbench so triage is context-aware.</div>
+            <div class="item" data-i18n-html="landingStep1"><strong>1) Configure models &amp; Gmail</strong><br/>Use the <strong>Configure</strong> tab for LLM models (via the OpenAI or OpenRouter-compatible API), API keys, embeddings, and gog paths. Then set vendor / role / product scope in Workbench.</div>
             <div class="item" data-i18n-html="landingStep2"><strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.</div>
             <div class="item" data-i18n-html="landingStep3"><strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.</div>
             <div class="item" data-i18n-html="landingStep4"><strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.</div>
@@ -1800,7 +1809,7 @@
       <div class="landing-grid landing-extra">
         <div class="landing-panel">
           <div class="landing-title" data-i18n="landingFeedbackTitle">Feedback &amp; self-evolution</div>
-          <p class="landing-copy" data-i18n-html="landingFeedbackBody">Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.</p>
+          <p class="landing-copy" data-i18n-html="landingFeedbackBody">Open <strong>Run history</strong> (expand a run) or the <strong>Action dashboard</strong> (on each action card) and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.</p>
           <div class="landing-cta">
             <button type="button" class="ghost" onclick="showTab('tab-interactions')" data-i18n="landingCtaRunHistory">Open Run history</button>
           </div>
@@ -1822,7 +1831,7 @@
       <p class="section-lead" data-i18n-html="configureLead">Choose provider preset, models, API keys, and Gmail <strong>gog</strong> fields. <strong>Save configuration</strong> stores values in this app’s database. <strong>Clear all database overrides</strong> removes everything saved from this screen, deletes local <strong>gog</strong> OAuth tokens under <code>GOG_HOME</code> (see Gmail section), and restores built-in defaults.</p>
       <p style="font-size:0.78rem;color:var(--muted);margin:-0.35rem 0 0.85rem 0;max-width:52rem;" data-i18n-html="configureEmbedHint">After changing embedding model, run <strong>Reindex</strong> on the Knowledge tab.</p>
       <div class="configure-layout">
-        <details class="configure-details" open>
+        <details class="configure-details">
           <summary><span data-i18n="configureProviderSummary">Provider &amp; API</span><span style="color:var(--muted);font-weight:600;font-size:0.75rem;">OpenRouter / OpenAI / Gemini (OR)</span></summary>
           <div class="configure-details__body">
             <p class="configure-hint" id="cfg_preset_hint" data-i18n="configurePresetHint">Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.</p>
@@ -1851,23 +1860,10 @@
                 <option value="true">on</option>
               </select>
             </div>
-            <div class="configure-field"><label for="cfg_langsmith_project">LangSmith project</label><input id="cfg_langsmith_project" type="text" placeholder="email_draft_agent" /></div>
+            <div class="configure-field"><label for="cfg_langsmith_project">LangSmith project</label><input id="cfg_langsmith_project" type="text" placeholder="Sova_CSM_Radar_247" /></div>
             <div class="configure-field"><label for="cfg_langsmith_api_key">LangSmith API key</label><input id="cfg_langsmith_api_key" type="password" autocomplete="new-password" placeholder="" /></div>
             <p id="cfg_langsmith_key_status" class="configure-hint"></p>
             <p id="cfg_key_status" class="configure-hint"></p>
-          </div>
-        </details>
-        <details class="configure-details">
-          <summary data-i18n="configureTimezoneBlockTitle">Scheduler &amp; display timezone</summary>
-          <div class="configure-details__body">
-            <p class="configure-hint" data-i18n-html="configureTimezoneBlockHintHtml">
-              Choose a <strong>GMT offset</strong> and region below (each row maps to one standard zone id for daylight-saving correctness). Thread list, message times, action cards, run traces, cron summaries, and <strong>distilled learning “last updated”</strong> all use this zone.
-            </p>
-            <div class="configure-field">
-              <label for="cfg_scheduler_timezone" data-i18n="configureTimezoneFieldLabel">Scheduler / UI timezone</label>
-              <select id="cfg_scheduler_timezone" class="configure-timezone-select" autocomplete="off"></select>
-              <span class="configure-env" id="cfg_env_scheduler_timezone"></span>
-            </div>
           </div>
         </details>
         <details class="configure-details">
@@ -1884,18 +1880,21 @@
           </div>
         </details>
         <details class="configure-details">
-          <summary data-i18n="configureRetrievalPolicyBlock">Retrieval ranking policy</summary>
+          <summary data-i18n="configureGogBlock">Gmail (gog)</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n="configureRetrievalPolicyHint">Vendor-agnostic retrieval policy for LLM reranking. This controls ranking behavior (not hardcoded boosts).</p>
-            <div class="configure-field">
-              <label for="cfg_retrieval_ranking_policy" data-i18n="cfgRetrievalRankingPolicy">RETRIEVAL_RANKING_POLICY (JSON)</label>
-              <textarea id="cfg_retrieval_ranking_policy" rows="8" style="width:100%;max-width:52rem;" spellcheck="false"></textarea>
-              <span class="configure-env" id="cfg_env_retrieval_ranking_policy"></span>
-            </div>
+            <p class="configure-hint" data-i18n-html="configureGogLead">Run one-time OAuth in a terminal (<a href="https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a> on GitHub). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.</p>
+            <div class="configure-field"><label for="cfg_gog_home" data-i18n="cfgGogHome">GOG_HOME</label><input id="cfg_gog_home" type="text" autocomplete="off" placeholder="./scripts/.local" /></div>
+            <div class="configure-field"><label for="cfg_gog_account" data-i18n="cfgGogAccount">GOG_ACCOUNT</label><input id="cfg_gog_account" type="email" autocomplete="off" placeholder="you@example.com" /></div>
+            <div class="configure-field"><label for="cfg_gog_keyring_backend" data-i18n="cfgGogKeyringBackend">GOG_KEYRING_BACKEND</label><input id="cfg_gog_keyring_backend" type="text" autocomplete="off" placeholder="file" /></div>
+            <div class="configure-field"><label for="cfg_gog_keyring_password" data-i18n="cfgGogKeyringPassword">GOG_KEYRING_PASSWORD</label><input id="cfg_gog_keyring_password" type="password" autocomplete="new-password" placeholder="" /><span class="configure-env" id="cfg_env_gog_keyring"></span></div>
+            <div class="configure-field"><label for="cfg_xdg_config_home" data-i18n="cfgXdgConfigHome">XDG_CONFIG_HOME</label><input id="cfg_xdg_config_home" type="text" autocomplete="off" placeholder="" /></div>
+            <div class="configure-field"><label for="cfg_gog_credentials_path" data-i18n="cfgGogCredentialsPath">GOG_CREDENTIALS_PATH</label><input id="cfg_gog_credentials_path" type="text" autocomplete="off" placeholder="optional absolute path to credentials.json" /></div>
+            <p id="cfg_gog_keyring_status" class="configure-hint"></p>
+            <div id="gogSetupStatus" class="gog-setup-status" aria-live="polite"></div>
           </div>
         </details>
         <details class="configure-details">
-          <summary data-i18n="configureEmbedBlock">Embeddings (RAG)</summary>
+          <summary data-i18n="configureEmbedBlock">Embedding</summary>
           <div class="configure-details__body">
             <p class="configure-hint" id="cfg_embed_hint"></p>
             <datalist id="datalistEmbedModels"></datalist>
@@ -1904,7 +1903,7 @@
           </div>
         </details>
         <details class="configure-details">
-          <summary>CSM guardrails</summary>
+          <summary data-i18n="configureAgentGuardrailsBlock">Agent Guardrails</summary>
           <div class="configure-details__body">
             <p class="configure-hint">Include/exclude <strong>intents</strong> use one natural-language rule per line (or a JSON array). Matching prefers embeddings (same stack as RAG) when API keys are set; otherwise phrase/word overlap. Delete a line to remove a rule.</p>
             <p class="configure-hint" id="cfg_guardrail_encryption_note" style="margin-top:0.35rem;"></p>
@@ -1922,10 +1921,10 @@
             <div class="configure-field"><label for="cfg_guardrail_team_guidance">Team guidance</label><textarea id="cfg_guardrail_team_guidance" rows="3" placeholder="Internal policy notes for what to surface/ignore."></textarea></div>
           </div>
         </details>
-        <details class="configure-details" open>
-          <summary data-i18n="configureAgentPromptsSurfacesTitle">Agent prompts · runtime surfaces</summary>
+        <details class="configure-details">
+          <summary data-i18n="configureAgentPromptsSurfacesTitle">Agent prompts / runtime surfaces</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n-html="configureAgentPromptsSurfacesIntroHtml">Overview, <strong>what you can edit here</strong>, and the <strong>four database-backed templates</strong> in one place. See <strong>Effective prompts by mode</strong> below for assembled previews.</p>
+            <p class="configure-hint" data-i18n-html="configureAgentPromptsSurfacesIntroHtml">Overview, <strong>what you can edit here</strong>, and the <strong>four database-backed templates</strong> in one place. See <strong>Effective prompts by mode (read-only)</strong> below for assembled previews.</p>
             <div class="configure-legend-grid">
               <div class="configure-legend-box configure-legend-box--editable" data-i18n-html="configureLegendEditableHtml"></div>
               <div class="configure-legend-box configure-legend-box--system" data-i18n-html="configureLegendNotEditableHtml"></div>
@@ -2018,7 +2017,7 @@
           </div>
         </details>
         <details class="configure-details">
-          <summary data-i18n="configureDistilledLearningTitle">Distilled learning rules</summary>
+          <summary data-i18n="configureDistilledLearningTitle">Distilled Learning Rules</summary>
           <div class="configure-details__body">
             <p class="configure-hint" data-i18n-html="configureDistilledLearningHintHtml">Read-only text injected into the main template as <code>{learning_section}</code> (from Run history feedback). Separate from interaction compaction (<code>agent_memory</code>).</p>
             <p class="configure-hint" style="margin-top:0.35rem;" data-i18n-html="configureDistilledLearningQualityHintHtml"></p>
@@ -2034,7 +2033,18 @@
           </div>
         </details>
         <details class="configure-details">
-          <summary>Effective prompts by mode (read-only)</summary>
+          <summary data-i18n="configureRetrievalPolicyBlock">Retrieval Ranking Policy</summary>
+          <div class="configure-details__body">
+            <p class="configure-hint" data-i18n="configureRetrievalPolicyHint">Vendor-agnostic retrieval policy for LLM reranking. This controls ranking behavior (not hardcoded boosts).</p>
+            <div class="configure-field">
+              <label for="cfg_retrieval_ranking_policy" data-i18n="cfgRetrievalRankingPolicy">RETRIEVAL_RANKING_POLICY (JSON)</label>
+              <textarea id="cfg_retrieval_ranking_policy" rows="8" style="width:100%;max-width:52rem;" spellcheck="false"></textarea>
+              <span class="configure-env" id="cfg_env_retrieval_ranking_policy"></span>
+            </div>
+          </div>
+        </details>
+        <details class="configure-details">
+          <summary data-i18n="configureEffectivePromptsTitle">Effective prompts by mode (read-only)</summary>
           <div class="configure-details__body">
             <p class="configure-hint">Preview of the <strong>assembled</strong> system prompt per mode (database template + Workbench profile + learning + team guidance + mode append). Probe mode also shows the stored probe user message.</p>
             <p class="configure-hint" id="promptEffectiveAssembleNote" style="margin-top:0.25rem;"></p>
@@ -2042,17 +2052,16 @@
           </div>
         </details>
         <details class="configure-details">
-          <summary data-i18n="configureGogBlock">Gmail (gog)</summary>
+          <summary data-i18n="configureTimezoneBlockTitle">Scheduler &amp; Display Timezone</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n-html="configureGogLead">Run one-time OAuth in a terminal (<a href="/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a>). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.</p>
-            <div class="configure-field"><label for="cfg_gog_home" data-i18n="cfgGogHome">GOG_HOME</label><input id="cfg_gog_home" type="text" autocomplete="off" placeholder="./scripts/.local" /></div>
-            <div class="configure-field"><label for="cfg_gog_account" data-i18n="cfgGogAccount">GOG_ACCOUNT</label><input id="cfg_gog_account" type="email" autocomplete="off" placeholder="you@example.com" /></div>
-            <div class="configure-field"><label for="cfg_gog_keyring_backend" data-i18n="cfgGogKeyringBackend">GOG_KEYRING_BACKEND</label><input id="cfg_gog_keyring_backend" type="text" autocomplete="off" placeholder="file" /></div>
-            <div class="configure-field"><label for="cfg_gog_keyring_password" data-i18n="cfgGogKeyringPassword">GOG_KEYRING_PASSWORD</label><input id="cfg_gog_keyring_password" type="password" autocomplete="new-password" placeholder="" /><span class="configure-env" id="cfg_env_gog_keyring"></span></div>
-            <div class="configure-field"><label for="cfg_xdg_config_home" data-i18n="cfgXdgConfigHome">XDG_CONFIG_HOME</label><input id="cfg_xdg_config_home" type="text" autocomplete="off" placeholder="" /></div>
-            <div class="configure-field"><label for="cfg_gog_credentials_path" data-i18n="cfgGogCredentialsPath">GOG_CREDENTIALS_PATH</label><input id="cfg_gog_credentials_path" type="text" autocomplete="off" placeholder="optional absolute path to credentials.json" /></div>
-            <p id="cfg_gog_keyring_status" class="configure-hint"></p>
-            <div id="gogSetupStatus" class="gog-setup-status" aria-live="polite"></div>
+            <p class="configure-hint" data-i18n-html="configureTimezoneBlockHintHtml">
+              Choose a <strong>GMT offset</strong> and region below (each row maps to one standard zone id for daylight-saving correctness). Thread list, message times, action cards, run traces, cron summaries, and <strong>distilled learning “last updated”</strong> all use this zone.
+            </p>
+            <div class="configure-field">
+              <label for="cfg_scheduler_timezone" data-i18n="configureTimezoneFieldLabel">Scheduler / UI timezone</label>
+              <select id="cfg_scheduler_timezone" class="configure-timezone-select" autocomplete="off"></select>
+              <span class="configure-env" id="cfg_env_scheduler_timezone"></span>
+            </div>
           </div>
         </details>
         <details class="configure-details">
@@ -2077,7 +2086,7 @@
   <div class="tab-pane" id="tab-agent">
     <section>
       <h2 data-i18n="workbenchTitle">Workbench</h2>
-      <p class="section-lead" data-i18n="workbenchLead">Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.</p>
+      <p class="section-lead" data-i18n="workbenchLead">Chat in threads here. Use the Action dashboard tab for inbox review runs; expand Run trace for step detail, and Run history for audit.</p>
       <details id="profileDetails" class="profile-card" open>
         <summary>
           <div class="profile-head">
@@ -2462,7 +2471,8 @@
         tabHistory: 'Run history',
         tabActionDashboard: 'Action dashboard',
         landingTitle: 'Welcome to Sova',
-        landingLead: 'CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required.',
+        landingLead:
+          'CSM Radar Agent that triages inbox, tracks action cards, and keeps thread-by-thread follow-up grounded in KB context. Use <strong>Configure</strong> for models, API keys, and Gmail/gog paths—no code edits required. For more depth—how the agent works, architecture, and installation—see the <a href="https://github.com/sangyoon-pak/Sova_CSM_Radar_247#readme" target="_blank" rel="noopener noreferrer">README on GitHub</a>.',
         landingNextStepsTitle: 'Next steps',
         landingNextStepsLead: 'You already cloned the repo and started the server—continue in the UI:',
         landingNextStepsLi1: '<strong>Configure</strong> — Provider preset, models, API keys, embeddings, Gmail / <code>gog</code> paths. Saving stores values in the app database; grey hints show recommended defaults.',
@@ -2470,7 +2480,7 @@
         landingNextStepsLi3: '<strong>Knowledge</strong> — Upload <code>.md</code>, <code>.txt</code>, <code>.pdf</code>, or <code>.docx</code> and <strong>Reindex</strong> for RAG; add RC URLs if you use web search.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Review probes, action cards, and traces after runs.',
         landingNextStepsLi5: '<strong>Cron</strong> — Schedule automated inbox probes from the Cron tab (presets + cron expression), or manage jobs in natural language from Workbench when the thread is about cron.',
-        landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, optional Gmail): see ',
+        landingDocsGithubBefore: 'Full setup from clone (venv, ripgrep, Configure / env, Gmail): see ',
         landingDocsGithubLinkLabel: 'docs on GitHub',
         landingDocsGithubAfter: ' — or open <code>docs/INSTALLATION.md</code> in your local clone.',
         landingDocsArchitectureLine: 'Runtime flow, API routes, and the <strong>Configure</strong> map: <code>docs/ARCHITECTURE.md</code> in your clone (same <code>docs/</code> tree on GitHub).',
@@ -2481,13 +2491,15 @@
         landingCtaWorkbench: 'Open Workbench',
         landingCtaDashboard: 'Open Action dashboard',
         landingQuickStartTitle: 'Quick start',
-        landingStep1: '<strong>1) Configure models &amp; Gmail (optional)</strong><br/>Use the <strong>Configure</strong> tab for OpenRouter models, API key, embeddings, and gog paths. Then set vendor / role / product scope in Workbench.',
+        landingStep1:
+          '<strong>1) Configure models &amp; Gmail</strong><br/>Use the <strong>Configure</strong> tab for LLM models (via the OpenAI or OpenRouter-compatible API), API keys, embeddings, and gog paths. Then set vendor / role / product scope in Workbench.',
         landingStep2: '<strong>2) Scan inbox</strong><br/>Run probe from Workbench to generate structured action cards in the dashboard.',
         landingStep3: '<strong>3) Triage by status</strong><br/>Use Not started / In progress / Completed to manage execution and sorting.',
         landingStep4: '<strong>4) Discuss one action deeply</strong><br/>Use "Discuss this action" to open a scoped thread and fetch the exact email thread when needed.',
         landingStep5: '<strong>5) Schedule inbox probes</strong><br/>Use the <strong>Cron</strong> tab for presets and schedules, or describe cadence in Workbench (cron admin mode) when your message is about jobs.',
         landingFeedbackTitle: 'Feedback & self-evolution',
-        landingFeedbackBody: 'Open <strong>Run history</strong>, expand a run, and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.',
+        landingFeedbackBody:
+          'Open <strong>Run history</strong> (expand a run) or the <strong>Action dashboard</strong> (on each action card) and tap <strong>Correct</strong>, <strong>Incorrect</strong>, <strong>Useful</strong>, or <strong>Noisy</strong>. Feedback is saved into <strong>learning memory</strong> and distilled into reusable rules for future runs.',
         landingKnowledgeTitle: 'Product docs & RC URLs',
         landingKnowledgeBody: 'Go to the <strong>Knowledge</strong> tab. Under <strong>Upload</strong>, add <code>.md</code>, <code>.txt</code>, <code>.pdf</code>, or <code>.docx</code> (product or internal docs), then click <strong>Reindex</strong> so search can surface them. Under <strong>RC URLs</strong>, add docs or portal base URLs and <strong>enable</strong> those domains so the agent may use web search during runs.',
         landingCtaRunHistory: 'Open Run history',
@@ -2509,11 +2521,14 @@
         configureSavedEmpty: 'Nothing saved in the database yet — edit fields above and click Save configuration.',
         configureSavedValueCol: 'Value (masked)',
         configureKeyMissingDb: 'No API key saved — paste above and Save configuration.',
-        configureEmbedBlock: 'Embeddings (RAG)',
+        configureEmbedBlock: 'Embedding',
         configureOrHint:
           'Paste the API key for the selected preset and <strong>Save configuration</strong> to store it in the app database on this machine (OpenAI preset → <code>openai_api_key</code>; OpenRouter / Gemini (OR) → <code>openrouter_api_key</code>).',
         configureGogBlock: 'Gmail (gog)',
-        configureGogLead: 'Run one-time OAuth in a terminal (<a href="/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a>). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.',
+        configureAgentGuardrailsBlock: 'Agent Guardrails',
+        configureEffectivePromptsTitle: 'Effective prompts by mode (read-only)',
+        configureGogLead:
+          'Run one-time OAuth in a terminal (<a href="https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/GMAIL_SETUP.md" target="_blank" rel="noopener noreferrer">GMAIL_SETUP.md</a> on GitHub). Then save the fields below — they persist in this app’s database so you do not need shell exports on every restart.',
         configureGogKeyringDb: 'Keyring passphrase is stored in the app database (leave password blank and Save to keep it; enter a new value to replace).',
         configureGogKeyringMissingDb: 'No keyring passphrase saved — paste GOG_KEYRING_PASSWORD and Save, or set it in the process environment.',
         cfgGogHome: 'GOG_HOME',
@@ -2531,7 +2546,8 @@
         configureSaveFail: 'Save failed',
         configureClearAllHint: 'This removes <strong>every</strong> value saved from Configure (all sections above), and deletes local <strong>gog</strong> OAuth token files under your effective <code>GOG_HOME</code> (bundled <code>scripts/.local</code> when unset). The <code>gog</code> binary is kept. Fields will show recommended defaults until you save again.',
         configureClearAllBtn: 'Clear all database overrides',
-        configureClearAllConfirm: 'Remove every Configure value from the app database and delete local gog OAuth tokens under GOG_HOME? You will need to run terminal OAuth again (docs/GMAIL_SETUP.md).',
+        configureClearAllConfirm:
+          'Remove every Configure value from the app database and delete local gog OAuth tokens under GOG_HOME? You will need to run terminal OAuth again (see docs/GMAIL_SETUP.md on GitHub).',
         configureClearAllDone: 'Database overrides cleared.',
         configureClearAllGogSuffix: 'Removed {n} local gog OAuth file(s).',
         configureKeyDb: 'OpenRouter API key stored in app database',
@@ -2546,7 +2562,7 @@
         configureBaseUrlHintOpenRouter:
           'Set the OpenAI-compatible API base for OpenRouter (or Gemini via OpenRouter). Grey hint shows the usual default; save after you change it.',
         configureProviderSummary: 'Provider & API',
-        configureRetrievalPolicyBlock: 'Retrieval ranking policy',
+        configureRetrievalPolicyBlock: 'Retrieval Ranking Policy',
         configureRetrievalPolicyHint:
           'Vendor-agnostic policy JSON used by retrieval reranker. Keep valid JSON. This replaces hardcoded vendor boosts.',
         configurePresetHint: 'Choose a preset, then Apply defaults or edit fields. Chat uses an OpenAI-compatible HTTP client.',
@@ -2590,7 +2606,7 @@
         landingDisclaimerTitle: 'Email provider note',
         landingDisclaimerBody: 'Inbox access in this app is implemented for <strong>Gmail</strong> via the local <strong>gog</strong> CLI and your OAuth setup. Support for other providers (Outlook, etc.) is <strong>not</strong> included—teams that need them should build their own ingestion pipeline or replace the Gmail tool layer.',
         workbenchTitle: 'Workbench',
-        workbenchLead: 'Monitor threads and chat; open the Action dashboard tab for inbox review runs. Trace and Run history stay available for audit.',
+        workbenchLead: 'Chat in threads here. Use the Action dashboard tab for inbox review runs; expand Run trace for step detail, and Run history for audit.',
         profileCardTitle: 'Agent profile',
         profileConfigure: 'Configure',
         profilePill: 'Applies to all runs',
@@ -2638,6 +2654,12 @@
         roleUser: 'User',
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
+        traceTypeSovaAgent: 'Sova Agent',
+        traceTypeTool: 'Tool',
+        traceTypeWeb: 'Web',
+        traceTypeChain: 'Chain',
+        traceTypeRun: 'Run',
+        traceTypeEvent: 'Event',
         cronTitle: 'Cron jobs',
         cronHelp: 'Schedule automatic "Scan inbox" runs. Start with a preset, then fine-tune the cron expression if needed.',
         cronPresetSelect: 'Preset cadence…',
@@ -2719,7 +2741,7 @@
         optPurgeMemory: 'Purge memory table',
         maintenanceStatsFail: 'Could not load database stats.',
         historyTip:
-          'Tip: expand a run and use OK / NG / Good / Noise. Each click saves a short note so it can be distilled into learning rules. Open Configure → Distilled learning rules to read or re-run distillation.',
+          'Tip: expand a run and use OK / NG / Good / Noise. Each click saves a short note so it can be distilled into learning rules. Open Configure → Distilled Learning Rules to read or re-run distillation.',
         historyTriggerFilter: 'Run type',
         historyTriggerAll: 'All',
         historyTriggerCronAdmin: 'Cron admin (Workbench)',
@@ -2868,16 +2890,16 @@
         dashCatGeneral: 'General (legacy)',
         dashCatProductTechnical: 'Product · technical (legacy)',
         dashCatAccount: 'Account (legacy)',
-        configureAgentPromptsSurfacesTitle: 'Agent prompts · runtime surfaces',
+        configureAgentPromptsSurfacesTitle: 'Agent prompts / runtime surfaces',
         configureAgentPromptsSurfacesIntroHtml:
-          'Single place for the <strong>visual map</strong>, <strong>what is editable vs not</strong>, and the <strong>four prompt templates</strong> stored in the app database. Open <strong>Effective prompts by mode</strong> below for assembled previews.',
-        configureTimezoneBlockTitle: 'Scheduler & display timezone',
+          'Single place for the <strong>visual map</strong>, <strong>what is editable vs not</strong>, and the <strong>four prompt templates</strong> stored in the app database. Open <strong>Effective prompts by mode (read-only)</strong> below for assembled previews.',
+        configureTimezoneBlockTitle: 'Scheduler & Display Timezone',
         configureTimezoneBlockHintHtml:
           'Choose a <strong>GMT offset</strong> and region below (each row maps to one standard zone id for daylight-saving correctness). Thread list, message times, action cards, run traces, cron summaries, and <strong>distilled learning “last updated”</strong> all use this zone.',
         configureTimezoneFieldLabel: 'Scheduler / UI timezone',
         configureTimezoneUnknownSaved: 'saved value — pick a listed zone',
         configureLegendEditableHtml:
-          '<strong>Editable on this screen</strong><ul><li>The four <code>prompt_*</code> text areas (main system template, probe user message, probe mode append, action review append)</li><li>Saved to SQLite <code>app_settings</code> when you click <strong>Save configuration</strong></li><li><strong>Distilled learning</strong> is not typed here — it comes from Run history / Action dashboard feedback; see <strong>Distilled learning rules</strong> below</li></ul>',
+          '<strong>Editable on this screen</strong><ul><li>The four <code>prompt_*</code> text areas (main system template, probe user message, probe mode append, action review append)</li><li>Saved to SQLite <code>app_settings</code> when you click <strong>Save configuration</strong></li><li><strong>Distilled learning</strong> is not typed here — it comes from Run history / Action dashboard feedback; see <strong>Distilled Learning Rules</strong> below</li></ul>',
         configureLegendNotEditableHtml:
           '<strong>Not editable in these text areas</strong><ul><li><strong>Code</strong>: intent routing, probe-thread intent classifier, KB subquery planner, rerank/sufficiency, KB→web gate, RC web synthesis — in modules such as <code>email_agent.py</code>, <code>search_agent.py</code>, <code>kb_web_gate.py</code>, <code>rc_web_search.py</code> (changes need a deploy).</li><li><strong>Other Configure sections</strong>: model roles, <code>RETRIEVAL_RANKING_POLICY</code>, guardrails, Gmail paths.</li><li><strong>Knowledge tab</strong>: uploads, reindex, RC URLs, <code>rc_web_retrieval_mode</code>.</li></ul><div class="configure-legend-box--not-editable-foot">Full map: <code>docs/ARCHITECTURE.md</code></div>',
         configureAgentPromptsDbHintHtml:
@@ -2898,12 +2920,12 @@
         configurePromptUsedByMain:
           'Used by: main LangChain agent — Workbench chat when probe=false, and shared base for other modes.',
         configurePromptUsedByProbeUser:
-          'Used by: inbox probe — human-style turn for inbox_probe mode (see Effective prompts by mode).',
+          'Used by: inbox probe — human-style turn for inbox_probe mode (see Effective prompts by mode (read-only)).',
         configurePromptUsedByProbeAppend:
           'Used by: inbox_probe — appended to the system prompt when the agent runs with probe=true (Scan inbox / cron).',
         configurePromptUsedByActionReview:
           'Used by: action_review — “Discuss this action” threads scoped to one dashboard card.',
-        configureDistilledLearningTitle: 'Distilled learning rules',
+        configureDistilledLearningTitle: 'Distilled Learning Rules',
         configureDistilledLearningHintHtml:
           'Read-only text injected into the main template as <code>{learning_section}</code>. <strong>Incorrect / noisy</strong> feedback and action-card corrections are <strong>LLM-distilled</strong> into constraint bullets (<code>agent_learning_constraints</code>). <strong>Useful / correct</strong> feedback becomes <strong>verbatim excerpts</strong> from the saved run output (<code>agent_learning_exemplars</code>) — no second distill pass. Rows need a <strong>note</strong> or <strong>correction</strong> in <code>agent_feedback</code>. Separate from interaction compaction (<code>agent_memory</code>).',
         configureDistilledLearningQualityHintHtml:
@@ -2958,7 +2980,8 @@
         tabHistory: 'Run history',
         tabActionDashboard: 'Action dashboard',
         landingTitle: 'Sova 시작하기',
-        landingLead: 'Inbox를 트리아지하고 액션 카드를 추적하며, 스레드별 후속 대응을 KB 근거와 함께 운영하는 CSM Radar Agent입니다. 모델·API 키·Gmail/gog 경로는 <strong>설정</strong> 탭에서 구성하면 됩니다(코드 수정 불필요).',
+        landingLead:
+          'Inbox를 트리아지하고 액션 카드를 추적하며, 스레드별 후속 대응을 KB 근거와 함께 운영하는 CSM Radar Agent입니다. 모델·API 키·Gmail/gog 경로는 <strong>설정</strong> 탭에서 구성하면 됩니다(코드 수정 불필요). 동작 방식·아키텍처·설치 절차 등 자세한 내용은 GitHub <a href="https://github.com/sangyoon-pak/Sova_CSM_Radar_247#readme" target="_blank" rel="noopener noreferrer">README</a>를 참고하세요.',
         landingNextStepsTitle: '다음 단계',
         landingNextStepsLead: '저장소를 클론하고 서버를 띄운 상태입니다. UI에서 이어서 진행하세요:',
         landingNextStepsLi1: '<strong>설정</strong> — 프리셋·모델·API 키·임베딩·Gmail/<code>gog</code> 경로. 저장 시 앱 DB에 반영되며, 필드 아래 회색 안내는 권장 기본값입니다.',
@@ -2966,7 +2989,7 @@
         landingNextStepsLi3: '<strong>Knowledge</strong> — RAG용 <code>.md</code>·<code>.txt</code>·<code>.pdf</code>·<code>.docx</code> 업로드 후 <strong>Reindex</strong>; 웹 검색 시 RC URL.',
         landingNextStepsLi4: '<strong>Action dashboard / Run history</strong> — Probe·액션 카드·트레이스 확인.',
         landingNextStepsLi5: '<strong>Cron</strong> — Cron 탭에서 자동 인박스 Probe 예약(프리셋·크론식), Workbench에서는 스레드가 크론 관리일 때 자연어로 잡 생성/수정.',
-        landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, 선택 Gmail): ',
+        landingDocsGithubBefore: '클론부터 전체 설치(venv, ripgrep, 설정/환경 변수, Gmail): ',
         landingDocsGithubLinkLabel: 'GitHub 문서',
         landingDocsGithubAfter: ' — 또는 로컬 클론의 <code>docs/INSTALLATION.md</code>를 여세요.',
         landingDocsArchitectureLine: '런타임 흐름·API 경로·<strong>설정</strong> 탭과의 매핑: 클론의 <code>docs/ARCHITECTURE.md</code> (GitHub의 <code>docs/</code> 폴더와 동일 경로).',
@@ -2976,13 +2999,15 @@
         landingCtaCron: 'Cron 열기',
         landingCtaDashboard: 'Action dashboard 열기',
         landingQuickStartTitle: '빠른 시작',
-        landingStep1: '<strong>1) 모델·Gmail 설정(선택)</strong><br/><strong>설정</strong> 탭에서 OpenRouter 모델·API 키·임베딩·gog 경로를 지정한 뒤, Workbench에서 Vendor/Role/Product scope를 맞추세요.',
+        landingStep1:
+          '<strong>1) 모델·Gmail 설정</strong><br/><strong>설정</strong> 탭에서 LLM(OpenAI 또는 OpenRouter 호환 API)·API 키·임베딩·gog 경로를 지정한 뒤, Workbench에서 Vendor/Role/Product scope를 맞추세요.',
         landingStep2: '<strong>2) Inbox 스캔</strong><br/>Workbench에서 Probe를 실행하면 대시보드에 구조화 액션 카드가 생성됩니다.',
         landingStep3: '<strong>3) 상태로 운영</strong><br/>시작 전 / 진행 중 / 완료 상태로 실행 우선순위와 정렬을 관리하세요.',
         landingStep4: '<strong>4) 액션 단위 심화 대화</strong><br/>“이 작업만 논의”로 스코프된 스레드를 열고 필요 시 정확한 이메일 thread를 다시 불러오세요.',
         landingStep5: '<strong>5) 인박스 Probe 예약</strong><br/><strong>Cron</strong> 탭에서 프리셋·스케줄을 지정하거나, Workbench에서 메시지가 크론 잡일 때 캐던스를 자연어로 말해 관리하세요.',
         landingFeedbackTitle: '피드백과 자기 진화',
-        landingFeedbackBody: '<strong>Run history</strong>에서 Run을 펼친 뒤 <strong>OK</strong> / <strong>NG</strong> / <strong>Good</strong> / <strong>Noise</strong> 중 하나를 눌러 피드백을 남기세요. 피드백은 <strong>learning memory</strong>에 저장되고 이후 Run에 반영되는 운영 규칙으로 정리됩니다.',
+        landingFeedbackBody:
+          '<strong>Run history</strong>에서 Run을 펼치거나, <strong>Action dashboard</strong>의 각 <strong>액션 카드</strong>에서 <strong>OK</strong> / <strong>NG</strong> / <strong>Good</strong> / <strong>Noise</strong>를 눌러 피드백을 남기세요. 피드백은 <strong>learning memory</strong>에 저장되고 이후 Run에 반영되는 운영 규칙으로 정리됩니다.',
         landingKnowledgeTitle: '제품 문서·RC URL',
         landingKnowledgeBody: '<strong>Knowledge</strong> 탭 → <strong>Upload</strong>에서 제품·내부 문서(<code>.md</code>·<code>.txt</code>·<code>.pdf</code>·<code>.docx</code>)를 올리고 <strong>Reindex</strong>로 검색 색인을 갱신하세요. <strong>RC URLs</strong>에서 문서·포털 base URL을 등록하고 필요한 도메인을 <strong>enabled</strong>로 두면 Run 중 해당 도메인 web search를 사용할 수 있습니다.',
         landingCtaRunHistory: 'Run history 열기',
@@ -3011,7 +3036,7 @@
         landingDisclaimerTitle: '이메일 공급자 안내',
         landingDisclaimerBody: 'Inbox 연동은 <strong>Gmail</strong>만 지원하며, 로컬 <strong>gog</strong> CLI와 OAuth 설정을 전제로 합니다. Outlook 등 다른 서비스는 <strong>포함되지 않습니다</strong>. 필요하면 별도 수집 파이프라인을 구현하거나 Gmail 도구 레이어를 교체해야 합니다.',
         workbenchTitle: 'Workbench',
-        workbenchLead: '스레드·대화는 Workbench에서. Inbox 리뷰 Run은 Action dashboard 탭에서 확인하세요. Trace·Run history는 감사용입니다.',
+        workbenchLead: '이 탭에서 스레드 대화. Inbox 리뷰 런은 Action dashboard에서; 단계는 Run trace, 감사는 Run history.',
         profileCardTitle: 'Agent 프로필',
         profileConfigure: '설정',
         profilePill: '모든 Run에 적용',
@@ -3059,6 +3084,12 @@
         roleUser: 'User',
         roleAssistant: 'Sova Agent',
         roleSystem: 'System',
+        traceTypeSovaAgent: 'Sova Agent',
+        traceTypeTool: '도구',
+        traceTypeWeb: '웹',
+        traceTypeChain: '체인',
+        traceTypeRun: '실행',
+        traceTypeEvent: '이벤트',
         cronTitle: 'Cron',
         cronHelp: 'Inbox 스캔 자동 실행 스케줄입니다. 프리셋을 먼저 고르고 필요하면 cron 식을 미세 조정하세요.',
         cronPresetSelect: '실행 주기 프리셋…',
@@ -3086,7 +3117,10 @@
         reindexHelpHtml: '<strong>Reindex</strong>로 업로드 파일 전체의 search index를 다시 만듭니다. 색인 실패·출처 누락 시.',
         persistedDocs: '저장된 문서',
         noDocsYet: '문서 없음',
-        configureRetrievalPolicyBlock: '검색 랭킹 정책',
+        configureEmbedBlock: '임베딩',
+        configureAgentGuardrailsBlock: '에이전트 가드레일',
+        configureEffectivePromptsTitle: '모드별 유효 프롬프트 (읽기 전용)',
+        configureRetrievalPolicyBlock: '검색 순위 정책',
         configureRetrievalPolicyHint:
           '벤더-중립 정책 JSON을 LLM rerank에 사용합니다. 하드코딩된 벤더 가중치를 대체합니다.',
         cfgRetrievalRankingPolicy: 'RETRIEVAL_RANKING_POLICY (JSON)',
@@ -3147,7 +3181,7 @@
         optPurgeMemory: 'Memory 테이블 purge',
         maintenanceStatsFail: 'DB stats 로드 실패',
         historyTip:
-          '팁: Run을 펼쳐 OK/NG/Good/Noise를 누르면 짧은 메모가 함께 저장되어 정제(learning rules)에 포함됩니다. 설정 → Distilled learning rules에서 확인하거나 정제를 다시 실행하세요.',
+          '팁: Run을 펼쳐 OK/NG/Good/Noise를 누르면 짧은 메모가 함께 저장되어 정제(learning rules)에 포함됩니다. 설정 → 정제된 학습 규칙에서 확인하거나 정제를 다시 실행하세요.',
         historyTriggerFilter: 'Run 유형',
         historyTriggerAll: '전체',
         historyTriggerCronAdmin: 'Cron 관리 (Workbench)',
@@ -3295,10 +3329,10 @@
         dashboardCategoryAll: '모든 분류',
         dashboardActionCategoryLabel: '분류',
         dashboardCategoryUpdateFail: '분류를 바꾸지 못했습니다',
-        configureAgentPromptsSurfacesTitle: '에이전트 프롬프트 · 런타임 표면',
+        configureAgentPromptsSurfacesTitle: '에이전트 프롬프트 / 런타임 표면',
         configureAgentPromptsSurfacesIntroHtml:
-          '<strong>다이어그램</strong>, <strong>편집 가능/불가 구분</strong>, <strong>DB에 저장된 네 프롬프트</strong>를 한 섹션에 모았습니다. 조합된 미리보기는 아래 <strong>Effective prompts by mode</strong>를 여세요.',
-        configureTimezoneBlockTitle: '스케줄러·표시 시간대',
+          '<strong>다이어그램</strong>, <strong>편집 가능/불가 구분</strong>, <strong>DB에 저장된 네 프롬프트</strong>를 한 섹션에 모았습니다. 조합된 미리보기는 아래 <strong>모드별 유효 프롬프트 (읽기 전용)</strong>를 여세요.',
+        configureTimezoneBlockTitle: '스케줄러 및 표시 시간대',
         configureTimezoneBlockHintHtml:
           '아래에서 <strong>GMT(UTC) 기준 오프셋</strong>과 주요 지역을 고르세요(각 행은 서머타임을 반영하는 표준 구역 id로 저장됩니다). 스레드 목록, 메시지 시각, 액션 카드, 실행 기록, Cron 요약, <strong>정제된 학습 규칙의 “마지막 갱신”</strong> 표시에 모두 이 시간대를 씁니다.',
         configureTimezoneFieldLabel: '스케줄러 / UI 시간대',
@@ -3329,7 +3363,7 @@
           'America/Phoenix': 'UTC−7(일광절약 없음) — 미국 애리조나(피닉스)',
         },
         configureLegendEditableHtml:
-          '<strong>이 화면에서 편집 가능</strong><ul><li>아래 네 <code>prompt_*</code> 텍스트 영역(메인 시스템, 프로브 사용자 메시지, 프로브 모드 덧붙임, 액션 리뷰 덧붙임)</li><li><strong>Save configuration</strong> 시 SQLite <code>app_settings</code>에 저장</li><li><strong>정제된 학습(Distilled learning)</strong>은 여기서 입력하지 않으며 Run history / Action dashboard 피드백에서 생성; 아래 <strong>Distilled learning rules</strong> 참고</li></ul>',
+          '<strong>이 화면에서 편집 가능</strong><ul><li>아래 네 <code>prompt_*</code> 텍스트 영역(메인 시스템, 프로브 사용자 메시지, 프로브 모드 덧붙임, 액션 리뷰 덧붙임)</li><li><strong>Save configuration</strong> 시 SQLite <code>app_settings</code>에 저장</li><li><strong>정제된 학습(Distilled learning)</strong>은 여기서 입력하지 않으며 Run history / Action dashboard 피드백에서 생성; 아래 <strong>정제된 학습 규칙</strong> 참고</li></ul>',
         configureLegendNotEditableHtml:
           '<strong>이 텍스트 영역으로는 편집되지 않음</strong><ul><li><strong>코드</strong>: 인텐트 라우팅, 프로브 스레드 인텐트 분류, KB 서브쿼리 플래너, 리랭크/충분성, KB→웹 게이트, RC 웹 합성 등 — <code>email_agent.py</code>, <code>search_agent.py</code>, <code>kb_web_gate.py</code>, <code>rc_web_search.py</code> 등(배포가 필요).</li><li><strong>설정의 다른 섹션</strong>: 모델 역할, <code>RETRIEVAL_RANKING_POLICY</code>, 가드레일, Gmail 경로.</li><li><strong>Knowledge 탭</strong>: 업로드, 재색인, RC URL, <code>rc_web_retrieval_mode</code>.</li></ul><div class="configure-legend-box--not-editable-foot">전체 구조: <code>docs/ARCHITECTURE.md</code></div>',
         configureAgentPromptsDbHintHtml:
@@ -3350,7 +3384,7 @@
         configurePromptUsedByMain:
           '사용처: 메인 LangChain 에이전트 — probe=false일 때 Workbench 채팅, 기타 모드의 공통 베이스.',
         configurePromptUsedByProbeUser:
-          '사용처: 인박스 프로브 — inbox_probe 모드의 사람 발화 턴(Effective prompts by mode 참고).',
+          '사용처: 인박스 프로브 — inbox_probe 모드의 사람 발화 턴(모드별 유효 프롬프트(읽기 전용) 참고).',
         configurePromptUsedByProbeAppend:
           '사용처: inbox_probe — 에이전트가 probe=true로 실행될 때(Scan inbox / cron) 시스템 프롬프트에 덧붙는 문구.',
         configurePromptUsedByActionReview:
@@ -4301,12 +4335,14 @@
       if (d) d.open = false; // keep it quiet by default
     }
 
-    function typeLabel(t) {
-      if (t === 'model_start' || t === 'model_end') return 'assistant';
-      if (t === 'tool_start' || t === 'tool_end') return 'tool';
-      if (t === 'web_round_start' || t === 'web_round_end') return 'web';
-      if (t === 'chain_start' || t === 'chain_end') return 'chain';
-      return String(t || 'event');
+    function traceEventTypeLabel(t) {
+      const x = String(t || '');
+      if (x === 'model_start' || x === 'model_end') return uiText('traceTypeSovaAgent');
+      if (x === 'tool_start' || x === 'tool_end') return uiText('traceTypeTool');
+      if (x === 'web_round_start' || x === 'web_round_end') return uiText('traceTypeWeb');
+      if (x === 'chain_start' || x === 'chain_end') return uiText('traceTypeChain');
+      if (x === 'run_cancelled') return uiText('traceTypeRun');
+      return uiText('traceTypeEvent');
     }
 
     function renderTraceItem(e) {
@@ -4321,7 +4357,7 @@
           <details>
             <summary style="cursor:pointer;">
               <div class="trace-head">
-                <div class="trace-type">${escapeHtml(typeLabel(e.type))}</div>
+                <div class="trace-type">${escapeHtml(traceEventTypeLabel(e.type))}</div>
                 <div class="trace-title">${escapeHtml(e.title || '')}</div>
                 <div class="trace-time">${escapeHtml(ts)}</div>
                 <div class="trace-caret">▾</div>
@@ -4333,7 +4369,7 @@
       } else {
         el.innerHTML = `
           <div class="trace-head">
-            <div class="trace-type">${escapeHtml(typeLabel(e.type))}</div>
+            <div class="trace-type">${escapeHtml(traceEventTypeLabel(e.type))}</div>
             <div class="trace-title">${escapeHtml(e.title || '')}</div>
             <div class="trace-time">${escapeHtml(ts)}</div>
           </div>
@@ -4863,7 +4899,7 @@
         setv('cfg_gog_credentials_path', eff.gog_credentials_path != null ? String(eff.gog_credentials_path) : '');
         setSchedulerTimezoneSelectValue(eff.scheduler_timezone != null ? String(eff.scheduler_timezone) : 'Asia/Seoul');
         setv('cfg_langsmith_tracing', eff.langsmith_tracing != null ? String(eff.langsmith_tracing) : 'false');
-        setv('cfg_langsmith_project', eff.langsmith_project != null ? String(eff.langsmith_project) : 'email_draft_agent');
+        setv('cfg_langsmith_project', eff.langsmith_project != null ? String(eff.langsmith_project) : 'Sova_CSM_Radar_247');
         setv('cfg_langsmith_api_key', '');
         setvCfgGuardrail(
           'cfg_guardrail_include_sender_domains',
@@ -5016,7 +5052,7 @@
       payload.gog_credentials_path = gv('cfg_gog_credentials_path');
       payload.scheduler_timezone = gv('cfg_scheduler_timezone') || 'Asia/Seoul';
       payload.langsmith_tracing = gv('cfg_langsmith_tracing') || 'false';
-      payload.langsmith_project = gv('cfg_langsmith_project') || 'email_draft_agent';
+      payload.langsmith_project = gv('cfg_langsmith_project') || 'Sova_CSM_Radar_247';
       const lsk = gv('cfg_langsmith_api_key');
       if (lsk) payload.langsmith_api_key = lsk;
       payload.guardrail_include_sender_domains = gv('cfg_guardrail_include_sender_domains');

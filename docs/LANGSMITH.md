@@ -13,22 +13,22 @@ Traces agent runs, tool calls, and LLM invocations for debugging. Free tier: 5,0
 ```
 LANGSMITH_TRACING=true
 LANGSMITH_API_KEY=lsv2_pt_...
-LANGSMITH_PROJECT=email_draft_agent
+LANGSMITH_PROJECT=Sova_CSM_Radar_247
 ```
 
 For ad-hoc Python, export `LANGSMITH_*` in your shell (process env is not read from Configure DB unless the app loads it).
 
-**Project name matters:** Whatever you save under **Configure → LangSmith project** is written to the app database and **overrides** `LANGSMITH_PROJECT` from the process environment for agent runs. Traces are tagged to that name. If the UI still says `email_draft_agent` in docs but your Configure value is e.g. `sova_agent`, you must open **that** project in LangSmith to see new traces. Confirm the effective name via **`GET /settings/runtime`** (JSON includes **`langsmith_project`** and **`langsmith_tracing`**) or the Configure form after save.
+**Project name matters:** Whatever you save under **Configure → LangSmith project** is written to the app database and **overrides** `LANGSMITH_PROJECT` from the process environment for agent runs. Traces are tagged to that name. If this doc shows one example name but your Configure value differs (e.g. `sova` or `my_team`), you must open **that** project in LangSmith to see new traces. Confirm the effective name via **`GET /settings/runtime`** (JSON includes **`langsmith_project`** and **`langsmith_tracing`**) or the Configure form after save.
 
 ## Verify Tracing
 
-Start the app (`python run.py`), enable LangSmith in **Configure**, then trigger any agent run (Workbench, **Scan inbox**, or **Run history** / API). Open [smith.langchain.com](https://smith.langchain.com) → **Projects** → **the same project name as Configure** (default example: `email_draft_agent`; yours may differ) after a few seconds.
+Start the app (`python run.py`), enable LangSmith in **Configure**, then trigger any agent run (Workbench, **Scan inbox**, or **Run history** / API). Open [smith.langchain.com](https://smith.langchain.com) → **Projects** → **the same project name as Configure** (example: `Sova_CSM_Radar_247`; yours may differ) after a few seconds.
 
 Each LLM span uses the resolved model id (see [LLM_MODELS.md](LLM_MODELS.md)); filter traces by model or by run name (e.g. `search_agent.split_focus_subqueries`, `search_agent.policy_rerank`, `retrieval.kb_web_gate`).
 
 ## No Traces Appearing?
 
-1. **Open the correct LangSmith project** — Must match **`langsmith_project`** from Configure / **`GET /settings/runtime`** (not necessarily `email_draft_agent`). This is the most common “suddenly empty” confusion after renaming the project in Configure or using a different workspace.
+1. **Open the correct LangSmith project** — Must match **`langsmith_project`** from Configure / **`GET /settings/runtime`**. This is the most common “suddenly empty” confusion after renaming the project in Configure or using a different workspace.
 2. **Tracing toggle** — **Configure → LangSmith tracing** = **true**. If a DB row exists with `false`, it overrides a `true` in `.env` until you change it.
 3. **API key present** — Configure shows “key stored in database” / env; `_ensure_langsmith_env` sends nothing to LangSmith if tracing is on but the key is missing.
 4. **Trigger an agent run** — Traces appear only when the agent runs (Workbench, **Scan inbox**, probe, or `/agent/run`). Inbox-peek short paths still invoke tools but parent traces use `email_agent.run_agent` when routing runs the full agent.

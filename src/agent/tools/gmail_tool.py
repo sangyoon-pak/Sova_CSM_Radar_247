@@ -131,7 +131,7 @@ def _maybe_bootstrap_oauth(env: dict[str, str], project_root: Path) -> str | Non
         return (
             "Missing OAuth client credentials.\n"
             f"Tried: {', '.join(str(p) for p in candidates)}\n"
-            "Place Google OAuth client JSON at email_draft_agent/credentials.json or set GOG_CREDENTIALS_PATH, "
+            "Place Google OAuth client JSON at the repo root (e.g. Sova_CSM_Radar_247/credentials.json) or set GOG_CREDENTIALS_PATH, "
             "then run OAuth once (docs/GMAIL_SETUP.md)."
         )
 
