@@ -10,7 +10,7 @@ Use this script to see structured **action cards** metadata from a pasted client
 Requires working LLM keys (Configure / .env) and, for real inbox tools, Gmail (gog).
 Optional: ``--seed-rc-url`` upserts one enabled RC URL before the run (e.g. your hosted docs root).
 
-Usage (from repo root ``email_draft_agent``)::
+Usage (from repo root ``Sova_CSM_Radar_247``)::
 
   python scripts/run_probe_like_workbench.py --save-dir data/reports/probe_workbench_run
   python scripts/run_probe_like_workbench.py --fixture path/to/email.txt --seed-rc-url 'https://docs.example.com/'

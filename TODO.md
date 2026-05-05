@@ -20,7 +20,7 @@
 ### Distribution
 
 - [ ] change the local project folder name to Sova_CSM_Radar_247 and do all the unit test, linter check and sanity check. 
-- [ ] clean up all the db tables back to clean state. 
+- [ ] clean up all the db tables back to clean state before commit to remote repo
 - [ ] **Host install** story: mac/linux/windows via venv + `run.py` (not container-first); `gog`/OAuth need a normal OS env (`docs/GMAIL_SETUP.md`)
 - [ ] **Public docs UX**: canonical `docs/INSTALLATION.md`; README links; optional future docs site; landing links when published
 

@@ -2,7 +2,7 @@
 
 Sova is an inbox-aware CSM copilot that turns customer email threads into evidence-backed follow-up actions using retrieval over product knowledge.
 
-> Repository folder naming may still use `email_draft_agent`; product naming should remain **Sova - CSM Radar Agent 24/7** across docs and UI.
+> Clone or rename the project folder as **`Sova_CSM_Radar_247`** (or your preferred name). Product naming should remain **Sova - CSM Radar Agent 24/7** across docs and UI.
 
 ## What Sova Does
 

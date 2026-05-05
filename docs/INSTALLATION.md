@@ -25,7 +25,7 @@ After the app is up, the **Configure** tab’s prompt/runtime layout is document
 
 ```bash
 git clone <your-repo-url>
-cd email_draft_agent
+cd Sova_CSM_Radar_247
 ```
 
 Use the HTTPS or SSH URL from your Git host (fork or upstream).

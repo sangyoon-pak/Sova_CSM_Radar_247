@@ -15,7 +15,7 @@ In [Google Cloud Console](https://console.cloud.google.com/): enable **Gmail API
 ## 2. Install `gog`
 
 ```bash
-cd email_draft_agent/scripts
+cd Sova_CSM_Radar_247/scripts
 ./install-gog-local.sh
 ```
 
@@ -62,7 +62,7 @@ The app **does not** run Google OAuth in the browser here — it only stores **`
 With the server running and §4 saved (or the same variables set only in the environment):
 
 ```bash
-cd email_draft_agent
+cd Sova_CSM_Radar_247
 .venv/bin/python -c "from src.agent.tools.gmail_tool import fetch_inbox_emails; print(fetch_inbox_emails(max_results=2)[:500])"
 ```
 
