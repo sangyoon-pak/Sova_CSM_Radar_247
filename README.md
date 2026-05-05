@@ -4,6 +4,12 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 > Clone or rename the project folder as **`Sova_CSM_Radar_247`** (or your preferred name). Product naming should remain **Sova - CSM Radar Agent 24/7** across docs and UI.
 
+## Walkthrough Video
+
+<video src="docs/Sova_walkthrough.mp4" controls muted playsinline width="100%"></video>
+
+If inline playback is not available in your viewer, open the file directly: [docs/Sova_walkthrough.mp4](docs/Sova_walkthrough.mp4).
+
 ## What Sova Does
 
 - Probes inbox threads (Gmail via local `gog` + OAuth)
