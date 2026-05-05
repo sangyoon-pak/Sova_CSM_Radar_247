@@ -63,26 +63,16 @@ Common entrypoints (not exhaustive; see `src/api/routes.py`):
 
 **Full inbox probe** (same pipeline as **Scan inbox** / `probe: true`):
 
-- Triggered when the client sends **`probe: true`** on `/threads/send`, **or** when **`is_inbox_probe_chat_intent(text)`** is true (`src/agent/email_agent.py`).
-- **Action-review** threads (`metadata.kind == action_review`) **never** auto-promote to probe.
+- Triggered **only** when the client sends **`probe: true`** on `/threads/send` (explicit Scan inbox).
 - When probe is active: `trigger_type` is `thread_probe`, **no** thread history is passed for that run (isolated probe), agent input is typically the configured **probe user message** (`get_probe_trigger_message()`), and the worker applies **`merge_csm_actions_metadata`** + **`format_probe_thread_reply`** so **Action dashboard** cards update.
-
-**Intent classifier (auto-probe from chat):**
-
-- Implemented as a **single JSON LLM call** using the same model stack as other small routers: **`LLM_MODEL_SEARCH_JSON`** (`effective_llm_model_search_json()`), temperature 0.
-- Classifies whether the user wants **`run_full_inbox_probe`** (full Gmail triage + dashboard merge) vs normal chat.
-- Disabled with env / setting **`PROBE_THREAD_INTENT_CLASSIFIER=off`** (or `heuristic` / `disabled` aliases)—see `src/config.py` (`probe_thread_intent_classifier`).
-- A separate router in the same module classifies **inbox peek** vs full agent when **not** in probe mode (`_route_user_request`: `inbox_peek` → early `fetch_inbox_emails` return without the full agent loop).
 
 ## Inside `run_agent` (simplified)
 
 Order matters early in `run_agent` (`src/agent/email_agent.py`):
 
-1. **Cron NL fast path** (Workbench, not probe, not action-review): deterministic cron handling when the message matches cron admin patterns.
-2. **`route_text`**: latest user utterance from `conversation_messages` when not probing.
-3. **`inbox_peek` short-circuit**: if `_route_user_request(route_text) == "inbox_peek"` and not action-review → return `fetch_inbox_emails` output only (no doc tools in that path).
-4. **`probe=True`**: probe-specific system append, Gmail slice, then model must emit **probe JSON**; server merges into dashboard metadata on completion (routes worker).
-5. **Default**: full LangChain agent with tools (`fetch_inbox_emails`, `fetch_gmail_thread`, `search_product_docs`, `search_rc_web`, cron tools, …).
+1. **`route_text`**: latest user utterance from `conversation_messages` when not probing (used for retrieval / forced web-follow-up context).
+2. **`probe=True`**: probe-specific system append, Gmail slice, then model must emit **probe JSON**; server merges into dashboard metadata on completion (routes worker).
+3. **Default**: full LangChain agent with **`create_agent_executor`** (`render_email_agent_system` includes **Configure → Agent profile**). Tools: `fetch_inbox_emails`, `fetch_gmail_thread`, `search_product_docs`, `search_rc_web`, cron tools, ….
 
 ## Configure tab: runtime diagram (UI)
 
