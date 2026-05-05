@@ -1,6 +1,6 @@
 # Installation guide (A–Z)
 
-Single path from **empty clone** to **running Sova** with models and (optional) Gmail. Host install only (venv + `python run.py`); this project does not ship as a Docker image—**`gog`** needs local OAuth and a file keyring.
+Single path from **empty clone** to **running Sova** with models and (optional) Gmail. This is the **canonical install document** for host environments (venv + `python run.py`). The project is not container-first; **`gog`** OAuth/keyring requires a normal OS user environment.
 
 After the app is up, the **Configure** tab’s prompt/runtime layout is documented in [ARCHITECTURE.md](ARCHITECTURE.md) § **Configure tab: runtime diagram (UI)** (same structure as the in-app diagram).
 
@@ -18,6 +18,12 @@ After the app is up, the **Configure** tab’s prompt/runtime layout is document
 - **Gmail** — Google Cloud project, **Gmail API** enabled, **OAuth client** JSON (`credentials.json`), and the **`gog`** CLI (see [GMAIL_SETUP.md](GMAIL_SETUP.md))
 
 **OS notes:** The bundled `scripts/install-gog-local.sh` installs **macOS** `gog` binaries. On **Linux**, install a compatible `gog` build and set `PATH` / `GOG_HOME` accordingly. On **Windows**, use **WSL2** (recommended) or extend the install story for native Windows.
+
+### Host install matrix (current)
+
+- **macOS:** fully supported host path (`venv` + `run.py` + local `gog` script).
+- **Linux:** supported host path (`venv` + `run.py`), with manual `gog` install.
+- **Windows:** supported via **WSL2** host path (`venv` + `run.py`); native Windows `gog` path is not the default documented flow yet.
 
 ---
 

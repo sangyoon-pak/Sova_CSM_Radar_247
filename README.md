@@ -26,9 +26,10 @@ Related deep dives:
 
 ## Install And First Run
 
-Use the full A-Z guide:
+Use the full A-Z guide (canonical):
 
 - **[docs/INSTALLATION.md](docs/INSTALLATION.md)** (canonical install path)
+- **[docs/README.md](docs/README.md)** (full documentation index)
 
 Quick local bootstrap:
 

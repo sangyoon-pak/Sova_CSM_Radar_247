@@ -4,7 +4,7 @@ This index is the canonical map for implementing and operating **Sova - CSM Rada
 
 ## Start Here
 
-- New users: [INSTALLATION.md](INSTALLATION.md)
+- New users: [INSTALLATION.md](INSTALLATION.md) (**canonical install guide**)
 - Product overview: [../README.md](../README.md)
 - Retrieval foundation: [SEARCH_AGENT.md](SEARCH_AGENT.md)
 

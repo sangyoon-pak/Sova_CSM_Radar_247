@@ -6,8 +6,8 @@
 ### Distribution
 
 
-- [ ] **Host install** story: mac/linux/windows via venv + `run.py` (not container-first); `gog`/OAuth need a normal OS env (`docs/GMAIL_SETUP.md`)
-- [ ] **Public docs UX**: canonical `docs/INSTALLATION.md`; README links; optional future docs site; landing links when published
+- [x] **Host install** story: mac/linux/windows via venv + `run.py` (not container-first); `gog`/OAuth need a normal OS env (`docs/GMAIL_SETUP.md`)
+- [x] **Public docs UX**: canonical `docs/INSTALLATION.md`; README links; optional future docs site; landing links when published
 
 ### Post-distribution
 
