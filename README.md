@@ -12,9 +12,9 @@ Players below use **`raw.githubusercontent.com`** with ref **`docs%2Freadme-walk
 
 ### Landing page and Configure
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/landiing%20page%20and%20configure%20walk-through.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [landiing page and configure walk-through.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/landiing%20page%20and%20configure%20walk-through.mp4)
+
+
 
 ### Workbench
 
