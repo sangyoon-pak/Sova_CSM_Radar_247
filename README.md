@@ -16,13 +16,13 @@ https://github.com/user-attachments/assets/44b35168-b054-4bbf-8c53-7a7442fce337
 
 ### Knowledge base
 
-Covers knowledge setup end-to-end: RC document upload, chunking, embedding/index build, and optional RC web URL-tree configuration so `search_rc_web` can use curated site paths when web augmentation is enabled.
+Covers knowledge setup end-to-end: RC document upload, chunking, embedding/index build, and optional RC web URL-tree configuration so `search_rc_web` can use curated site paths when web search is enabled.
 
 https://github.com/user-attachments/assets/5940b0de-4c23-4d61-a10c-02960dd3f55c
 
 ### Workbench
 
-Starts with simple user prompts in Workbench, then shows how search gets activated: the agent routes into `search_product_docs` and (mode-dependent) `search_rc_web`, runs KB-first / augment logic, and returns grounded context for follow-up drafting.
+Starts with simple user prompts in Workbench, then shows how search gets activated: the agent routes into `search_product_docs` and (mode-dependent) `search_rc_web`, runs KB-first / augment logic, and returns grounded context for follow-up drafting. With **inbox probe** mode on, the same surface runs a full Gmail triage pass: the model emits probe-shaped JSON, merge/guardrails turn that into **action cards** on the dashboard instead of conversational chat output.
 
 https://github.com/user-attachments/assets/011c427c-bffe-4732-8bf5-2645960b489c
 
