@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/15e62e5f-debb-4d81-bde1-683700fc89be
 
 ### Cron (scheduled probes)
 
-https://github.com/user-attachments/assets/87341cbc-fd66-44fc-87d0-94f6b7bf38f2
+https://github.com/user-attachments/assets/6643aa38-0ac8-49b3-ab2e-e6fec184b0ba
 
 ## What Sova Does (at a glance)
 
