@@ -10,7 +10,12 @@ from langchain_core.callbacks import BaseCallbackHandler
 
 from datetime import datetime
 
-from src.agent.email_agent import AgentRunCancelled, run_agent
+from src.agent.email_agent import (
+    AgentRunCancelled,
+    is_cron_management_request,
+    is_inbox_probe_chat_intent,
+    run_agent,
+)
 from src.agent.memory import (
     clear_distilled_learning_instructions,
     compact_memory,
@@ -968,9 +973,16 @@ def send_thread_message(req: ThreadSendRequest):
     th0 = database.get_thread_by_id(req.thread_id)
     md0 = (th0 or {}).get("metadata") or {}
     is_action_review = isinstance(md0, dict) and md0.get("kind") == "action_review"
-    effective_probe = bool(req.probe)
+    auto_probe = (
+        (not req.probe)
+        and (not is_action_review)
+        and is_inbox_probe_chat_intent(text)
+    )
+    effective_probe = bool(req.probe or auto_probe)
 
     um_meta: dict = {"kind": "probe" if effective_probe else "message"}
+    if auto_probe:
+        um_meta["auto_probe_from_chat"] = True
 
     # Persist the user message immediately.
     user_msg = database.add_message(
@@ -980,7 +992,16 @@ def send_thread_message(req: ThreadSendRequest):
         metadata=um_meta,
     )
 
-    trigger_type = "thread_probe" if effective_probe else "thread_message"
+    hist_for_route = None if effective_probe else database.list_messages(req.thread_id, limit=30)
+    cron_admin = (not effective_probe) and is_cron_management_request(
+        text,
+        conversation_messages=hist_for_route,
+    )
+    trigger_type = (
+        "thread_probe"
+        if effective_probe
+        else ("thread_cron_admin" if cron_admin else "thread_message")
+    )
     log_input = (
         get_probe_trigger_message()
         if effective_probe
@@ -1020,7 +1041,7 @@ def send_thread_message(req: ThreadSendRequest):
     thread_history = None if effective_probe else database.list_messages(req.thread_id, limit=200)
 
     agent_input = (text or "").strip()
-    if effective_probe and (req.probe and not agent_input):
+    if effective_probe and (auto_probe or (req.probe and not agent_input)):
         agent_input = get_probe_trigger_message()
 
     def _worker():

@@ -4,19 +4,72 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 > Clone or rename the project folder as **`Sova_CSM_Radar_247`** (or your preferred name). Product naming should remain **Sova - CSM Radar Agent 24/7** across docs and UI.
 
-## Walkthrough Video
+## Walkthrough videos
 
-<video src="docs/Sova_walkthrough.mp4" controls muted playsinline width="100%"></video>
+Source files live in [docs/assets/](docs/assets/)
 
-If inline playback is not available in your viewer, open the file directly: [docs/Sova_walkthrough.mp4](docs/Sova_walkthrough.mp4).
+### Landing page and Configure
 
-## What Sova Does
+Walks through the user onboarding flow, then shows how Configure lets teams tune agent prompts and guardrails, choose model/provider settings, validate Gmail + `gog` connectivity, and save runtime preferences (including retrieval and policy options) that are applied on every run.
+
+https://github.com/user-attachments/assets/44b35168-b054-4bbf-8c53-7a7442fce337
+
+### Knowledge base
+
+Covers KB preparation only: document ingestion, chunking, embedding creation, and pipeline/index build so the knowledge base is ready for later query-time grounding.
+
+https://github.com/user-attachments/assets/5940b0de-4c23-4d61-a10c-02960dd3f55c
+
+### Workbench
+
+Starts with simple user prompts in Workbench, then shows how search gets activated: the agent routes into `search_product_docs` and (mode-dependent) `search_rc_web`, runs KB-first / augment logic, and returns grounded context for follow-up drafting.
+
+https://github.com/user-attachments/assets/011c427c-bffe-4732-8bf5-2645960b489c
+
+### Action dashboard cards
+
+Shows how action cards appear and get managed in practice: review what was surfaced, adjust category when needed, and move status forward as the team executes follow-up.
+
+https://github.com/user-attachments/assets/7751d81e-17e6-4a35-94fd-39c1028f8834
+
+### Agent learning
+
+Explains the learning loop in depth: feedback signals are captured, consolidated into distilled constraints/exemplars, refreshed through `/memory/*`, and injected as a structured learning section in later runs so triage and guidance improve without changing core code paths.
+
+https://github.com/user-attachments/assets/15e62e5f-debb-4d81-bde1-683700fc89be
+
+### Cron (scheduled probes)
+
+Shows the day-to-day automation flow: set a schedule once, let probes run in the background, and come back to an already refreshed action queue.
+
+https://github.com/user-attachments/assets/6643aa38-0ac8-49b3-ab2e-e6fec184b0ba
+
+## What Sova Does (at a glance)
 
 - Probes inbox threads (Gmail via local `gog` + OAuth)
 - Classifies whether a thread requires CSM action
 - Runs retrieval (RAG + lexical search) for evidence-backed responses
 - Builds action-card candidates and tracks status progression
 - Supports manual and scheduled processing via cron workflows
+
+## Outcomes—and the product features behind them
+
+Each row is **what you want in the workflow** paired with **how Sova implements it** (still one agent process behind the scenes; diagrams and routing live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+
+| Expected outcome | What delivers it |
+|------------------|------------------|
+| Spend time on threads that truly need a CSM | **Inbox probe** runs (Scan inbox / scheduled jobs): Gmail is read via **`gog` + OAuth**; the LangChain **`email_agent`** scores threads and emits structured probe JSON; **merge + guardrails** (`probe_actions`) decide what becomes dashboard cards under Configure policy ([AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md)). |
+| Answers grounded in your content, not generic web rambling | **`search_product_docs`** drives the KB pipeline (RAG + lexical/`ripgrep` + rerank); optional **`search_rc_web`** follows **Configure** `rc_web_retrieval_mode` (for example KB-first with a gate, or augment with hosted docs). Details: [SEARCH_AGENT.md](docs/SEARCH_AGENT.md). |
+| A team-visible queue you can run | **Action dashboard** cards from merged probe metadata; **category overrides** via the dashboard API; status progression and **action-review** Workbench threads for deep dives on one candidate ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/AGENT_GUARDRAILS.md](docs/AGENT_GUARDRAILS.md)). |
+| No outbound email surprises | Gmail integration is **read-only** (`gmail_tool` → local fetch script); richer customer-facing drafts come from explicit **Workbench** requests, not from silent sends. |
+| Triage matches your products, vendors, and tone | **Workbench** agent profile + **Configure** (prompt keys, models, retrieval ranking policy, Gmail paths) persisted in **`app_settings`** via the runtime-settings API—composed into each **`run_agent`** invocation. Prompt keys: [docs/PROMPTS.md](docs/PROMPTS.md). |
+| Coverage when the team is offline | Built-in **cron / scheduler** + API routes kick the same probe path on a timetable so backlog does not silently grow. |
+| Behavior improves after operator corrections | **`/memory/*`**: feedback ingestion, learning refresh/compaction, and **distilled rules** layered into later runs alongside profile and Configure prompts. |
+| Explainability after the fact | **Run history** in the UI snapshots what ran; paired with optional observability setups (see [docs/LANGSMITH.md](docs/LANGSMITH.md)) where enabled. |
+
+**Workbench vs probe (quick distinction):** normal **Workbench** chat is `run_agent(..., probe=False)` with conversation history and tools; a **full inbox probe** is `probe=True` (or classifier-triggered equivalents)—isolated input, probe-shaped JSON output, then merge into the dashboard pipeline. See **Workbench threads vs full inbox probe** in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+
 
 ## Architecture Flow
 
