@@ -10,25 +10,37 @@ Source files live in [docs/assets/](docs/assets/)
 
 ### Landing page and Configure
 
+Walks through the user onboarding flow, then shows how Configure lets teams tune agent prompts and guardrails, choose model/provider settings, validate Gmail + `gog` connectivity, and save runtime preferences (including retrieval and policy options) that are applied on every run.
+
 https://github.com/user-attachments/assets/44b35168-b054-4bbf-8c53-7a7442fce337
 
 ### Knowledge base
+
+Covers KB preparation only: document ingestion, chunking, embedding creation, and pipeline/index build so the knowledge base is ready for later query-time grounding.
 
 https://github.com/user-attachments/assets/5940b0de-4c23-4d61-a10c-02960dd3f55c
 
 ### Workbench
 
+Starts with simple user prompts in Workbench, then shows how search gets activated: the agent routes into `search_product_docs` and (mode-dependent) `search_rc_web`, runs KB-first / augment logic, and returns grounded context for follow-up drafting.
+
 https://github.com/user-attachments/assets/011c427c-bffe-4732-8bf5-2645960b489c
 
 ### Action dashboard cards
+
+Shows how action cards appear and get managed in practice: review what was surfaced, adjust category when needed, and move status forward as the team executes follow-up.
 
 https://github.com/user-attachments/assets/7751d81e-17e6-4a35-94fd-39c1028f8834
 
 ### Agent learning
 
+Explains the learning loop in depth: feedback signals are captured, consolidated into distilled constraints/exemplars, refreshed through `/memory/*`, and injected as a structured learning section in later runs so triage and guidance improve without changing core code paths.
+
 https://github.com/user-attachments/assets/15e62e5f-debb-4d81-bde1-683700fc89be
 
 ### Cron (scheduled probes)
+
+Shows the day-to-day automation flow: set a schedule once, let probes run in the background, and come back to an already refreshed action queue.
 
 https://github.com/user-attachments/assets/6643aa38-0ac8-49b3-ab2e-e6fec184b0ba
 
