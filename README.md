@@ -8,43 +8,43 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 Source files live in [docs/assets/](docs/assets/). On GitHub’s website, **Markdown links** to `.mp4` files in the repo open the file viewer and often feel like a download; **`<video src="...">`** only gets a real player if `src` points at a **direct file URL** (typically `raw.githubusercontent.com` or a URL GitHub generates when you attach a clip in the README editor).
 
-Players below use **`raw.githubusercontent.com`** for the default branch **`main`**. If your default branch differs, replace `main` in the URLs. Until a given file exists on that branch, the player will be empty (use the blob link to open the version on your current branch).
+Players below use **`raw.githubusercontent.com`** with ref **`docs%2Freadme-walkthrough-outcomes-2026-05-06`** (the **`docs/readme-walkthrough-outcomes-2026-05-06`** integration branch—the slash is encoded so GitHub parses the branch name correctly). Paths that said **`main`** 404 until those assets are merged into default branch. **After this work lands on `main`,** do a find-replace: `docs%2Freadme-walkthrough-outcomes-2026-05-06` → `main` in every URL below (and in the “Open in repo UI” links).
 
 ### Landing page and Configure
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/main/docs/assets/landiing%20page%20and%20configure%20walk-through.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/landiing%20page%20and%20configure%20walk-through.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [landiing page and configure walk-through.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/assets/landiing%20page%20and%20configure%20walk-through.mp4)
+Open in repo UI: [landiing page and configure walk-through.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/landiing%20page%20and%20configure%20walk-through.mp4)
 
 ### Workbench
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/main/docs/assets/workbench.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/workbench.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [workbench.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/assets/workbench.mp4)
+Open in repo UI: [workbench.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/workbench.mp4)
 
 ### Action dashboard cards
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/main/docs/assets/action%20card.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/action%20card.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [action card.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/assets/action%20card.mp4)
+Open in repo UI: [action card.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/action%20card.mp4)
 
 ### Knowledge base
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/main/docs/assets/Knowledge%20walkthrough.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Knowledge%20walkthrough.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [Knowledge walkthrough.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/assets/Knowledge%20walkthrough.mp4)
+Open in repo UI: [Knowledge walkthrough.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Knowledge%20walkthrough.mp4)
 
 ### Agent learning
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/main/docs/assets/Agent%20learning.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Agent%20learning.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [Agent learning.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/assets/Agent%20learning.mp4)
+Open in repo UI: [Agent learning.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Agent%20learning.mp4)
 
 ### Cron (scheduled probes)
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/main/docs/assets/cron.mp4" controls muted playsinline width="100%"></video>
+<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/cron.mp4" controls muted playsinline width="100%"></video>
 
-Open in repo UI: [cron.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/main/docs/assets/cron.mp4)
+Open in repo UI: [cron.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/cron.mp4)
 
 **Alternative GitHub-native option:** In the GitHub web UI, edit this README and **drag each `.mp4`** into the editor. GitHub uploads it and inserts a host URL (often `user-images.githubusercontent.com` …). That URL can be used as the only `src` in `<video>` — it tends to behave the same everywhere on GitHub but has a **size limit** (commonly 10MB on free accounts); large walkthroughs usually stay in-repo with `raw.githubusercontent.com` as above.
 
