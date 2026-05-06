@@ -13,6 +13,11 @@ Players below use **`raw.githubusercontent.com`** with ref **`docs%2Freadme-walk
 ### Landing page and Configure
 
 
+### Knowledge base
+
+
+
+https://github.com/user-attachments/assets/e66910d0-cd62-46c6-889a-b0acbbb16ec8
 
 
 
