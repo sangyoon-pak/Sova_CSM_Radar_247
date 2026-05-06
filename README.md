@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/44b35168-b054-4bbf-8c53-7a7442fce337
 
 ### Knowledge base
 
-Covers KB preparation only: document ingestion, chunking, embedding creation, and pipeline/index build so the knowledge base is ready for later query-time grounding.
+Covers knowledge setup end-to-end: RC document upload, chunking, embedding/index build, and optional RC web URL-tree configuration so `search_rc_web` can use curated site paths when web augmentation is enabled.
 
 https://github.com/user-attachments/assets/5940b0de-4c23-4d61-a10c-02960dd3f55c
 
