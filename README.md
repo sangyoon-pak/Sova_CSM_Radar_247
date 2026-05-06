@@ -6,52 +6,31 @@ Sova is an inbox-aware CSM copilot that turns customer email threads into eviden
 
 ## Walkthrough videos
 
-Source files live in [docs/assets/](docs/assets/). On GitHub’s website, **Markdown links** to `.mp4` files in the repo open the file viewer and often feel like a download; **`<video src="...">`** only gets a real player if `src` points at a **direct file URL** (typically `raw.githubusercontent.com` or a URL GitHub generates when you attach a clip in the README editor).
-
-Players below use **`raw.githubusercontent.com`** with ref **`docs%2Freadme-walkthrough-outcomes-2026-05-06`** (the **`docs/readme-walkthrough-outcomes-2026-05-06`** integration branch—the slash is encoded so GitHub parses the branch name correctly). Paths that said **`main`** 404 until those assets are merged into default branch. **After this work lands on `main`,** do a find-replace: `docs%2Freadme-walkthrough-outcomes-2026-05-06` → `main` in every URL below (and in the “Open in repo UI” links).
+Source files live in [docs/assets/](docs/assets/)
 
 ### Landing page and Configure
 
+https://github.com/user-attachments/assets/44b35168-b054-4bbf-8c53-7a7442fce337
 
 ### Knowledge base
 
-
-
-https://github.com/user-attachments/assets/e66910d0-cd62-46c6-889a-b0acbbb16ec8
-
-
+https://github.com/user-attachments/assets/5940b0de-4c23-4d61-a10c-02960dd3f55c
 
 ### Workbench
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/workbench.mp4" controls muted playsinline width="100%"></video>
-
-Open in repo UI: [workbench.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/workbench.mp4)
+https://github.com/user-attachments/assets/011c427c-bffe-4732-8bf5-2645960b489c
 
 ### Action dashboard cards
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/action%20card.mp4" controls muted playsinline width="100%"></video>
-
-Open in repo UI: [action card.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/action%20card.mp4)
-
-### Knowledge base
-
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Knowledge%20walkthrough.mp4" controls muted playsinline width="100%"></video>
-
-Open in repo UI: [Knowledge walkthrough.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Knowledge%20walkthrough.mp4)
+https://github.com/user-attachments/assets/7751d81e-17e6-4a35-94fd-39c1028f8834
 
 ### Agent learning
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Agent%20learning.mp4" controls muted playsinline width="100%"></video>
-
-Open in repo UI: [Agent learning.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/Agent%20learning.mp4)
+https://github.com/user-attachments/assets/15e62e5f-debb-4d81-bde1-683700fc89be
 
 ### Cron (scheduled probes)
 
-<video src="https://raw.githubusercontent.com/sangyoon-pak/Sova_CSM_Radar_247/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/cron.mp4" controls muted playsinline width="100%"></video>
-
-Open in repo UI: [cron.mp4](https://github.com/sangyoon-pak/Sova_CSM_Radar_247/blob/docs%2Freadme-walkthrough-outcomes-2026-05-06/docs/assets/cron.mp4)
-
-**Alternative GitHub-native option:** In the GitHub web UI, edit this README and **drag each `.mp4`** into the editor. GitHub uploads it and inserts a host URL (often `user-images.githubusercontent.com` …). That URL can be used as the only `src` in `<video>` — it tends to behave the same everywhere on GitHub but has a **size limit** (commonly 10MB on free accounts); large walkthroughs usually stay in-repo with `raw.githubusercontent.com` as above.
+https://github.com/user-attachments/assets/dc315671-e9ae-4553-93ed-987fdd9a7b0c
 
 ## What Sova Does (at a glance)
 
