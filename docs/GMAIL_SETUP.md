@@ -10,6 +10,12 @@ Gmail uses the **`gog`** CLI and Google OAuth. LLM/API keys are separate — see
 
 In [Google Cloud Console](https://console.cloud.google.com/): enable **Gmail API**, configure the OAuth consent screen, create an **OAuth client ID** (Desktop app), download the JSON, and save it as **`credentials.json`** in the **repo root** (gitignored). Add test users if the app is in Testing.
 
+If you keep the OAuth JSON outside the repo (for example in another project folder), you can leave it there and point `gog` at it with an absolute path (example):
+
+```bash
+export GOG_CREDENTIALS_PATH="/absolute/path/to/credentials.json"
+```
+
 ---
 
 ## 2. Install `gog`
