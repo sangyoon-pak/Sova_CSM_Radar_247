@@ -93,8 +93,6 @@ pip install -r requirements.txt
 ```
 
 > Activate the venv in **every shell** before running `python run.py`, `pip install`, or any of the CLIs installed by `requirements.txt` (`uvicorn`, `langsmith`, `huggingface-cli`, `transformers-cli`, etc.). Without activation those commands resolve to system binaries (or fail), not the venv copies.
->
-> **Anaconda / Miniconda users:** If your prompt still shows `(base)` after activating `.venv`, you can end up with a hybrid interpreter (Anaconda stdlib mixed with `.venv` packages) and confusing tracebacks like `/opt/anaconda3/...` plus `.venv/site-packages`. Run `conda deactivate` until `(base)` disappears, then `source .venv/bin/activate` again. Confirm with `which python` → it should be `.../Sova_CSM_Radar_247/.venv/bin/python`.
 
 ---
 
@@ -121,19 +119,6 @@ python run.py
 ```
 
 Open **http://127.0.0.1:8000** (or your `HOST`:`PORT`). The server can start before you add API keys; you need keys (via Configure or the environment) before chat and tools will call models.
-
-### zsh tip: `unknown file attribute: b`
-
-If **`zsh` prints that message** after pasting steps from docs or chat, it is rarely Python itself—it is usually the shell interpreting something oddly (truncated paste, smart quotes, or conda + hook ordering). Prefer **typing one command per line** (no `# …` tails on `conda deactivate` until things work). Use the interpreter explicitly so you bypass any conda alias:
-
-```bash
-conda deactivate
-source .venv/bin/activate
-pip install -r requirements.txt
-./.venv/bin/python run.py
-```
-
-If `(base)` is still shown next to `(.venv)`, **`conda deactivate` again** (sometimes twice) until `which python` resolves to `.../.venv/bin/python`.
 
 ---
 

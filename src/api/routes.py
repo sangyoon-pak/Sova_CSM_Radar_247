@@ -1057,7 +1057,11 @@ def send_thread_message(req: ThreadSendRequest):
                 thread_is_action_review=is_action_review if not effective_probe else False,
                 cancel_check=lambda: run_state.is_cancel_requested(run_id),
             )
-            run_state.complete_run(run_id, output)
+            # Persist before flipping run status so pollRun (frontend) cannot observe
+            # "completed" before the assistant message exists. merge_csm_actions_metadata
+            # runs guardrail embeddings (~hundreds of ms to seconds) — that whole interval
+            # must stay inside `running`, otherwise the spinner dies and loadThreadMessages
+            # returns no new row until the user refreshes.
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
             metadata = {
@@ -1099,8 +1103,8 @@ def send_thread_message(req: ThreadSendRequest):
                 "completed",
                 metadata=metadata,
             )
+            run_state.complete_run(run_id, output)
         except AgentRunCancelled:
-            run_state.mark_cancelled(run_id)
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
             metadata = {
@@ -1125,8 +1129,8 @@ def send_thread_message(req: ThreadSendRequest):
                 "completed",
                 metadata=metadata,
             )
+            run_state.mark_cancelled(run_id)
         except Exception as e:
-            run_state.fail_run(run_id, str(e))
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
             metadata = {
@@ -1150,6 +1154,7 @@ def send_thread_message(req: ThreadSendRequest):
                 error_message=str(e),
                 metadata=metadata,
             )
+            run_state.fail_run(run_id, str(e))
 
     Thread(target=_worker, daemon=True).start()
     return RunAgentAsyncResponse(run_id=run_id, status="running")
