@@ -93,6 +93,8 @@ pip install -r requirements.txt
 ```
 
 > Activate the venv in **every shell** before running `python run.py`, `pip install`, or any of the CLIs installed by `requirements.txt` (`uvicorn`, `langsmith`, `huggingface-cli`, `transformers-cli`, etc.). Without activation those commands resolve to system binaries (or fail), not the venv copies.
+>
+> **Anaconda / Miniconda users:** If your prompt still shows `(base)` after activating `.venv`, you can end up with a hybrid interpreter (Anaconda stdlib mixed with `.venv` packages) and confusing tracebacks like `/opt/anaconda3/...` plus `.venv/site-packages`. Run `conda deactivate` until `(base)` disappears, then `source .venv/bin/activate` again. Confirm with `which python` → it should be `.../Sova_CSM_Radar_247/.venv/bin/python`.
 
 ---
 
