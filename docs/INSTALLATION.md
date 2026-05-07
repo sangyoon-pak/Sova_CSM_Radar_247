@@ -30,7 +30,7 @@ After the app is up, the **Configure** tab’s prompt/runtime layout is document
 ## 1. Clone and enter the project
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/sangyoon-pak/Sova_CSM_Radar_247.git
 cd Sova_CSM_Radar_247
 ```
 
