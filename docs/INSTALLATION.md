@@ -40,13 +40,59 @@ Use the HTTPS or SSH URL from your Git host (fork or upstream).
 
 ## 2. Python virtual environment
 
+### 2.1 Confirm (or install) Python 3.10+
+
+Sova requires **Python 3.10+** (3.12 recommended). Many systems ship with an older Python; check first:
+
 ```bash
-python3 -m venv .venv
+python3 --version
+```
+
+If the printed version is below 3.10 — or no `python3` is found — install a supported interpreter using one of the options below.
+
+**macOS (Homebrew, recommended):**
+
+```bash
+brew install python@3.12
+# Homebrew prints the exact path; typically /opt/homebrew/opt/python@3.12/bin/python3.12
+```
+
+**Ubuntu / Debian (apt):**
+
+```bash
+sudo apt update
+sudo apt install -y python3.12 python3.12-venv python3-pip
+# Older distros: enable deadsnakes PPA first:
+#   sudo add-apt-repository ppa:deadsnakes/ppa && sudo apt update
+```
+
+**Windows (WSL2 strongly recommended):** install Ubuntu via WSL2, then follow the Debian/Ubuntu instructions above. For native Windows, use [python.org](https://www.python.org/downloads/) installers and ensure “Add Python to PATH” is checked.
+
+**Multiple Pythons / version manager (pyenv):** if the system Python is locked to an older version and you cannot upgrade it system-wide, use **pyenv**:
+
+```bash
+# macOS: brew install pyenv
+# Linux: see https://github.com/pyenv/pyenv#installation
+pyenv install 3.12.7
+pyenv local 3.12.7        # writes .python-version in the project folder
+```
+
+### 2.2 Create and activate the venv
+
+Sova needs an **isolated Python environment with `requirements.txt` installed** — modern macOS and Linux block global `pip install` (PEP 668), and mixing Sova's deps with other projects causes conflicts. The doc uses Python's built-in `venv` because it ships with the interpreter, but **any equivalent works** (`uv`, `virtualenv`, `conda`/`mamba`, Docker, etc.) — just point step §4's `python run.py` at that environment's interpreter.
+
+Create the venv with the specific Python you confirmed above (replace `python3.12` with the binary you just installed if different):
+
+```bash
+python3.12 -m venv .venv
 source .venv/bin/activate          # Windows CMD: .venv\Scripts\activate.bat
                                    # Windows PowerShell: .venv\Scripts\Activate.ps1
+python --version                   # should now print 3.10+ (3.12 recommended)
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+> Activate the venv in **every shell** before running `python run.py`, `pip install`, or any of the CLIs installed by `requirements.txt` (`uvicorn`, `langsmith`, `huggingface-cli`, `transformers-cli`, etc.). Without activation those commands resolve to system binaries (or fail), not the venv copies.
 
 ---
 
