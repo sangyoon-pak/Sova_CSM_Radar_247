@@ -122,6 +122,19 @@ python run.py
 
 Open **http://127.0.0.1:8000** (or your `HOST`:`PORT`). The server can start before you add API keys; you need keys (via Configure or the environment) before chat and tools will call models.
 
+### zsh tip: `unknown file attribute: b`
+
+If **`zsh` prints that message** after pasting steps from docs or chat, it is rarely Python itself—it is usually the shell interpreting something oddly (truncated paste, smart quotes, or conda + hook ordering). Prefer **typing one command per line** (no `# …` tails on `conda deactivate` until things work). Use the interpreter explicitly so you bypass any conda alias:
+
+```bash
+conda deactivate
+source .venv/bin/activate
+pip install -r requirements.txt
+./.venv/bin/python run.py
+```
+
+If `(base)` is still shown next to `(.venv)`, **`conda deactivate` again** (sometimes twice) until `which python` resolves to `.../.venv/bin/python`.
+
 ---
 
 ## 5. Configuration (Configure UI, optional host environment)
