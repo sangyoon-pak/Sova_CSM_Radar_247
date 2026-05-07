@@ -34,7 +34,6 @@ Binary: **`scripts/.local/bin/gog`**. Default **`GOG_HOME=./scripts/.local`**.
 Use a normal shell (not an IDE Run task). From **repo root**, replace `CHANGE_ME` and `YOUR_EMAIL`:
 
 ```bash
-cd scripts && \
 export GOG_HOME="$(pwd)/.local" HOME="$(pwd)/.local" PATH="$(pwd)/.local/bin:$PATH" GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD='CHANGE_ME' && \
 ./.local/bin/gog auth credentials ../credentials.json && \
 ./.local/bin/gog auth add 'YOUR_EMAIL' --services gmail --readonly --manual
