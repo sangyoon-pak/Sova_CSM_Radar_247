@@ -1916,6 +1916,11 @@
             </div>
             <div class="configure-field"><label for="cfg_guardrail_include_sender_domains">Include sender domains</label><input id="cfg_guardrail_include_sender_domains" type="text" placeholder="customer.com, partner.org" /></div>
             <div class="configure-field"><label for="cfg_guardrail_exclude_sender_domains">Exclude sender domains</label><input id="cfg_guardrail_exclude_sender_domains" type="text" placeholder="internal.company.com" /></div>
+            <div class="configure-field">
+              <label for="cfg_customer_email_domains" data-i18n="configureCustomerEmailDomainsLabel">Customer email domains</label>
+              <input id="cfg_customer_email_domains" type="text" placeholder="customer1.com, partner.example.org" />
+              <p class="configure-hint" style="margin:0.25rem 0 0 0;" data-i18n="configureCustomerEmailDomainsHint">Anchors action card sender to the customer when both you and the client are in the thread (e.g. you replied last). Independent of dashboard inclusion gating.</p>
+            </div>
             <div class="configure-field"><label for="cfg_guardrail_include_intent_keywords">Include intents (natural language)</label><textarea id="cfg_guardrail_include_intent_keywords" rows="5" style="width:100%;max-width:52rem;" placeholder="e.g. urgent production outage&#10;e.g. customer escalated to leadership"></textarea></div>
             <div class="configure-field"><label for="cfg_guardrail_exclude_intent_keywords">Exclude intents (natural language)</label><textarea id="cfg_guardrail_exclude_intent_keywords" rows="5" style="width:100%;max-width:52rem;" placeholder="e.g. automated quota monitoring alerts&#10;e.g. internal newsletter"></textarea></div>
             <div class="configure-field"><label for="cfg_guardrail_team_guidance">Team guidance</label><textarea id="cfg_guardrail_team_guidance" rows="3" placeholder="Internal policy notes for what to surface/ignore."></textarea></div>
@@ -2544,6 +2549,9 @@
         configureSaved: 'Saved.',
         configureLoadFail: 'Could not load settings',
         configureSaveFail: 'Save failed',
+        configureCustomerEmailDomainsLabel: 'Customer email domains',
+        configureCustomerEmailDomainsHint:
+          'Anchors action card sender to the customer when both you and the client are in the thread (e.g. you replied last). Independent of dashboard inclusion gating.',
         configureClearAllHint: 'This removes <strong>every</strong> value saved from Configure (all sections above), and deletes local <strong>gog</strong> OAuth token files under your effective <code>GOG_HOME</code> (bundled <code>scripts/.local</code> when unset). The <code>gog</code> binary is kept. Fields will show recommended defaults until you save again.',
         configureClearAllBtn: 'Clear all database overrides',
         configureClearAllConfirm:
@@ -4547,6 +4555,7 @@
       guardrail_exclude_intent_keywords: 'GUARDRAIL_EXCLUDE_INTENT_KEYWORDS',
       guardrail_team_guidance: 'GUARDRAIL_TEAM_GUIDANCE',
       guardrail_strictness: 'GUARDRAIL_STRICTNESS',
+      customer_email_domains: 'CUSTOMER_EMAIL_DOMAINS',
       langsmith_api_key: 'LANGSMITH_API_KEY',
       langsmith_project: 'LANGSMITH_PROJECT',
       langsmith_tracing: 'LANGSMITH_TRACING',
@@ -4923,6 +4932,7 @@
         );
         setvCfgGuardrail('cfg_guardrail_team_guidance', 'guardrail_team_guidance', eff.guardrail_team_guidance);
         setv('cfg_guardrail_strictness', eff.guardrail_strictness != null ? String(eff.guardrail_strictness) : 'balanced');
+        setv('cfg_customer_email_domains', eff.customer_email_domains != null ? String(eff.customer_email_domains) : '');
         setv('cfg_probe_inbox_max_results', eff.probe_inbox_max_results != null ? String(eff.probe_inbox_max_results) : '10');
         setv(
           'cfg_probe_inbox_gmail_search',
@@ -5061,6 +5071,7 @@
       payload.guardrail_exclude_intent_keywords = gv('cfg_guardrail_exclude_intent_keywords');
       payload.guardrail_team_guidance = gv('cfg_guardrail_team_guidance');
       payload.guardrail_strictness = gv('cfg_guardrail_strictness') || 'balanced';
+      payload.customer_email_domains = gv('cfg_customer_email_domains');
       payload.probe_inbox_max_results = gv('cfg_probe_inbox_max_results') || '10';
       payload.probe_inbox_gmail_search = gv('cfg_probe_inbox_gmail_search');
       payload.user_inbox_peek_max_results = gv('cfg_user_inbox_peek_max_results') || '5';

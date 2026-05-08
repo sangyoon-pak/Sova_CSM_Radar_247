@@ -47,6 +47,7 @@ def category_requires_mandatory_kb_retrieval(category: str) -> bool:
 _THREAD_ID_LINE_RE = re.compile(r"(?im)^thread_id\t([^\n\r]+)$")
 _FROM_LINE_RE = re.compile(r"(?im)^from\t(.+)$")
 _SUBJECT_LINE_RE = re.compile(r"(?im)^subject\t(.+)$")
+_ID_LINE_RE = re.compile(r"(?im)^id\t([^\n\r]+)$")
 
 
 def _GMAIL_THREAD_ID_OK(s: str) -> bool:
@@ -92,8 +93,59 @@ def _extract_emails(s: str) -> list[str]:
     return [m.group(0).strip().lower() for m in _EMAIL_ADDR_RE.finditer(str(s or ""))]
 
 
+_INTERNAL_ORG_DOMAINS: set[str] = {"appier.com"}
+
+
+def _maybe_anchor_email_from_to_customer(a: dict[str, Any]) -> None:
+    """Rewrite `email_from` to the customer when the literal From is the operator's own org.
+
+    The probe block fed to the model contains the **latest** message in each thread, so when
+    the operator (you) replied last the literal `from\\t...` line is internal. CSM users still
+    expect the action card "From" to identify the **customer**. When a customer email has
+    already been resolved on the same row (curated `customer_email_domains` or external
+    fallback), present the From line as `"Name <customer_email>"` so the dashboard reads the
+    way a CSM does. Genuinely internal threads with no resolved customer are left unchanged.
+    """
+    e_from = str(a.get("email_from") or "").strip()
+    cust_email = str(a.get("customer_email") or "").strip()
+    if not e_from or not cust_email:
+        return
+    from_dom = _guardrail_domain(e_from).lower()
+    if not from_dom or from_dom not in _INTERNAL_ORG_DOMAINS:
+        return
+    cust_dom = (cust_email.split("@", 1)[1].lower() if "@" in cust_email else "")
+    if not cust_dom or cust_dom in _INTERNAL_ORG_DOMAINS:
+        return
+    cust_name = str(a.get("customer_identifier") or "").strip()
+    if cust_name and cust_name.lower() != cust_email.lower():
+        a["email_from"] = f"{cust_name} <{cust_email}>"[:400]
+    else:
+        a["email_from"] = cust_email[:400]
+    a["customer_domain"] = cust_dom[:200]
+
+
+def _customer_email_domains_set() -> set[str]:
+    """Operator-curated customer email domains (lowercased). Empty → no curated preference."""
+    try:
+        from src.runtime_config import effective_customer_email_domains
+
+        raw = effective_customer_email_domains() or ""
+    except Exception:
+        raw = ""
+    return {x.strip().lower() for x in raw.split(",") if x.strip()}
+
+
 def _pick_external_customer_email(*headers: str) -> str:
+    """Choose the best customer email from one or more header strings (From / To / Cc).
+
+    Resolution order:
+      1. address whose domain is in the curated `customer_email_domains` registry
+         (Configure → Guardrails → Customer email domains)
+      2. address whose domain is **not** in the internal-org set
+      3. first address seen
+    """
     internal_domains = {"appier.com"}
+    customer_domains = _customer_email_domains_set()
     candidates: list[str] = []
     for h in headers:
         candidates.extend(_extract_emails(h))
@@ -104,6 +156,11 @@ def _pick_external_customer_email(*headers: str) -> str:
             continue
         seen.add(e)
         ordered.append(e)
+    if customer_domains:
+        for e in ordered:
+            dom = e.split("@", 1)[1] if "@" in e else ""
+            if dom and dom in customer_domains:
+                return e
     for e in ordered:
         dom = e.split("@", 1)[1] if "@" in e else ""
         if dom and dom not in internal_domains:
@@ -194,6 +251,64 @@ def _extract_probe_thread_identity_from_events(md: dict | None) -> dict[str, dic
             if cust_email and not rec.get("customer_email"):
                 rec["customer_email"] = cust_email
             out[gid] = rec
+    return out
+
+
+def parse_inbox_tool_output_thread_message_ids(detail: str) -> dict[str, str]:
+    """Map gmail thread id → first (latest) message id seen in one inbox tool output.
+
+    `fetch_inbox_emails` returns blocks formatted by `scripts/gmail-get-decoded.py`, where each
+    decoded message starts with `id\\t<message_id>` immediately followed by `thread_id\\t<thread_id>`.
+    Inbox search mode emits the latest message per thread, so the first id we see for a given
+    thread is the one we treat as the change signal for early-skip logic.
+    """
+    text = str(detail or "")
+    if not text or "thread_id" not in text:
+        return {}
+    text = (
+        text.replace("\\r\\n", "\n")
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\r", "\n")
+    )
+    out: dict[str, str] = {}
+    blocks = re.split(r"(?im)(?=^id\t)", text)
+    for b in blocks:
+        if "thread_id\t" not in b:
+            continue
+        im = _ID_LINE_RE.search(b)
+        tm = _THREAD_ID_LINE_RE.search(b)
+        if not im or not tm:
+            continue
+        msg_id = im.group(1).strip()
+        gid = tm.group(1).strip()
+        if not gid or not _GMAIL_THREAD_ID_OK(gid) or not msg_id:
+            continue
+        if gid in out:
+            continue
+        out[gid] = msg_id
+    return out
+
+
+def _extract_latest_message_id_by_thread_from_events(md: dict | None) -> dict[str, str]:
+    """Build {thread_id: latest_message_id} from `fetch_inbox_emails` tool_end events on this run."""
+    out: dict[str, str] = {}
+    events = (md or {}).get("events")
+    if not isinstance(events, list):
+        return out
+    for e in events:
+        if not isinstance(e, dict):
+            continue
+        if str(e.get("type") or "").strip() != "tool_end":
+            continue
+        title = str(e.get("title") or "").strip().lower()
+        if "tool output" not in title:
+            continue
+        detail = str(e.get("detail") or "")
+        if "thread_id\t" not in detail and "thread_id\\t" not in detail:
+            continue
+        for gid, msg_id in parse_inbox_tool_output_thread_message_ids(detail).items():
+            out.setdefault(gid, msg_id)
     return out
 
 
@@ -993,6 +1108,7 @@ def merge_csm_actions_metadata(
     parsed = parse_probe_dashboard_json(output_text, policy=policy)
     actions = list(parsed["actions"] or [])
     by_tid_from_tool = _extract_probe_thread_identity_from_events(md)
+    msg_id_by_tid = _extract_latest_message_id_by_thread_from_events(md)
     used_tools = _retrieval_tools_used(md)
     has_retrieval = bool(used_tools.intersection({"search_product_docs", "search_rc_web"}))
     product_without_retrieval = 0
@@ -1022,6 +1138,29 @@ def merge_csm_actions_metadata(
                 ce = str(src.get("customer_email") or "").strip()
                 if ce:
                     a["customer_email"] = ce[:320]
+            # Curated `customer_email_domains` is the operator's explicit truth: if the inbox
+            # tool resolved a customer in the registry but the model JSON populated
+            # `customer_email` with a non-registry address (typical when the operator replied
+            # last and the model copied the latest From line), force the registry-backed
+            # answer to win. Without this the model's value would persist forever and the
+            # registry would only help on brand-new cards.
+            registry = _customer_email_domains_set()
+            tool_ce = str(src.get("customer_email") or "").strip().lower()
+            tool_dom = tool_ce.split("@", 1)[1] if "@" in tool_ce else ""
+            cur_ce = str(a.get("customer_email") or "").strip().lower()
+            cur_dom = cur_ce.split("@", 1)[1] if "@" in cur_ce else ""
+            if (
+                registry
+                and tool_dom
+                and tool_dom in registry
+                and (not cur_dom or cur_dom not in registry)
+            ):
+                a["customer_email"] = str(src.get("customer_email") or "")[:320]
+                tool_cid = str(src.get("customer_identifier") or "").strip()
+                if tool_cid:
+                    a["customer_identifier"] = tool_cid[:200]
+                # Force re-derivation: clear so later anchor / domain step recomputes.
+                a["customer_domain"] = ""
         need_identity = (
             gid0
             and (
@@ -1095,6 +1234,11 @@ def merge_csm_actions_metadata(
             prev_status = str(prev.get("status") or "").strip().lower()
             if prev_status not in {"not_started", "in_progress", "completed"}:
                 prev_status = "not_started"
+            # Apply anchor BEFORE the fingerprint comparison so identity is final on `a`.
+            # The anchor only touches identity fields (email_from / customer_domain), none of
+            # which feed into `_action_fingerprint`, so this can't change the same/different-fp
+            # outcome — it just makes `a`'s identity directly comparable to `prev`'s.
+            _maybe_anchor_email_from_to_customer(a)
             same_fp = _action_fingerprint(a) == _action_fingerprint(prev)
             if same_fp:
                 src_id = int(prev.get("_probe_merge_interaction_id") or 0)
@@ -1104,7 +1248,34 @@ def merge_csm_actions_metadata(
                     dedupe_key=key,
                     fingerprint=fp_prev,
                 ):
-                    # Same text as a card still on the board (e.g. hourly cron, no new mail).
+                    # Same body as a card still on the board (hourly cron, no new mail).
+                    # If identity (sender / customer domain) changed since prev — typically
+                    # because the operator updated `customer_email_domains` — refresh it
+                    # in-place on the source interaction so the existing card reflects the
+                    # new picker without being re-emitted as new.
+                    identity_diff = {
+                        k: a.get(k) or ""
+                        for k in (
+                            "email_from",
+                            "customer_email",
+                            "customer_identifier",
+                            "customer_domain",
+                        )
+                        if str(a.get(k) or "") != str(prev.get(k) or "")
+                    }
+                    if identity_diff and src_id:
+                        try:
+                            from src.db import database
+
+                            database.update_dashboard_action_identity_inplace(
+                                src_id,
+                                gmail_thread_id=str(a.get("gmail_thread_id") or ""),
+                                email_from=str(prev.get("email_from") or ""),
+                                email_subject=str(prev.get("email_subject") or ""),
+                                identity=identity_diff,
+                            )
+                        except Exception:
+                            pass
                     skipped_unchanged += 1
                     continue
                 # Same fingerprint as a ghost row (e.g. user removed the card) — re-surface as new.
@@ -1114,6 +1285,19 @@ def merge_csm_actions_metadata(
                 a["status"] = "in_progress" if prev_status == "completed" else prev_status
         else:
             a["status"] = "not_started"
+            # No previous card on this thread — anchor still needs to run for fresh cards.
+            _maybe_anchor_email_from_to_customer(a)
+        # Persist the latest gmail message id we saw for this thread on this run, so the next
+        # probe's preflight can compare against this value and skip retrieval when nothing new
+        # arrived. Falls back to whatever the model emitted (rare) or the previous card's value.
+        if gid0:
+            latest_msg_id = msg_id_by_tid.get(gid0) or str(a.get("gmail_latest_message_id") or "").strip()
+            if not latest_msg_id and key and key in by_thread:
+                prev_for_msg = by_thread.get(key) or {}
+                if isinstance(prev_for_msg, dict):
+                    latest_msg_id = str(prev_for_msg.get("gmail_latest_message_id") or "").strip()
+            if latest_msg_id:
+                a["gmail_latest_message_id"] = latest_msg_id[:128]
         merged.append(a)
     md["csm_actions"] = merged
     md["csm_decision_summary"] = _decision_log_summary(merged)

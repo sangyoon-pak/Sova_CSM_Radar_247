@@ -76,6 +76,57 @@ def _append_csm_language_footer(block: str) -> str:
     return b + f"\n\ncsm_output_language\t{lang}\ncsm_output_language_note\t{note_one}\n"
 
 
+_PROBE_PREFLIGHT_TRAILER_HEADER = "PROBE_PREFLIGHT"
+_PROBE_PREFLIGHT_SKIP_KEY = "RETRIEVAL_SKIP_THREAD_IDS"
+
+
+def _build_probe_preflight_trailer(inbox_blob: str) -> str:
+    """Return a `PROBE_PREFLIGHT: ...` trailer for the inbox tool output, or empty string.
+
+    For threads whose latest Gmail message id matches the previously persisted
+    `gmail_latest_message_id` on a still-visible dashboard card, list them under
+    `RETRIEVAL_SKIP_THREAD_IDS` so the model can skip `search_product_docs` /
+    `search_rc_web` / `fetch_gmail_thread` for those threads. Merge-time fingerprint
+    skip in `merge_csm_actions_metadata` remains the safety net.
+    """
+    text = (inbox_blob or "").strip()
+    if not text:
+        return ""
+    try:
+        from src.agent.probe_actions import parse_inbox_tool_output_thread_message_ids
+        from src.db import database
+    except Exception:
+        return ""
+
+    msg_id_by_tid = parse_inbox_tool_output_thread_message_ids(text)
+    if not msg_id_by_tid:
+        return ""
+    try:
+        prev_by_thread = database.latest_dashboard_actions_by_gmail_thread()
+    except Exception:
+        return ""
+
+    skip_pairs: list[tuple[str, str]] = []
+    for gid, msg_id in msg_id_by_tid.items():
+        prev = prev_by_thread.get(f"gid:{gid}")
+        if not isinstance(prev, dict):
+            continue
+        prev_msg_id = str(prev.get("gmail_latest_message_id") or "").strip()
+        if not prev_msg_id or prev_msg_id != msg_id:
+            continue
+        skip_pairs.append((gid, msg_id))
+
+    if not skip_pairs:
+        return ""
+    ids = ",".join(g for g, _ in skip_pairs)
+    return (
+        f"\n\n{_PROBE_PREFLIGHT_TRAILER_HEADER}\n"
+        f"{_PROBE_PREFLIGHT_SKIP_KEY}={ids}\n"
+        "REASON\tlatest gmail message id matches the dashboard card on the previous probe; "
+        "no new mail since last run\n"
+    )
+
+
 def _annotate_blocks_with_csm_lang(blob: str) -> str:
     """
     Append `csm_output_language` after each inbox thread block (split on 60 '=').
@@ -218,6 +269,17 @@ def fetch_inbox_emails(search: str | None = None, max_results: int = 10) -> str:
     raw = (result.stdout or "").strip()
     if raw:
         raw = _annotate_blocks_with_csm_lang(raw)
+        # Probe-only: append a preflight trailer listing thread ids whose latest gmail message id
+        # equals the one we already persisted on the dashboard card. The probe system prompt
+        # (`probe_hint`) tells the model not to run KB/web/thread retrieval for those ids.
+        try:
+            from src.agent.email_agent import is_probe_mode_active
+        except Exception:
+            is_probe_mode_active = lambda: False  # noqa: E731
+        if is_probe_mode_active():
+            trailer = _build_probe_preflight_trailer(raw)
+            if trailer:
+                raw = raw + trailer
     return raw or "No emails found."
 
 

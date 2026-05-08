@@ -8,6 +8,7 @@ from src.config import settings
 from src.api import run_state
 from src.db import database
 from src.runtime_config import (
+    effective_customer_email_domains,
     effective_guardrail_exclude_intent_keywords,
     effective_guardrail_exclude_sender_domains,
     effective_guardrail_include_intent_keywords,
@@ -83,6 +84,7 @@ def _run_probe_job(name: str = "default"):
                 "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
                 "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
                 "guardrail_strictness": effective_guardrail_strictness(),
+                "customer_email_domains": effective_customer_email_domains(),
             },
             existing_by_thread=existing,
         )

@@ -81,6 +81,7 @@ RUNTIME_CONFIGURE_KEYS: tuple[str, ...] = (
     "guardrail_exclude_intent_keywords",
     "guardrail_team_guidance",
     "guardrail_strictness",
+    "customer_email_domains",
     "probe_inbox_max_results",
     "probe_inbox_gmail_search",
     "user_inbox_peek_max_results",
@@ -558,6 +559,18 @@ def effective_guardrail_strictness() -> str:
     return raw
 
 
+def effective_customer_email_domains() -> str:
+    """CSV of operator-curated customer email domains (used to anchor card identity).
+
+    Distinct from `guardrail_include_sender_domains` which still gates **dashboard inclusion**;
+    this list only steers **who is the customer** when picking sender info from a thread.
+    """
+    v = _db_str("customer_email_domains")
+    if v is not None:
+        return v.strip()
+    return (getattr(settings, "customer_email_domains", None) or "").strip()
+
+
 def _bounded_int_str(raw: str | None, *, default: int, min_v: int, max_v: int) -> str:
     try:
         n = int(str(raw or "").strip())
@@ -896,6 +909,7 @@ def runtime_settings_snapshot() -> dict:
             "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
             "guardrail_team_guidance": effective_guardrail_team_guidance(),
             "guardrail_strictness": effective_guardrail_strictness(),
+            "customer_email_domains": effective_customer_email_domains(),
             "prompt_email_agent_system_template": effective_prompt_email_agent_system_template(),
             "prompt_probe_user_message": effective_prompt_probe_user_message(),
             "prompt_probe_mode_append": effective_prompt_probe_mode_append(),
