@@ -17,6 +17,21 @@ Related behavior docs:
 - Action cards: [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md)
 - Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
 
+### KB query planner (before `search_with_agent`)
+
+Before the orchestrator in `search_agent.py` runs, `search_product_docs` in `email_agent.py` may call **`_expand_kb_query_with_context`**. That step asks a small JSON LLM (LangSmith run name **`search_product_docs.query_planner`**, tags `search_product_docs` / `query_planner`) to emit up to six retrieval-oriented **`subqueries`** so a single long or multi-part ask does not collapse into one thin search string.
+
+**What counts as “full user context” for the planner**
+
+| Mode | Planner context | Why |
+|------|-----------------|-----|
+| Workbench chat | `_SEARCH_PRODUCT_DOCS_CONTEXT` — the user’s message (and, when thread history is used, the latest user turn chosen for routing) | Normal conversational retrieval expansion. |
+| Inbox probe | Latest successful Gmail tool output (`fetch_inbox_emails` / `fetch_gmail_thread`), recorded in `_GMAIL_LAST_OUTPUT_CTX` via `record_gmail_tool_output` | The probe **user message** is the long probe trigger prompt (instruction sheet). Feeding that text to the planner used to make subqueries echo tool/category boilerplate (“API/SDK”, “webhooks”, …). Customer language comes from the Gmail blobs instead. |
+
+If the probe planner has no Gmail output yet (e.g. `search_product_docs` called before any Gmail fetch), expansion degrades gracefully to the focused tool `query=` alone.
+
+After a successful JSON parse, the tool replaces the raw query with a short numbered block (`Focused retrieval intents:` …) that downstream **`_split_focus_subqueries`** and retrieval still treat as one query string.
+
 ### LLM models (OpenRouter / OpenAI-compatible)
 Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (policy-aware reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). The **RC KB→web gate** uses **`LLM_MODEL_KB_WEB_GATE`** (`kb_web_gate.py`) — intentionally **separate** from `LLM_MODEL_SEARCH_JSON`. Rerank policy itself is configured via **`RETRIEVAL_RANKING_POLICY`** (Configure/runtime JSON). All roles fall back to **`LLM_MODEL`** when unset (gate: see `effective_llm_model_kb_web_gate()`).
 

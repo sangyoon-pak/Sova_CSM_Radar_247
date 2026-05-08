@@ -67,6 +67,18 @@ Common entrypoints (not exhaustive; see `src/api/routes.py`):
 - **Action-review** threads (`metadata.kind == action_review`) **never** auto-promote to probe.
 - When probe is active: `trigger_type` is `thread_probe`, **no** thread history is passed for that run (isolated probe), agent input is typically the configured **probe user message** (`get_probe_trigger_message()`), and the worker applies **`merge_csm_actions_metadata`** + **`format_probe_thread_reply`** so **Action dashboard** cards update.
 
+### Probe: avoiding redundant retrieval (`PROBE_PREFLIGHT`)
+
+The product avoids burning **`search_product_docs`** / **`search_rc_web`** / **`fetch_gmail_thread`** on threads that have **no new mail** since the last probe, using two layers:
+
+1. **Agent instruction + inbox trailer (early skip)**  
+   In probe mode, `fetch_inbox_emails` may append a machine-readable trailer starting with **`PROBE_PREFLIGHT`** and a line **`RETRIEVAL_SKIP_THREAD_IDS=<id1>,<id2>,…`**. Those Gmail thread ids match dashboard rows whose persisted **`gmail_latest_message_id`** equals the latest message id returned by Gmail this run — i.e. nothing changed in-thread. The probe system append (`email_agent.py`) tells the model to **omit** those threads from **`actions[]`** and **not** call KB/web/thread tools for them. That keeps doc search off those threads **before** the model spends tokens on retrieval.
+
+2. **Merge dedupe (after JSON)**  
+   **`merge_csm_actions_metadata`** (`src/agent/probe_actions.py`) merges model output with prior dashboard state: content fingerprinting, **`gmail_latest_message_id`** stamped from Gmail tool events, and guardrails. If the model still emits an action whose body matches an **existing** card still on the board (same fingerprint), the merge may **skip** re-persisting it as a duplicate (“unchanged” path). If the operator **dismissed** the card (no longer on dashboard) but the model emits the **same** fingerprint again, that row is treated as a **ghost** and the card can **re-surface** as new — retrieval is not blocked server-side in that case; preflight only skips when **mail** is unchanged.
+
+Operator takeaway: **dismissing a card** clears it from the UI and drops the merge-side dedupe anchor for that thread; **preflight** is what ties “no doc search” to **no new Gmail message**, not to dismissal alone.
+
 **Intent classifier (auto-probe from chat):**
 
 - Implemented as a **single JSON LLM call** using the same model stack as other small routers: **`LLM_MODEL_SEARCH_JSON`** (`effective_llm_model_search_json()`), temperature 0.
