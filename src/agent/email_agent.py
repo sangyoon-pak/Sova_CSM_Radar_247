@@ -565,6 +565,12 @@ _SEARCH_PRODUCT_DOCS_CONTEXT: ContextVar[str] = ContextVar("search_product_docs_
 # Set to True only inside probe runs (`run_agent(..., probe=True)`); read by tools to gate
 # probe-only behavior such as the inbox preflight skip list.
 _PROBE_MODE_CONTEXT: ContextVar[bool] = ContextVar("probe_mode_context", default=False)
+# Most recent successful Gmail tool output (inbox fetch / thread fetch). Used by
+# `_expand_kb_query_with_context` so the planner expands subqueries from the actual
+# customer email content, not from the probe instruction prompt. Tools call
+# `record_gmail_tool_output(...)` after a successful fetch.
+_GMAIL_LAST_OUTPUT_CTX: ContextVar[str] = ContextVar("gmail_last_output_context", default="")
+_GMAIL_OUTPUT_CTX_MAX = 8000  # bound so a huge inbox blob can't overwhelm the planner prompt
 
 
 def is_probe_mode_active() -> bool:
@@ -573,6 +579,19 @@ def is_probe_mode_active() -> bool:
         return bool(_PROBE_MODE_CONTEXT.get())
     except LookupError:
         return False
+
+
+def record_gmail_tool_output(text: str) -> None:
+    """Stash the latest Gmail fetch output so the KB query planner can use it as
+    'Full user context'. Called from `fetch_inbox_emails` / `fetch_gmail_thread`
+    on success. No-op for empty/error strings."""
+    s = (text or "").strip()
+    if not s or s.lower().startswith("error"):
+        return
+    try:
+        _GMAIL_LAST_OUTPUT_CTX.set(s[:_GMAIL_OUTPUT_CTX_MAX])
+    except Exception:
+        pass
 
 _KB_QUERY_PLAN_PROMPT = """Expand a focused retrieval query into coverage-oriented subqueries.
 
@@ -634,10 +653,20 @@ def _parse_json_object_from_text(raw: str) -> dict | None:
 def _expand_kb_query_with_context(focused_query: str) -> str:
     """
     Planner-backed query expansion so `search_product_docs` doesn't lose non-endpoint asks.
-    Uses latest user context captured in `_run_agent_impl`.
+
+    Context selection:
+    - Probe mode: prefer the latest Gmail tool output (real customer email body) so the
+      planner expands from actual product/account language. The Workbench/cron `input_text`
+      in probe mode is the probe trigger prompt itself; feeding that to the planner makes
+      it echo tool/category words ("API/SDK", "webhooks", ...) instead of customer asks.
+    - Otherwise: use `_SEARCH_PRODUCT_DOCS_CONTEXT` (set in `_run_agent_impl` to the user's
+      message / route text) — the historical behavior for Workbench chat.
     """
     focused = (focused_query or "").strip()
-    full_ctx = (_SEARCH_PRODUCT_DOCS_CONTEXT.get() or "").strip()
+    if is_probe_mode_active():
+        full_ctx = (_GMAIL_LAST_OUTPUT_CTX.get() or "").strip()
+    else:
+        full_ctx = (_SEARCH_PRODUCT_DOCS_CONTEXT.get() or "").strip()
     if not focused:
         return full_ctx[:2600] if full_ctx else focused
     if not full_ctx or len(full_ctx) <= len(focused) + 20:
@@ -1221,11 +1250,20 @@ def _run_agent_impl(
         invoke_messages = lc_messages
     else:
         invoke_messages = [HumanMessage(content=input_text)]
-    retrieval_ctx = (input_text or "").strip()
-    if route_text and len(route_text) > len(retrieval_ctx):
-        retrieval_ctx = route_text
+    # Workbench chat: planner sees the actual user message / route text.
+    # Probe runs: `input_text` is the probe trigger prompt (instruction sheet) which
+    # contains tool/category words; feeding that to the planner produces bogus
+    # subqueries echoing "fetch_inbox_emails", "API/SDK", "webhooks", etc. The planner
+    # instead reads the latest Gmail tool output via `_GMAIL_LAST_OUTPUT_CTX`.
+    if probe:
+        retrieval_ctx = ""
+    else:
+        retrieval_ctx = (input_text or "").strip()
+        if route_text and len(route_text) > len(retrieval_ctx):
+            retrieval_ctx = route_text
     ctx_token = _SEARCH_PRODUCT_DOCS_CONTEXT.set(retrieval_ctx)
     probe_token = _PROBE_MODE_CONTEXT.set(bool(probe))
+    gmail_ctx_token = _GMAIL_LAST_OUTPUT_CTX.set("")
     try:
         result = agent.invoke({"messages": invoke_messages}, config=config)
     except Exception as e:
@@ -1238,6 +1276,10 @@ def _run_agent_impl(
     finally:
         _SEARCH_PRODUCT_DOCS_CONTEXT.reset(ctx_token)
         _PROBE_MODE_CONTEXT.reset(probe_token)
+        try:
+            _GMAIL_LAST_OUTPUT_CTX.reset(gmail_ctx_token)
+        except Exception:
+            pass
     messages = result.get("messages", [])
     draft = None
     for m in reversed(messages):

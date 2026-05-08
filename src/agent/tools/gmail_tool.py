@@ -280,6 +280,13 @@ def fetch_inbox_emails(search: str | None = None, max_results: int = 10) -> str:
             trailer = _build_probe_preflight_trailer(raw)
             if trailer:
                 raw = raw + trailer
+    # Stash the inbox blob so the KB planner can expand subqueries from the actual
+    # customer emails rather than the probe instruction prompt.
+    try:
+        from src.agent.email_agent import record_gmail_tool_output
+        record_gmail_tool_output(raw)
+    except Exception:
+        pass
     return raw or "No emails found."
 
 
@@ -325,4 +332,10 @@ def fetch_gmail_thread(thread_id: str) -> str:
     raw = (result.stdout or "").strip()
     if raw and not re.search(r"(?m)^csm_output_language\t", raw):
         raw = _append_csm_language_footer(raw)
+    # Same purpose as in `fetch_inbox_emails`: feed the planner real thread content.
+    try:
+        from src.agent.email_agent import record_gmail_tool_output
+        record_gmail_tool_output(raw)
+    except Exception:
+        pass
     return raw or "No messages in thread."
