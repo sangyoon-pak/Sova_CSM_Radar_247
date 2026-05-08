@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/5940b0de-4c23-4d61-a10c-02960dd3f55c
 
 ### Workbench
 
-Starts with simple user prompts in Workbench, then shows how search gets activated: the agent routes into `search_product_docs` and (mode-dependent) `search_rc_web`, runs KB-first / augment logic, and returns grounded context for follow-up drafting. With **inbox probe** mode on, the same surface runs a full Gmail triage pass: the model emits probe-shaped JSON, merge/guardrails turn that into **action cards** on the dashboard instead of conversational chat output.
+Starts with simple user prompts in Workbench, then shows how search gets activated: the agent routes into `search_product_docs` and (mode-dependent) `search_rc_web`, runs KB-first / augment logic, and returns grounded context for follow-up drafting. With **inbox probe** mode on (triggered by user prompt or the “Scan Inbox” button), the same surface runs a full Gmail triage pass: the model emits probe-shaped JSON, merge/guardrails turn that into **action cards** on the dashboard instead of conversational chat output.
 
 https://github.com/user-attachments/assets/011c427c-bffe-4732-8bf5-2645960b489c
 
