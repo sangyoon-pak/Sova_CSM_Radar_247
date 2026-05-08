@@ -99,6 +99,9 @@ class Settings(BaseSettings):
     guardrail_exclude_intent_keywords: str = Field("", validation_alias="GUARDRAIL_EXCLUDE_INTENT_KEYWORDS")
     guardrail_team_guidance: str = Field("", validation_alias="GUARDRAIL_TEAM_GUIDANCE")
     guardrail_strictness: str = Field("balanced", validation_alias="GUARDRAIL_STRICTNESS")
+    # Comma-separated customer email domains used to identify the **customer side** of a
+    # thread when deriving action-card sender info (independent of dashboard inclusion gating).
+    customer_email_domains: str = Field("", validation_alias="CUSTOMER_EMAIL_DOMAINS")
 
     # Database
     database_path: str = Field("./data/agent.db", validation_alias="DATABASE_PATH")

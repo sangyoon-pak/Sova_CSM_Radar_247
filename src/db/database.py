@@ -383,6 +383,101 @@ def set_csm_dashboard_action_category(interaction_id: int, action_index: int, ca
         return True
 
 
+_DASHBOARD_IDENTITY_FIELDS: tuple[str, ...] = (
+    "email_from",
+    "customer_email",
+    "customer_identifier",
+    "customer_domain",
+)
+
+
+def update_dashboard_action_identity_inplace(
+    interaction_id: int,
+    *,
+    gmail_thread_id: str = "",
+    email_from: str = "",
+    email_subject: str = "",
+    identity: dict | None = None,
+) -> bool:
+    """Refresh sender/customer identity on a single dashboard action without re-emitting it.
+
+    Used by `merge_csm_actions_metadata` when a probe produces the same fingerprint as an
+    existing card (so we shouldn't reset its status / dedupe it as new) but the operator
+    changed something that affects who the customer is — e.g. updated the
+    `customer_email_domains` registry. The match key is the same one the dashboard uses for
+    de-duplication: gmail_thread_id when present, else (email_from, email_subject).
+
+    Only the four identity fields in `_DASHBOARD_IDENTITY_FIELDS` are written; status, body,
+    references, retrieval evidence, and fingerprint inputs are intentionally left alone.
+    Returns True iff at least one action row was actually mutated.
+    """
+    if not interaction_id or not isinstance(identity, dict) or not identity:
+        return False
+    gid_match = (gmail_thread_id or "").strip()
+    ef_match = (email_from or "").strip().lower()
+    es_match = (email_subject or "").strip().lower()
+    if not gid_match and not (ef_match and es_match):
+        return False
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (int(interaction_id),),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        actions = md.get("csm_actions")
+        if not isinstance(actions, list):
+            conn.close()
+            return False
+        actions = list(actions)
+        any_changed = False
+        for idx, item in enumerate(actions):
+            if not isinstance(item, dict):
+                continue
+            row_gid = str(item.get("gmail_thread_id") or "").strip()
+            if gid_match:
+                if row_gid != gid_match:
+                    continue
+            else:
+                row_ef = str(item.get("email_from") or "").strip().lower()
+                row_es = str(item.get("email_subject") or "").strip().lower()
+                if row_ef != ef_match or row_es != es_match:
+                    continue
+            updated = dict(item)
+            row_changed = False
+            for k in _DASHBOARD_IDENTITY_FIELDS:
+                if k in identity:
+                    new_v = identity[k]
+                    if new_v is None:
+                        continue
+                    new_s = str(new_v)
+                    if str(updated.get(k) or "") != new_s:
+                        updated[k] = new_s
+                        row_changed = True
+            if row_changed:
+                actions[idx] = updated
+                any_changed = True
+        if not any_changed:
+            conn.close()
+            return False
+        md["csm_actions"] = actions
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), int(interaction_id)),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
 def latest_dashboard_actions_by_gmail_thread(limit: int = 800) -> dict[str, dict]:
     """
     Latest visible dashboard action per gmail_thread_id.

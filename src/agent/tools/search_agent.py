@@ -404,10 +404,14 @@ def _rerank_matches(
         return [], {"fallback_used": False, "pre_count": 0, "post_count": 0, "reason": "no_matches"}
     llm = _llm_search_rerank()
     retrieval_policy = effective_retrieval_ranking_policy()
-    # Build snippet list for prompt (truncate long lines)
+    # Build snippet list for prompt. Cap matches the indexed RAG chunk size so RAG
+    # candidates are shown in full to the reranker (previously 500 truncated to roughly
+    # half a chunk and ranking decisions were made on incomplete text). Grep/FTS windows
+    # are usually well under this cap. Cost: 30 candidates * ~1500 chars ~= 10-12K tokens
+    # in the rerank prompt, which the small/cheap LLM_MODEL_SEARCH_RERANK handles cheaply.
     snippets = []
     for m in matches:
-        text = (m.get("snippet") or m.get("line", ""))[:500]
+        text = (m.get("snippet") or m.get("line", ""))[:1500]
         snippets.append(f"[{m['file']} L{m['line_num']}] {text}")
     snippet_text = "\n".join(f"{i+1}. {s}" for i, s in enumerate(snippets))
     scope = _rerank_product_scope_note(query, exclusive_scope=exclusive_scope)

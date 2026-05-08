@@ -23,6 +23,7 @@ An action card represents a customer-facing CSM task that needs follow-up and ca
 
 - `source_messages`: list of email IDs included in analysis
 - `retrieval_evidence`: citations/snippets used for draft reasoning
+- `gmail_latest_message_id` (probe): latest Gmail **message** id for the thread, used for **probe preflight** (unchanged mail → model may skip KB/web/thread tools on the next run) — see [ARCHITECTURE.md](ARCHITECTURE.md)
 - `confidence_label`: `high | medium | low`
 - `priority`: `low | medium | high | urgent`
 - `category` (probe JSON, persisted on each action): `client_technical` | `client_non_technical` | `internal` — triage label from the model; legacy values (`product_technical`, `account`, `other`, `general`) are normalized server-side to the canonical three.
@@ -30,6 +31,11 @@ An action card represents a customer-facing CSM task that needs follow-up and ca
 - `feedback_notes`: free-text user feedback for self-evolution loops
 
 Operators can change **`category`** and **`status`** per card on the Action dashboard; those edits update the **current** interaction row only. The next inbox probe may emit a fresh **`category`** from the model for newly merged actions (model wins on merge).
+
+### Probe runs: lifecycle vs retrieval
+
+- **`gmail_latest_message_id`** (when present on merged actions) supports **preflight skip** on the next probe: threads whose latest Gmail message id has **not** changed may be listed in the **`PROBE_PREFLIGHT`** trailer so the agent is instructed **not** to run **`search_product_docs`** / **`search_rc_web`** / **`fetch_gmail_thread`** for them — see [ARCHITECTURE.md](ARCHITECTURE.md) § *Probe: avoiding redundant retrieval*.
+- **Dismissing** a card (`DELETE` on dashboard scope) removes it from the dashboard; it does **not** by itself suppress future Gmail processing. If new mail arrives, the thread can appear again. **Unchanged-mail** suppression for doc search is driven by **preflight + message id**, not only by “card exists.”
 
 ## Status Behavior
 

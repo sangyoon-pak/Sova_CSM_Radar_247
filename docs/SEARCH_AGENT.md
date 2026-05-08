@@ -17,6 +17,21 @@ Related behavior docs:
 - Action cards: [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md)
 - Troubleshooting: [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md)
 
+### KB query planner (before `search_with_agent`)
+
+Before the orchestrator in `search_agent.py` runs, `search_product_docs` in `email_agent.py` may call **`_expand_kb_query_with_context`**. That step asks a small JSON LLM (LangSmith run name **`search_product_docs.query_planner`**, tags `search_product_docs` / `query_planner`) to emit up to six retrieval-oriented **`subqueries`** so a single long or multi-part ask does not collapse into one thin search string.
+
+**What counts as “full user context” for the planner**
+
+| Mode | Planner context | Why |
+|------|-----------------|-----|
+| Workbench chat | `_SEARCH_PRODUCT_DOCS_CONTEXT` — the user’s message (and, when thread history is used, the latest user turn chosen for routing) | Normal conversational retrieval expansion. |
+| Inbox probe | Latest successful Gmail tool output (`fetch_inbox_emails` / `fetch_gmail_thread`), recorded in `_GMAIL_LAST_OUTPUT_CTX` via `record_gmail_tool_output` | The probe **user message** is the long probe trigger prompt (instruction sheet). Feeding that text to the planner used to make subqueries echo tool/category boilerplate (“API/SDK”, “webhooks”, …). Customer language comes from the Gmail blobs instead. |
+
+If the probe planner has no Gmail output yet (e.g. `search_product_docs` called before any Gmail fetch), expansion degrades gracefully to the focused tool `query=` alone.
+
+After a successful JSON parse, the tool replaces the raw query with a short numbered block (`Focused retrieval intents:` …) that downstream **`_split_focus_subqueries`** and retrieval still treat as one query string.
+
 ### LLM models (OpenRouter / OpenAI-compatible)
 Search-related LLM calls use **`LLM_MODEL_SEARCH_JSON`** (split, sufficiency, refine) and **`LLM_MODEL_SEARCH_RERANK`** (policy-aware reranking). Term extraction in `search_terms_extractor.py` uses **`LLM_MODEL_SEARCH_JSON`**. The **same** `LLM_MODEL_SEARCH_JSON` stack also drives small **JSON intent routers** in `email_agent.py` (Workbench `inbox_peek` vs `agent_run`, and optional full-inbox-probe classifier)—see the **JSON intent routers** section in [LLM_MODELS.md](LLM_MODELS.md). The **RC KB→web gate** uses **`LLM_MODEL_KB_WEB_GATE`** (`kb_web_gate.py`) — intentionally **separate** from `LLM_MODEL_SEARCH_JSON`. Rerank policy itself is configured via **`RETRIEVAL_RANKING_POLICY`** (Configure/runtime JSON). All roles fall back to **`LLM_MODEL`** when unset (gate: see `effective_llm_model_kb_web_gate()`).
 
@@ -40,7 +55,7 @@ When `RC_SCOPE_ENABLE=true` and `RC_SCOPE_LABELS` is set, the search agent first
   - phrase-like terms (contains spaces / `/` / `:`) use fixed-string match (`fixed=True`)
 - Each hit is annotated as:
   - `source` is treated as `"grep"` (there is no explicit `"source":"grep"` field; default logic shows up without `| rag |` in the report)
-  - `snippet` is extracted around `line_num` via `_get_snippet()`
+  - `snippet` is extracted around `line_num` via `_get_snippet(window=10)` (±10 lines around the match — see **Snippet sizing knobs** below)
 
 ### Step C. FTS augmentation (SQLite FTS5 + BM25)
 - If the merged candidate list is still small (`len(all_matches) < 40`),
@@ -60,6 +75,20 @@ Before LLM rerank, candidates are ordered deterministically using:
 There are no hardcoded vendor-specific keyword boosts in this stage.
 
 Final return from `search_documents`: top candidates (currently capped at `[:50]`) with `snippet/line_num/path`.
+
+### Step E. Snippet sizing knobs (current values)
+
+| Layer | Constant / call | Value | Where |
+|---|---|---|---|
+| RAG chunk size | `_RAG_CHUNK_SIZE` | **1400 chars** | `src/agent/tools/doc_search.py` |
+| RAG chunk overlap | `_RAG_OVERLAP` | **250 chars** | `src/agent/tools/doc_search.py` |
+| RAG snippet cap | `text[:_RAG_CHUNK_SIZE]` | tracks chunk size | `run_rag_search` |
+| Grep / FTS window | `_get_snippet(window=10)` | **±10 lines** | `_get_snippet`, `search_documents` |
+| Rerank prompt cap | `(snippet or line)[:1500]` | **1500 chars / candidate** | `_rerank_matches` |
+| Rerank candidate cap | `all_matches[:30]` | **N=30** | `search_with_agent_structured` |
+| Final tool-output cap | `format_matches_for_context(max_chars=20000)` | **20000 chars** | `search_with_agent_structured` |
+
+The on-disk FAISS fingerprint is `registry:{count}:{digest}:{latest_mtime}:{provider}:{model}:c{chunk}o{overlap}` — the trailing `c…o…` segment makes any future chunk-size tweak auto-invalidate the index, and rebuild log entries in `data/rag/rebuild_log.jsonl` will list `chunk` in `reasons` when only the chunk knob changed.
 
 ### Uploaded documents behavior
 
@@ -182,6 +211,16 @@ If there are no relevant passages (or retrieved snippets do not substantively an
 the agent should state KB gaps and recommend the customer contact your team/support (no guessing).
 
 This keeps retrieval behavior aligned with guardrail policy in [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md).
+
+### Wrong product family in retrieval (separate from chunk size)
+
+When a query about **product A** (e.g. AIRIS Time Frame) returns snippets dominated by **product B** docs (e.g. AIQUA), the fix is **not** larger chunks — it's scope routing. Larger chunks just make a wrong-family hit *also* longer. Levers, in order of effort:
+
+1. **`RC_SCOPE_ENABLE=true` + `RC_SCOPE_LABELS=AIRIS,AIQUA,...`** — turns on the LLM-based scope inference step that down-ranks cross-scope docs (`RC_SCOPE_PENALTY`) and can hard-route when the query is exclusive to one scope (`RC_SCOPE_EXCLUSIVE_THRESHOLD`).
+2. **Frontmatter** (`RC_SCOPE_FIELD`, default `product`) — give each KB markdown an authoritative scope label, e.g. `product: "AIRIS"`. The cross-scope penalty in `doc_search.py` reads this; without it scope detection falls back to filename heuristics (`RC_SCOPE_FILENAME_REGEX`), which is brittle.
+3. **KB folder organization** — physically separating `AIRIS/` and `AIQUA/` markdown under `data/user_kb/files/` makes filename-based scope hints reliable and lets operators load only the relevant subset per probe campaign.
+
+Tracked as a follow-up rather than a blocker for this snippet-sizing change. Suggested next step: enable `RC_SCOPE_*` for the AIRIS/AIQUA pair and backfill `product:` frontmatter on at least the top 10 most-cited KB files.
 
 ---
 

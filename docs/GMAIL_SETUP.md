@@ -31,13 +31,16 @@ Binary: **`scripts/.local/bin/gog`**. Default **`GOG_HOME=./scripts/.local`**.
 
 ## 3. Sign in once (terminal)
 
-Use a normal shell (not an IDE Run task). From **repo root**, replace `CHANGE_ME` and `YOUR_EMAIL`:
+Use a normal shell (not an IDE Run task). From **repo root**, replace `CHANGE_ME` (passphrase) and `YOUR_EMAIL` (lowercase Gmail):
 
 ```bash
-export GOG_HOME="$(pwd)/.local" HOME="$(pwd)/.local" PATH="$(pwd)/.local/bin:$PATH" GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD='CHANGE_ME' && \
+cd scripts && \
+export GOG_HOME="$(pwd)/.local" HOME="$(pwd)/.local" PATH="$(pwd)/.local/bin:$PATH" GOG_KEYRING_BACKEND=file GOG_KEYRING_PASSWORD=CHANGE_ME && \
 ./.local/bin/gog auth credentials ../credentials.json && \
-./.local/bin/gog auth add 'YOUR_EMAIL' --services gmail --readonly --manual
+./.local/bin/gog auth add YOUR_EMAIL --services gmail --readonly --manual
 ```
+
+Do **not** put `"` or `'` around **`GOG_KEYRING_PASSWORD`** or the email after **`gog auth add`** (plain values only).
 
 `gog` prints a URL (it may not open a browser). Open it → sign in → paste the **full redirect URL** from the address bar when prompted.
 

@@ -37,6 +37,7 @@ from src.runtime_config import (
     clear_gog_local_oauth_files,
     clear_runtime_configure_overrides,
     persist_app_setting,
+    effective_customer_email_domains,
     effective_guardrail_exclude_intent_keywords,
     effective_guardrail_exclude_sender_domains,
     effective_guardrail_include_intent_keywords,
@@ -63,6 +64,7 @@ def _guardrail_policy_metadata() -> dict[str, str]:
         "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
         "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
         "guardrail_strictness": effective_guardrail_strictness(),
+        "customer_email_domains": effective_customer_email_domains(),
     }
 
 
@@ -121,7 +123,16 @@ class _UITraceCallback(BaseCallbackHandler):
         run_state.add_event(self.run_id, "tool_start", f"Tool start: {name}", str(input_str)[:1000])
 
     def on_tool_end(self, output, **kwargs):
-        run_state.add_event(self.run_id, "tool_end", "Tool output", str(output)[:1500])
+        # Newer LangChain wraps tool returns in a ToolMessage so `str(output)` would yield
+        # `content='...'\n...` (Python repr) — that breaks downstream parsers in
+        # `src/agent/probe_actions.py` (preflight skip + customer-identity extraction). Use
+        # `.content` when present so the persisted detail is the raw blob the tool returned.
+        # The cap is also wider than the UI-trace baseline (1500) because `fetch_inbox_emails`
+        # routinely emits 10-30KB blobs and the merge step needs to see every thread block to
+        # attribute the customer correctly. 50KB is a generous bound that keeps DB metadata
+        # from growing without limit while never truncating a realistic inbox listing.
+        text = str(getattr(output, "content", output) or "")
+        run_state.add_event(self.run_id, "tool_end", "Tool output", text[:50000])
 
     def on_chain_start(self, serialized, inputs, **kwargs):
         name = serialized.get("name", "chain") if isinstance(serialized, dict) else "chain"
@@ -314,6 +325,7 @@ class RuntimeSettingsPatch(BaseModel):
     guardrail_exclude_intent_keywords: str | None = None
     guardrail_team_guidance: str | None = None
     guardrail_strictness: str | None = None
+    customer_email_domains: str | None = None
     prompt_email_agent_system_template: str | None = None
     prompt_probe_user_message: str | None = None
     prompt_probe_mode_append: str | None = None
@@ -1057,7 +1069,11 @@ def send_thread_message(req: ThreadSendRequest):
                 thread_is_action_review=is_action_review if not effective_probe else False,
                 cancel_check=lambda: run_state.is_cancel_requested(run_id),
             )
-            run_state.complete_run(run_id, output)
+            # Persist before flipping run status so pollRun (frontend) cannot observe
+            # "completed" before the assistant message exists. merge_csm_actions_metadata
+            # runs guardrail embeddings (~hundreds of ms to seconds) — that whole interval
+            # must stay inside `running`, otherwise the spinner dies and loadThreadMessages
+            # returns no new row until the user refreshes.
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
             metadata = {
@@ -1077,6 +1093,7 @@ def send_thread_message(req: ThreadSendRequest):
                         "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
                         "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
                         "guardrail_strictness": effective_guardrail_strictness(),
+                        "customer_email_domains": effective_customer_email_domains(),
                     }
                 )
                 if probe_ui_loc:
@@ -1099,8 +1116,8 @@ def send_thread_message(req: ThreadSendRequest):
                 "completed",
                 metadata=metadata,
             )
+            run_state.complete_run(run_id, output)
         except AgentRunCancelled:
-            run_state.mark_cancelled(run_id)
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
             metadata = {
@@ -1125,8 +1142,8 @@ def send_thread_message(req: ThreadSendRequest):
                 "completed",
                 metadata=metadata,
             )
+            run_state.mark_cancelled(run_id)
         except Exception as e:
-            run_state.fail_run(run_id, str(e))
             run = run_state.get_run(run_id) or {}
             events = run.get("events") or []
             metadata = {
@@ -1150,6 +1167,7 @@ def send_thread_message(req: ThreadSendRequest):
                 error_message=str(e),
                 metadata=metadata,
             )
+            run_state.fail_run(run_id, str(e))
 
     Thread(target=_worker, daemon=True).start()
     return RunAgentAsyncResponse(run_id=run_id, status="running")

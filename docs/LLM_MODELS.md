@@ -14,7 +14,7 @@ Chat calls use **`src/agent/chat_llm.py`** (`get_chat_llm`). Model ids are **not
 |----------|------|----------|
 | `LLM_MODEL` | Default chat model for every role | Required baseline (set in Configure or env; see `.env.example`) |
 | `LLM_MODEL_MAIN` | Main email agent (`create_agent` + tools) | `LLM_MODEL` |
-| `LLM_MODEL_SEARCH_JSON` | Search: subquery split, term extraction, sufficiency, refine **and** small JSON “intent routers” in the main agent (see below) | `LLM_MODEL` |
+| `LLM_MODEL_SEARCH_JSON` | Search: KB query planner (`search_product_docs.query_planner`), orchestrator subquery split (`search_agent.split_focus_subqueries`), term extraction, sufficiency, refine **and** small JSON “intent routers” in the main agent (see below) | `LLM_MODEL` |
 | `LLM_MODEL_KB_WEB_GATE` | **RC path only:** JSON gate used after KB retrieval to decide web follow-up in `kb_first` mode (`proceed_web` / `reason`). **Separate** from `LLM_MODEL_SEARCH_JSON` — does **not** affect intent routers or retrieval sufficiency JSON. | `LLM_MODEL` (via `effective_llm_model()` when unset — see `effective_llm_model_kb_web_gate()`) |
 | `LLM_MODEL_SEARCH_RERANK` | Search: snippet rerank (1–5 scores) | `LLM_MODEL` |
 | `LLM_MODEL_MEMORY` | Memory compaction (summarize old interactions) | `LLM_MODEL` |
@@ -41,6 +41,7 @@ The **same** resolved model as search JSON steps (`effective_llm_model_search_js
 
 - **`inbox_peek` vs full agent** — `_route_user_request`: a quick peek at the inbox listing without spinning up the full tool loop when the user only asked “what’s in my inbox”.
 - **`run_full_inbox_probe` vs normal chat** — when `PROBE_THREAD_INTENT_CLASSIFIER` is in **`llm`** mode, a single classifier decides whether a Workbench message should trigger a **full inbox probe** (Gmail triage + dashboard merge) or stay in chat mode.
+- **KB query planner** — before `search_with_agent`, `_expand_kb_query_with_context` may emit JSON `subqueries` (LangSmith: `search_product_docs.query_planner`). In **inbox probe** runs the planner’s “full context” is the latest Gmail tool output, not the probe trigger prompt — see [SEARCH_AGENT.md](SEARCH_AGENT.md).
 
 If you point `LLM_MODEL_SEARCH_JSON` at a model that is **cheap but sloppy on JSON**, retrieval **and** these routing decisions can degrade. Prefer models that follow JSON-only instructions reliably.
 

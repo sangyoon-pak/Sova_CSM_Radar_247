@@ -562,6 +562,36 @@ def is_inbox_probe_chat_intent(text: str) -> bool:
 _SOURCE_TAG_RE = re.compile(r"^\[Source:\s*(.+?)\s*\|\s*line\s*\d+\]\s*$", re.MULTILINE)
 _KB_RELEVANCE_FALSE_MARKER = "KB relevance: false"
 _SEARCH_PRODUCT_DOCS_CONTEXT: ContextVar[str] = ContextVar("search_product_docs_context", default="")
+# Set to True only inside probe runs (`run_agent(..., probe=True)`); read by tools to gate
+# probe-only behavior such as the inbox preflight skip list.
+_PROBE_MODE_CONTEXT: ContextVar[bool] = ContextVar("probe_mode_context", default=False)
+# Most recent successful Gmail tool output (inbox fetch / thread fetch). Used by
+# `_expand_kb_query_with_context` so the planner expands subqueries from the actual
+# customer email content, not from the probe instruction prompt. Tools call
+# `record_gmail_tool_output(...)` after a successful fetch.
+_GMAIL_LAST_OUTPUT_CTX: ContextVar[str] = ContextVar("gmail_last_output_context", default="")
+_GMAIL_OUTPUT_CTX_MAX = 8000  # bound so a huge inbox blob can't overwhelm the planner prompt
+
+
+def is_probe_mode_active() -> bool:
+    """True when called from inside a probe run (set by `_run_agent_impl`)."""
+    try:
+        return bool(_PROBE_MODE_CONTEXT.get())
+    except LookupError:
+        return False
+
+
+def record_gmail_tool_output(text: str) -> None:
+    """Stash the latest Gmail fetch output so the KB query planner can use it as
+    'Full user context'. Called from `fetch_inbox_emails` / `fetch_gmail_thread`
+    on success. No-op for empty/error strings."""
+    s = (text or "").strip()
+    if not s or s.lower().startswith("error"):
+        return
+    try:
+        _GMAIL_LAST_OUTPUT_CTX.set(s[:_GMAIL_OUTPUT_CTX_MAX])
+    except Exception:
+        pass
 
 _KB_QUERY_PLAN_PROMPT = """Expand a focused retrieval query into coverage-oriented subqueries.
 
@@ -623,10 +653,20 @@ def _parse_json_object_from_text(raw: str) -> dict | None:
 def _expand_kb_query_with_context(focused_query: str) -> str:
     """
     Planner-backed query expansion so `search_product_docs` doesn't lose non-endpoint asks.
-    Uses latest user context captured in `_run_agent_impl`.
+
+    Context selection:
+    - Probe mode: prefer the latest Gmail tool output (real customer email body) so the
+      planner expands from actual product/account language. The Workbench/cron `input_text`
+      in probe mode is the probe trigger prompt itself; feeding that to the planner makes
+      it echo tool/category words ("API/SDK", "webhooks", ...) instead of customer asks.
+    - Otherwise: use `_SEARCH_PRODUCT_DOCS_CONTEXT` (set in `_run_agent_impl` to the user's
+      message / route text) — the historical behavior for Workbench chat.
     """
     focused = (focused_query or "").strip()
-    full_ctx = (_SEARCH_PRODUCT_DOCS_CONTEXT.get() or "").strip()
+    if is_probe_mode_active():
+        full_ctx = (_GMAIL_LAST_OUTPUT_CTX.get() or "").strip()
+    else:
+        full_ctx = (_SEARCH_PRODUCT_DOCS_CONTEXT.get() or "").strip()
     if not focused:
         return full_ctx[:2600] if full_ctx else focused
     if not full_ctx or len(full_ctx) <= len(focused) + 20:
@@ -1184,7 +1224,14 @@ def _run_agent_impl(
         probe_hint += (
             "If docs are truly unavailable, keep `references` and `retrieval_evidence` empty rather than fabricating sources.\n"
             "Language: follow the inferred-language note per thread. Do not default to English for dashboard strings "
-            "just because the latest reply is an internal English ping — read who actually asked for help and in which language."
+            "just because the latest reply is an internal English ping — read who actually asked for help and in which language.\n"
+            "**Preflight skip (PROBE_PREFLIGHT):** `fetch_inbox_emails` may end with a trailer:\n"
+            "```\nPROBE_PREFLIGHT\nRETRIEVAL_SKIP_THREAD_IDS=<id1>,<id2>,...\n```\n"
+            "Each listed Gmail thread id has the **same latest message** as the dashboard card from the previous probe — "
+            "no new mail since last run. For every id in that list:\n"
+            "- Do **not** call `search_product_docs`, `search_rc_web`, or `fetch_gmail_thread` for that thread.\n"
+            "- **Omit** that thread from `actions[]`. Note them only in `skipped_note` (e.g. `\"3 threads unchanged since last probe\"`).\n"
+            "Threads not listed in the trailer are new or updated — process them normally per the rules above."
         )
         if system_append and system_append.strip():
             system_append = system_append.rstrip() + "\n\n" + probe_hint
@@ -1203,10 +1250,20 @@ def _run_agent_impl(
         invoke_messages = lc_messages
     else:
         invoke_messages = [HumanMessage(content=input_text)]
-    retrieval_ctx = (input_text or "").strip()
-    if route_text and len(route_text) > len(retrieval_ctx):
-        retrieval_ctx = route_text
+    # Workbench chat: planner sees the actual user message / route text.
+    # Probe runs: `input_text` is the probe trigger prompt (instruction sheet) which
+    # contains tool/category words; feeding that to the planner produces bogus
+    # subqueries echoing "fetch_inbox_emails", "API/SDK", "webhooks", etc. The planner
+    # instead reads the latest Gmail tool output via `_GMAIL_LAST_OUTPUT_CTX`.
+    if probe:
+        retrieval_ctx = ""
+    else:
+        retrieval_ctx = (input_text or "").strip()
+        if route_text and len(route_text) > len(retrieval_ctx):
+            retrieval_ctx = route_text
     ctx_token = _SEARCH_PRODUCT_DOCS_CONTEXT.set(retrieval_ctx)
+    probe_token = _PROBE_MODE_CONTEXT.set(bool(probe))
+    gmail_ctx_token = _GMAIL_LAST_OUTPUT_CTX.set("")
     try:
         result = agent.invoke({"messages": invoke_messages}, config=config)
     except Exception as e:
@@ -1218,6 +1275,11 @@ def _run_agent_impl(
         raise
     finally:
         _SEARCH_PRODUCT_DOCS_CONTEXT.reset(ctx_token)
+        _PROBE_MODE_CONTEXT.reset(probe_token)
+        try:
+            _GMAIL_LAST_OUTPUT_CTX.reset(gmail_ctx_token)
+        except Exception:
+            pass
     messages = result.get("messages", [])
     draft = None
     for m in reversed(messages):

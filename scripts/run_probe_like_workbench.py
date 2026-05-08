@@ -75,6 +75,7 @@ def main() -> int:
     from src.agent.probe_actions import format_probe_thread_reply, merge_csm_actions_metadata
     from src.db import database
     from src.runtime_config import (
+        effective_customer_email_domains,
         effective_guardrail_exclude_intent_keywords,
         effective_guardrail_exclude_sender_domains,
         effective_guardrail_include_intent_keywords,
@@ -100,6 +101,7 @@ def main() -> int:
         "guardrail_include_intent_keywords": effective_guardrail_include_intent_keywords(),
         "guardrail_exclude_intent_keywords": effective_guardrail_exclude_intent_keywords(),
         "guardrail_strictness": effective_guardrail_strictness(),
+        "customer_email_domains": effective_customer_email_domains(),
     }
     loc = (args.ui_locale or "").strip().lower()
     if loc in ("ko", "en"):

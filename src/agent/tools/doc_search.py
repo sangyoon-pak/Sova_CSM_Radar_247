@@ -53,8 +53,8 @@ _RAG_STATE_PATH = (_RAG_DIR / "state.txt").resolve()
 _RAG_TOMBSTONES_PATH = (_RAG_DIR / "tombstones.json").resolve()
 _RAG_REBUILD_LOG_PATH = (_RAG_DIR / "rebuild_log.jsonl").resolve()
 _RAG_EMBED_MODEL_LOCAL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-_RAG_CHUNK_SIZE = 900
-_RAG_OVERLAP = 150
+_RAG_CHUNK_SIZE = 1400
+_RAG_OVERLAP = 250
 _RAG_REINDEX_LOCK = Lock()
 _EMBEDDINGS = None
 _EMBED_CFG: tuple[str, str] | None = None
@@ -131,10 +131,13 @@ def _kb_state(base_path: Path) -> tuple[int, int]:
 
 
 def _kb_fingerprint(base_path: Path) -> str:
+    # Include chunk size + overlap so any future tweak auto-invalidates the on-disk FAISS
+    # index (otherwise `_ensure_rag_index` would skip rebuild and the new code would still
+    # serve hits sized to the previous indexing run).
     count, latest = _kb_state(base_path)
     provider = (effective_rag_embedding_provider() or "openrouter").strip().lower()
     model = (effective_rag_embedding_model() or "").strip()
-    return f"{count}:{latest}:{provider}:{model}"
+    return f"{count}:{latest}:{provider}:{model}:c{_RAG_CHUNK_SIZE}o{_RAG_OVERLAP}"
 
 
 def _registry_rag_paths(base_path: Path) -> list[Path]:
@@ -179,6 +182,10 @@ def _registry_index_state(base_path: Path) -> tuple[int, int]:
 
 
 def _registry_rag_fingerprint(base_path: Path) -> str:
+    # Trailing `c{chunk}o{overlap}` segment makes chunk-size tweaks auto-invalidate the
+    # index. `_parse_fingerprint` strips this token before extracting model, so legacy
+    # fingerprints without the suffix still parse and rebuild reasons report `chunk` when
+    # only the chunk knob changed.
     paths = _registry_rag_paths(base_path)
     provider = (effective_rag_embedding_provider() or "openrouter").strip().lower()
     model = (effective_rag_embedding_model() or "").strip()
@@ -191,22 +198,30 @@ def _registry_rag_fingerprint(base_path: Path) -> str:
         parts.append(f"{p}|{m}")
     digest = hashlib.sha256("\n".join(sorted(parts)).encode("utf-8")).hexdigest()[:16]
     count, latest = _registry_index_state(base_path)
-    return f"registry:{count}:{digest}:{latest}:{provider}:{model}"
+    return f"registry:{count}:{digest}:{latest}:{provider}:{model}:c{_RAG_CHUNK_SIZE}o{_RAG_OVERLAP}"
 
 
 def _parse_fingerprint(fp: str) -> dict[str, str]:
     s = str(fp or "")
-    empty = {"count": "", "latest_mtime": "", "provider": "", "model": ""}
-    # New format: registry:{count}:{digest16}:{latest_mtime}:{provider}:{model}
+    empty = {"count": "", "latest_mtime": "", "provider": "", "model": "", "chunk": ""}
+    # New format: registry:{count}:{digest16}:{latest_mtime}:{provider}:{model}[:c{N}o{M}]
     if s.startswith("registry:"):
         rest = s[len("registry:") :]
         segs = rest.split(":")
+        # Optional trailing chunk-size token (always last segment). Strip it before model
+        # extraction so the model field stays consistent for fingerprints with or without
+        # the chunk suffix.
+        chunk_tok = ""
+        if segs and re.match(r"^c\d+o\d+$", segs[-1]):
+            chunk_tok = segs[-1]
+            segs = segs[:-1]
         if len(segs) >= 5:
             return {
                 "count": segs[0],
                 "latest_mtime": segs[2],
                 "provider": segs[3],
                 "model": ":".join(segs[4:]) if len(segs) > 5 else segs[4],
+                "chunk": chunk_tok,
             }
         return empty
     parts = s.split(":", 3)
@@ -217,6 +232,7 @@ def _parse_fingerprint(fp: str) -> dict[str, str]:
         "latest_mtime": parts[1],
         "provider": parts[2],
         "model": parts[3],
+        "chunk": "",
     }
 
 
@@ -225,7 +241,7 @@ def _log_rag_rebuild_event(base_path: Path, old_fp: str, new_fp: str, phase: str
         old = _parse_fingerprint(old_fp)
         new = _parse_fingerprint(new_fp)
         reasons: list[str] = []
-        for k in ("count", "latest_mtime", "provider", "model"):
+        for k in ("count", "latest_mtime", "provider", "model", "chunk"):
             if old.get(k) != new.get(k):
                 reasons.append(k)
         rec = {
@@ -554,7 +570,7 @@ def run_rag_search(query: str, base_path: Path, max_results: int = 20) -> list[d
                 "line_num": int(md.get("line_num", 1)),
                 "line": text.splitlines()[0][:240],
                 "path": md.get("path", ""),
-                "snippet": text[:900],
+                "snippet": text[:_RAG_CHUNK_SIZE],
                 "source": "rag",
                 "score": float(score),
             }
@@ -687,10 +703,12 @@ def _is_metadata_line(text: str) -> bool:
     return t == "---" or bool(_METADATA_LINE_RE.match(t))
 
 
-def _get_snippet(path: str, line_num: int, window: int = 3) -> str:
+def _get_snippet(path: str, line_num: int, window: int = 10) -> str:
     """
     Return +/- window lines around the matched line.
-    Keeps retrieval more actionable than single-line keyword matches.
+    Keeps retrieval more actionable than single-line keyword matches. The default ~10 lines
+    typically captures a full markdown paragraph or list block, putting grep/FTS hits on
+    par with RAG chunks for the reranker to compare meaningfully.
     """
     p = Path(path)
     if not p.exists() or line_num <= 0:
@@ -956,7 +974,7 @@ def search_documents(
             if _is_metadata_line(m.get("line", "")):
                 # Skip YAML/frontmatter-like hits that often cause weak answers.
                 continue
-            m["snippet"] = _get_snippet(m.get("path", ""), m.get("line_num", 0), window=3)
+            m["snippet"] = _get_snippet(m.get("path", ""), m.get("line_num", 0), window=10)
             key = (m["file"], m["line_num"])
             if key not in seen:
                 seen.add(key)
