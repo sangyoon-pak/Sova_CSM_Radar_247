@@ -383,6 +383,44 @@ def set_csm_dashboard_action_category(interaction_id: int, action_index: int, ca
         return True
 
 
+def set_csm_dashboard_action_priority(interaction_id: int, action_index: int, priority: str) -> bool:
+    """Set one action `priority` in metadata.csm_actions (low | medium | high | urgent)."""
+    pr = (priority or "").strip().lower()
+    if pr not in {"low", "medium", "high", "urgent"}:
+        return False
+    with _WRITE_LOCK:
+        conn = _conn()
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, trigger_type, metadata FROM agent_interactions WHERE id = ?",
+            (interaction_id,),
+        ).fetchone()
+        if not row:
+            conn.close()
+            return False
+        d = dict(row)
+        if not _is_probe_dashboard_trigger(d.get("trigger_type")):
+            conn.close()
+            return False
+        md = _parse_interaction_metadata(d.get("metadata"))
+        actions = md.get("csm_actions")
+        if not isinstance(actions, list) or action_index < 0 or action_index >= len(actions):
+            conn.close()
+            return False
+        actions = list(actions)
+        item = dict(actions[action_index] or {})
+        item["priority"] = pr
+        actions[action_index] = item
+        md["csm_actions"] = actions
+        conn.execute(
+            "UPDATE agent_interactions SET metadata = ? WHERE id = ?",
+            (json.dumps(md), interaction_id),
+        )
+        conn.commit()
+        conn.close()
+        return True
+
+
 _DASHBOARD_IDENTITY_FIELDS: tuple[str, ...] = (
     "email_from",
     "customer_email",
@@ -515,6 +553,51 @@ def latest_dashboard_actions_by_gmail_thread(limit: int = 800) -> dict[str, dict
     return out
 
 
+def _parse_probe_dashboard_source_tokens(source: str) -> list[str]:
+    """Comma-separated source tokens; empty list means all probe sources."""
+    s = (source or "all").strip().lower()
+    if s in ("", "all"):
+        return []
+    valid = {"cron", "thread_probe", "manual_probe"}
+    out: list[str] = []
+    for part in s.split(","):
+        p = part.strip().lower()
+        if p in valid and p not in out:
+            out.append(p)
+    return out
+
+
+def _probe_trigger_where_from_source_tokens(tokens: list[str]) -> tuple[str, list]:
+    """SQL fragment for trigger_type OR-group; empty tokens = all inbox-review triggers."""
+    if not tokens:
+        w = (
+            "(trigger_type LIKE 'cron:%' OR trigger_type = 'thread_probe' "
+            "OR trigger_type LIKE 'manual_probe%')"
+        )
+        return w, []
+    clauses: list[str] = []
+    for tok in tokens:
+        if tok == "cron":
+            clauses.append("trigger_type LIKE 'cron:%'")
+        elif tok == "thread_probe":
+            clauses.append("trigger_type = 'thread_probe'")
+        else:
+            clauses.append("(trigger_type = 'manual_probe' OR trigger_type LIKE 'manual_probe_%')")
+    return "(" + " OR ".join(clauses) + ")", []
+
+
+def _parse_probe_dashboard_status_tokens(status_filter: str | None) -> list[str]:
+    st = (status_filter or "all").strip().lower()
+    if st in ("", "all"):
+        return []
+    out: list[str] = []
+    for part in st.split(","):
+        p = part.strip().lower()
+        if p in ("completed", "error") and p not in out:
+            out.append(p)
+    return out
+
+
 def list_probe_interactions(
     *,
     limit: int = 30,
@@ -524,37 +607,19 @@ def list_probe_interactions(
 ) -> list[dict]:
     """
     Inbox review runs: cron:*, thread_probe, manual_probe.
-    source: all | cron | thread_probe | manual_probe
-    status_filter: None or 'all' = any status; 'completed' | 'error' to filter.
+    source: all | comma-separated subset of cron, thread_probe, manual_probe
+    status_filter: all | comma-separated subset of completed, error (interaction row status)
     """
-    src = (source or "all").strip().lower()
-    if src not in ("all", "cron", "thread_probe", "manual_probe"):
-        src = "all"
-    st = (status_filter or "").strip().lower()
-    if st in ("", "all"):
-        st = None
-    elif st not in ("completed", "error"):
-        st = None
+    src_tokens = _parse_probe_dashboard_source_tokens(source)
+    where_src, params_src = _probe_trigger_where_from_source_tokens(src_tokens)
+    st_tokens = _parse_probe_dashboard_status_tokens(status_filter)
 
-    if src == "cron":
-        where = "trigger_type LIKE 'cron:%'"
-        params: list = []
-    elif src == "thread_probe":
-        where = "trigger_type = 'thread_probe'"
-        params = []
-    elif src == "manual_probe":
-        where = "(trigger_type = 'manual_probe' OR trigger_type LIKE 'manual_probe_%')"
-        params = []
-    else:
-        where = (
-            "(trigger_type LIKE 'cron:%' OR trigger_type = 'thread_probe' "
-            "OR trigger_type LIKE 'manual_probe%')"
-        )
-        params = []
-
-    if st:
-        where = f"({where}) AND status = ?"
-        params.append(st)
+    params: list = list(params_src)
+    where = where_src
+    if st_tokens:
+        ph = ",".join("?" * len(st_tokens))
+        where = f"({where}) AND status IN ({ph})"
+        params.extend(st_tokens)
 
     # CSM dismissed probe runs stay in DB but are hidden from the Action dashboard.
     where = (

@@ -646,6 +646,8 @@ def list_probe_runs(
 ):
     """
     Recent inbox review runs (cron probes, thread Scan inbox, manual API probe).
+    `source` and `status` accept comma-separated lists (e.g. source=cron,thread_probe,
+    status=completed,error). Use `all` for no filter on that axis.
     """
     if limit < 1:
         limit = 20
@@ -653,18 +655,49 @@ def list_probe_runs(
         limit = 100
     if offset < 0:
         offset = 0
-    src = (source or "all").strip().lower()
-    if src not in ("all", "cron", "thread_probe", "manual_probe"):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid source. Use: all, cron, thread_probe, manual_probe.",
-        )
-    st = (status or "all").strip().lower()
-    if st not in ("all", "completed", "error"):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid status. Use: all, completed, error.",
-        )
+
+    def _normalize_sources(raw: str) -> str:
+        s = (raw or "all").strip().lower()
+        if not s or s == "all":
+            return "all"
+        valid = {"cron", "thread_probe", "manual_probe"}
+        out: list[str] = []
+        seen: set[str] = set()
+        for p in (x.strip().lower() for x in s.split(",") if x.strip()):
+            if p not in valid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid source token {p!r}. Use: all, cron, thread_probe, manual_probe (comma-separated for multiple).",
+                )
+            if p not in seen:
+                seen.add(p)
+                out.append(p)
+        if len(out) == len(valid):
+            return "all"
+        return ",".join(out)
+
+    def _normalize_run_statuses(raw: str) -> str:
+        s = (raw or "all").strip().lower()
+        if not s or s == "all":
+            return "all"
+        valid = {"completed", "error"}
+        out: list[str] = []
+        seen: set[str] = set()
+        for p in (x.strip().lower() for x in s.split(",") if x.strip()):
+            if p not in valid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid run status token {p!r}. Use: all, completed, error (comma-separated for multiple).",
+                )
+            if p not in seen:
+                seen.add(p)
+                out.append(p)
+        if len(out) == len(valid):
+            return "all"
+        return ",".join(out)
+
+    src = _normalize_sources(source)
+    st = _normalize_run_statuses(status)
     items = database.list_probe_interactions(
         limit=limit,
         offset=offset,
@@ -727,6 +760,26 @@ def set_dashboard_probe_action_category(
         raise HTTPException(
             status_code=404,
             detail="Interaction/action not found, not a probe run, or invalid category.",
+        )
+    return {"ok": True}
+
+
+class DashboardActionPriorityRequest(BaseModel):
+    priority: str
+
+
+@router.patch("/dashboard/probe-runs/{interaction_id}/actions/{action_index}/priority")
+def set_dashboard_probe_action_priority(
+    interaction_id: int, action_index: int, req: DashboardActionPriorityRequest
+):
+    """Update one dashboard action priority: low | medium | high | urgent."""
+    if action_index < 0:
+        raise HTTPException(status_code=400, detail="Invalid action index.")
+    ok = database.set_csm_dashboard_action_priority(interaction_id, action_index, req.priority)
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="Interaction/action not found, not a probe run, or invalid priority.",
         )
     return {"ok": True}
 

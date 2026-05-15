@@ -1187,6 +1187,34 @@
       font-size: 0.8125rem;
       font-weight: 600;
     }
+    .dashboard-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      align-items: center;
+      max-width: 22rem;
+    }
+    .dashboard-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.22rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .dashboard-pill:hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+      color: var(--text);
+    }
+    .dashboard-pill.active {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+      background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+      color: var(--text);
+    }
     .dashboard-feed {
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -1341,9 +1369,9 @@
     .csm-action-card__top {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.35rem;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.45rem;
     }
     .csm-action-card__cat {
       font-size: 0.625rem;
@@ -1355,6 +1383,74 @@
       padding: 0.1rem 0.35rem;
       border-radius: 6px;
       background: var(--surface2);
+    }
+    .csm-action-card__cat--client_technical {
+      color: color-mix(in srgb, #0d6efd 92%, var(--text));
+      border-color: color-mix(in srgb, #0d6efd 45%, var(--border));
+      background: color-mix(in srgb, #0d6efd 14%, var(--surface2));
+    }
+    .csm-action-card__cat--client_non_technical {
+      color: color-mix(in srgb, #6f42c1 92%, var(--text));
+      border-color: color-mix(in srgb, #6f42c1 42%, var(--border));
+      background: color-mix(in srgb, #6f42c1 12%, var(--surface2));
+    }
+    .csm-action-card__cat--internal {
+      color: color-mix(in srgb, #6c757d 95%, var(--text));
+      border-color: color-mix(in srgb, #6c757d 40%, var(--border));
+      background: color-mix(in srgb, #6c757d 10%, var(--surface2));
+    }
+    .csm-action-card__status-pill {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .csm-action-card__status-pill--not_started {
+      color: color-mix(in srgb, #fd7e14 95%, var(--text));
+      border-color: color-mix(in srgb, #fd7e14 45%, var(--border));
+      background: color-mix(in srgb, #fd7e14 12%, var(--surface2));
+    }
+    .csm-action-card__status-pill--in_progress {
+      color: color-mix(in srgb, #0dcaf0 95%, var(--text));
+      border-color: color-mix(in srgb, #0dcaf0 50%, var(--border));
+      background: color-mix(in srgb, #0dcaf0 14%, var(--surface2));
+    }
+    .csm-action-card__status-pill--completed {
+      color: color-mix(in srgb, #198754 95%, var(--text));
+      border-color: color-mix(in srgb, #198754 45%, var(--border));
+      background: color-mix(in srgb, #198754 12%, var(--surface2));
+    }
+    .csm-action-card__priority-pill {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .csm-action-card__priority-pill--urgent {
+      color: color-mix(in srgb, #dc3545 96%, var(--text));
+      border-color: color-mix(in srgb, #dc3545 48%, var(--border));
+      background: color-mix(in srgb, #dc3545 14%, var(--surface2));
+    }
+    .csm-action-card__priority-pill--high {
+      color: color-mix(in srgb, #d9480f 96%, var(--text));
+      border-color: color-mix(in srgb, #d9480f 45%, var(--border));
+      background: color-mix(in srgb, #d9480f 12%, var(--surface2));
+    }
+    .csm-action-card__priority-pill--medium {
+      color: color-mix(in srgb, #228be6 96%, var(--text));
+      border-color: color-mix(in srgb, #228be6 42%, var(--border));
+      background: color-mix(in srgb, #228be6 12%, var(--surface2));
+    }
+    .csm-action-card__priority-pill--low {
+      color: color-mix(in srgb, #868e96 98%, var(--text));
+      border-color: color-mix(in srgb, #868e96 42%, var(--border));
+      background: color-mix(in srgb, #868e96 10%, var(--surface2));
     }
     .csm-action-card__title {
       font-size: 0.9375rem;
@@ -1581,10 +1677,41 @@
     }
     .dashboard-bulk-bar {
       display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.3rem;
+      margin-right: 0.5rem;
+    }
+    .dashboard-bulk-bar__actions {
+      display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 0.35rem 0.5rem;
-      margin-right: 0.5rem;
+    }
+    .dashboard-bulk-bar__hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+      min-height: 1.15em;
+    }
+    .thread-bulk-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.3rem;
+      margin-bottom: 0.45rem;
+    }
+    .thread-bulk-bar__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .thread-bulk-bar__hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: nowrap;
+      min-height: 1.15em;
     }
     .csm-legacy-card {
       border: 1px dashed var(--border);
@@ -1846,7 +1973,7 @@
             <div class="row" style="gap:0.5rem;margin-bottom:0.65rem;flex-wrap:wrap;">
               <button type="button" class="ghost" onclick="applyProviderPresetDefaults()" data-i18n="configureApplyPreset">Apply preset defaults</button>
             </div>
-            <p class="configure-hint" data-i18n-html="configureOrHint">Paste your OpenRouter API key here and <strong>Save configuration</strong> to store it in the app database on this machine.</p>
+            <p class="configure-hint" data-i18n-html="configureOrHint">Paste the API key for the selected preset and <strong>Save configuration</strong> to store it in the app database on this machine (OpenAI preset → <code>openai_api_key</code>; OpenRouter / Gemini (OR) → <code>openrouter_api_key</code>).</p>
             <div class="configure-field" id="cfg_base_url_block">
               <label for="cfg_openrouter_base_url" id="cfg_base_url_label">Base URL</label>
               <input id="cfg_openrouter_base_url" type="text" />
@@ -1869,7 +1996,7 @@
         <details class="configure-details">
           <summary data-i18n="configureLlmBlock">LLM models</summary>
           <div class="configure-details__body">
-            <p class="configure-hint" data-i18n="configureLlmHint">Gray lines show recommended defaults (starting point only). Pick a suggestion or paste any OpenRouter model id.</p>
+            <p class="configure-hint" data-i18n="configureLlmHint">Grey lines show recommended defaults for the selected provider preset (starting point only). Pick a suggestion or paste a model id: OpenAI API uses ids like gpt-4o; OpenRouter-compatible presets use vendor/model (e.g. openai/gpt-4o).</p>
             <datalist id="datalistChatModels"></datalist>
             <div class="configure-field"><label for="cfg_llm_model" data-i18n="cfgLlmModel">Default model (LLM_MODEL)</label><input id="cfg_llm_model" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model"></span></div>
             <div class="configure-field"><label for="cfg_llm_model_main" data-i18n="cfgLlmMain">Main agent</label><input id="cfg_llm_model_main" type="text" autocomplete="off" list="datalistChatModels" /><span class="configure-env" id="cfg_env_llm_model_main"></span></div>
@@ -2092,7 +2219,7 @@
     <section>
       <h2 data-i18n="workbenchTitle">Workbench</h2>
       <p class="section-lead" data-i18n="workbenchLead">Chat in threads here. Use the Action dashboard tab for inbox review runs; expand Run trace for step detail, and Run history for audit.</p>
-      <details id="profileDetails" class="profile-card" open>
+      <details id="profileDetails" class="profile-card">
         <summary>
           <div class="profile-head">
             <div class="profile-head-left">
@@ -2147,11 +2274,13 @@
             </div>
           </div>
           <input id="threadSearch" type="text" data-i18n-placeholder="searchThreads" placeholder="Search threads…" style="padding:0.55rem 0.65rem;border-radius:10px;margin-bottom:0.45rem;" oninput="loadThreads()" />
-          <div class="thread-bulk-bar row" style="gap:0.35rem;flex-wrap:wrap;margin-bottom:0.45rem;align-items:center;">
-            <button type="button" class="ghost btn-compact" onclick="threadsSelectAllVisible()" data-i18n="threadsSelectAll">Select all</button>
-            <button type="button" class="ghost btn-compact" onclick="threadsClearSelection()" data-i18n="threadsSelectNone">Clear</button>
-            <button type="button" class="danger btn-compact" onclick="deleteSelectedThreads()" data-i18n="threadsDeleteSelected">Delete selected</button>
-            <span id="threadBulkHint" class="action-board-hint" style="flex:1;min-width:0;text-align:right;"></span>
+          <div class="thread-bulk-bar">
+            <div class="thread-bulk-bar__actions">
+              <button type="button" class="ghost btn-compact" onclick="threadsSelectAllVisible()" data-i18n="threadsSelectAll">Select all</button>
+              <button type="button" class="ghost btn-compact" onclick="threadsClearSelection()" data-i18n="threadsSelectNone">Clear</button>
+              <button type="button" class="danger btn-compact" onclick="deleteSelectedThreads()" data-i18n="threadsDeleteSelected">Delete selected</button>
+            </div>
+            <span id="threadBulkHint" class="thread-bulk-bar__hint" aria-live="polite"></span>
           </div>
           <div id="threadList"><div class="empty" style="padding:1rem 0;" data-i18n="loading">Loading…</div></div>
         </div>
@@ -2210,49 +2339,24 @@
       <div class="dashboard-controls">
         <div class="dashboard-controls__left row dashboard-filters">
           <div class="filter-field">
-            <label for="dashboardFilterSource" data-i18n="dashboardFilterSource">Source</label>
-            <select id="dashboardFilterSource" onchange="loadActionBoard(true)">
-              <option value="all">All sources</option>
-              <option value="cron">Cron</option>
-              <option value="thread_probe">Thread probe</option>
-              <option value="manual_probe">Manual probe</option>
-            </select>
+            <label data-i18n="dashboardFilterSource">Source</label>
+            <div class="dashboard-pill-row" id="dashPillsSource" role="group" aria-label="Source"></div>
           </div>
           <div class="filter-field">
-            <label for="dashboardActionStatusFilter" data-i18n="dashboardActionStatusFilter">Action status</label>
-            <select id="dashboardActionStatusFilter" onchange="rerenderActionBoardFromCache()">
-              <option value="all" data-i18n="dashboardActionStatusAll">All actions</option>
-              <option value="not_started" data-i18n="dashboardActionStatusNotStarted">Not started</option>
-              <option value="in_progress" data-i18n="dashboardActionStatusInProgress">In progress</option>
-              <option value="completed" data-i18n="dashboardActionStatusCompleted">Completed</option>
-            </select>
+            <label data-i18n="dashboardActionStatusFilter">Action status</label>
+            <div class="dashboard-pill-row" id="dashPillsActionStatus" role="group" aria-label="Action status"></div>
           </div>
           <div class="filter-field">
-            <label for="dashboardRunStatusFilter" data-i18n="dashboardRunStatusFilter">Run status</label>
-            <select id="dashboardRunStatusFilter" onchange="loadActionBoard(true)">
-              <option value="all" data-i18n="dashboardStatusAll">All</option>
-              <option value="completed" data-i18n="dashboardStatusCompleted">Completed</option>
-              <option value="error" data-i18n="dashboardStatusError">Error</option>
-            </select>
+            <label data-i18n="dashboardRunStatusFilter">Run status</label>
+            <div class="dashboard-pill-row" id="dashPillsRunStatus" role="group" aria-label="Run status"></div>
           </div>
           <div class="filter-field">
-            <label for="dashboardPriorityFilter" data-i18n="dashboardPriorityFilter">Priority</label>
-            <select id="dashboardPriorityFilter" onchange="rerenderActionBoardFromCache()">
-              <option value="all" data-i18n="dashboardPriorityAll">All priorities</option>
-              <option value="urgent" data-i18n="dashboardPriorityUrgent">Urgent</option>
-              <option value="high" data-i18n="dashboardPriorityHigh">High</option>
-              <option value="medium" data-i18n="dashboardPriorityMedium">Medium</option>
-              <option value="low" data-i18n="dashboardPriorityLow">Low</option>
-            </select>
+            <label data-i18n="dashboardPriorityFilter">Priority</label>
+            <div class="dashboard-pill-row" id="dashPillsPriority" role="group" aria-label="Priority"></div>
           </div>
           <div class="filter-field">
-            <label for="dashboardCategoryFilter" data-i18n="dashboardCategoryFilter">Action category</label>
-            <select id="dashboardCategoryFilter" onchange="rerenderActionBoardFromCache()">
-              <option value="all" data-i18n="dashboardCategoryAll">All categories</option>
-              <option value="client_technical" data-i18n="dashCatClientTechnical">Client · technical</option>
-              <option value="client_non_technical" data-i18n="dashCatClientNonTechnical">Client · non-technical</option>
-              <option value="internal" data-i18n="dashCatInternal">Internal</option>
-            </select>
+            <label data-i18n="dashboardCategoryFilter">Action category</label>
+            <div class="dashboard-pill-row" id="dashPillsCategory" role="group" aria-label="Category"></div>
           </div>
           <div class="filter-field" style="min-width:11rem;flex:1;">
             <label for="dashboardDomainFilter" data-i18n="dashboardDomainFilter">Customer domain</label>
@@ -2276,10 +2380,12 @@
       <div id="actionBoardFeed" class="dashboard-feed dashboard-feed--list"><div class="empty" style="padding:0.75rem 0;" data-i18n="loading">Loading…</div></div>
       <div class="action-board-toolbar">
         <div class="dashboard-bulk-bar">
-          <button type="button" class="ghost btn-compact" onclick="dashboardSelectAllCards()" data-i18n="dashboardSelectAll">Select all</button>
-          <button type="button" class="ghost btn-compact" onclick="dashboardClearCardSelection()" data-i18n="dashboardSelectNone">Clear</button>
-          <button type="button" class="danger btn-compact" onclick="dashboardBulkDismissSelected()" data-i18n="dashboardDismissSelected">Remove selected</button>
-          <span id="dashboardBulkSelectionHint" class="action-board-hint"></span>
+          <div class="dashboard-bulk-bar__actions">
+            <button type="button" class="ghost btn-compact" onclick="dashboardSelectAllCards()" data-i18n="dashboardSelectAll">Select all</button>
+            <button type="button" class="ghost btn-compact" onclick="dashboardClearCardSelection()" data-i18n="dashboardSelectNone">Clear</button>
+            <button type="button" class="danger btn-compact" onclick="dashboardBulkDismissSelected()" data-i18n="dashboardDismissSelected">Remove selected</button>
+          </div>
+          <span id="dashboardBulkSelectionHint" class="dashboard-bulk-bar__hint" aria-live="polite"></span>
         </div>
         <button type="button" class="ghost btn-compact" onclick="loadActionBoard(true)" data-i18n="actionBoardRefresh">Refresh</button>
         <button type="button" class="ghost btn-compact" id="dashboardLoadMoreBtn" style="display:none;" onclick="loadActionBoard(false)" data-i18n="dashboardLoadMore">Load more</button>
@@ -2518,7 +2624,8 @@
         configureEmbedProviderOptOpenRouter: 'openrouter (OpenRouter-compatible API)',
         configureEmbedModelTagPrefix: 'Recommended now',
         configureLlmBlock: 'LLM models',
-        configureLlmHint: 'Gray lines show recommended defaults (starting point only). Pick a suggestion or paste any OpenRouter model id.',
+        configureLlmHint:
+          'Grey lines show recommended defaults for the selected provider preset (starting point only). Pick a suggestion or paste a model id: OpenAI API uses ids like gpt-4o; OpenRouter-compatible presets use vendor/model (e.g. openai/gpt-4o).',
         configureRecommendedLabel: 'Recommended',
         configureSavedInDbShort: 'saved in database',
         configureSavedTitle: 'Saved in Configure',
@@ -2592,10 +2699,12 @@
         cfgOpenrouterKey: 'API key',
         landingSetupTitle: '1) Environment & API keys',
         landingSetupIntro: 'Use <strong>Configure</strong> to save models and keys in the database, or export variables from your host environment before starting the server. <strong>Restart the API server</strong> after changing exported environment variables.',
-        landingSetupHeadingLlm: 'LLM (chat via OpenRouter)',
-        landingEnvDdOpenrouter: 'Required. Your OpenRouter API key for all chat completions.',
+        landingSetupHeadingLlm: 'LLM (OpenAI or OpenRouter-compatible API)',
+        landingEnvDdOpenrouter:
+          'Required when using OpenRouter or Gemini-via-OpenRouter: your OpenRouter API key for chat completions.',
         landingEnvDdOpenrouterUrl: 'Optional. Defaults to OpenRouter’s API base URL.',
-        landingEnvDdLlmModel: 'Default model id (OpenRouter format, e.g. <code>openai/gpt-4o</code>) used for every role when the overrides below are unset.',
+        landingEnvDdLlmModel:
+          'Default chat model id when role overrides are unset. OpenAI API: ids like gpt-4o. OpenRouter-compatible: vendor/model (e.g. openai/gpt-4o).',
         landingEnvDdMain: 'Main CSM agent: tool calls, inbox probe, Workbench replies. Falls back to <code>LLM_MODEL</code>.',
         landingEnvDdSearchJson: 'Document retrieval helpers: subquery split, term extraction, JSON-heavy steps. Falls back to <code>LLM_MODEL</code>.',
         landingEnvDdKbWebGate:
@@ -2811,6 +2920,7 @@
         actionBoardEmpty: 'No inbox reviews yet. Run Scan inbox, a thread probe, or a cron job.',
         actionBoardFail: 'Could not load action board',
         dashboardFilterSource: 'Source',
+        dashboardPillAll: 'All',
         dashboardRunStatusFilter: 'Run status',
         dashboardActionStatusFilter: 'Action status',
         dashboardActionSort: 'Sort',
@@ -2882,6 +2992,8 @@
         dashboardCategoryAll: 'All categories',
         dashboardActionCategoryLabel: 'Category',
         dashboardCategoryUpdateFail: 'Could not update category',
+        dashboardActionPriorityLabel: 'Priority',
+        dashboardPriorityUpdateFail: 'Could not update priority',
         dashboardThreadTitle: 'Thread',
         dashboardClientId: 'Client',
         dashboardClientDomain: 'Domain',
@@ -3022,10 +3134,12 @@
         landingCtaKnowledge: 'Knowledge 열기',
         landingSetupTitle: '1) 환경 변수·API 키',
         landingSetupIntro: '<strong>설정</strong>에서 모델·키를 DB에 저장하거나, 서버 시작 전에 호스트 환경 변수로 내보냅니다. 내보낸 변수를 바꾼 뒤에는 <strong>API 서버를 재시작</strong>하세요.',
-        landingSetupHeadingLlm: 'LLM (OpenRouter 채팅)',
-        landingEnvDdOpenrouter: '필수. OpenRouter API 키(모든 채팅 completion).',
+        landingSetupHeadingLlm: 'LLM (OpenAI 또는 OpenRouter 호환 API)',
+        landingEnvDdOpenrouter:
+          'OpenRouter 또는 Gemini-via-OpenRouter 사용 시 필수: 모든 채팅 completion용 OpenRouter API 키.',
         landingEnvDdOpenrouterUrl: '선택. OpenRouter API base URL(기본값 사용 가능).',
-        landingEnvDdLlmModel: '기본 모델 id(OpenRouter 형식, 예: <code>openai/gpt-4o</code>). 아래 역할별 변수가 비어 있을 때 사용됩니다.',
+        landingEnvDdLlmModel:
+          '역할별 변수가 비어 있을 때 쓰는 기본 채팅 모델 id. OpenAI API는 gpt-4o 형식; OpenRouter 호환은 vendor/model(예: openai/gpt-4o).',
         landingEnvDdMain: '메인 CSM 에이전트: 도구 호출·Inbox probe·Workbench 답변. 미설정 시 <code>LLM_MODEL</code>.',
         landingEnvDdSearchJson: '문서 검색 보조: 서브쿼리 분리·용어 추출·JSON 위주 단계. 미설정 시 <code>LLM_MODEL</code>.',
         landingEnvDdKbWebGate:
@@ -3250,6 +3364,7 @@
         actionBoardEmpty: '아직 inbox 리뷰가 없습니다. Inbox 스캔, 스레드 Probe, 또는 Cron을 실행하세요.',
         actionBoardFail: 'Action dashboard를 불러오지 못했습니다',
         dashboardFilterSource: '출처',
+        dashboardPillAll: '전체',
         dashboardRunStatusFilter: '실행 상태',
         dashboardActionStatusFilter: '작업 상태',
         dashboardActionSort: '정렬',
@@ -3337,6 +3452,8 @@
         dashboardCategoryAll: '모든 분류',
         dashboardActionCategoryLabel: '분류',
         dashboardCategoryUpdateFail: '분류를 바꾸지 못했습니다',
+        dashboardActionPriorityLabel: '우선순위',
+        dashboardPriorityUpdateFail: '우선순위를 바꾸지 못했습니다',
         configureAgentPromptsSurfacesTitle: '에이전트 프롬프트 / 런타임 표면',
         configureAgentPromptsSurfacesIntroHtml:
           '<strong>다이어그램</strong>, <strong>편집 가능/불가 구분</strong>, <strong>DB에 저장된 네 프롬프트</strong>를 한 섹션에 모았습니다. 조합된 미리보기는 아래 <strong>모드별 유효 프롬프트 (읽기 전용)</strong>를 여세요.',
@@ -3493,41 +3610,7 @@
       });
       const ls = document.getElementById('langSwitch');
       if (ls) ls.setAttribute('title', uiText('langHelp'));
-      const dfs = document.getElementById('dashboardFilterSource');
-      if (dfs && dfs.options && dfs.options.length >= 4) {
-        dfs.options[0].text = uiText('dashboardSourceAll');
-        dfs.options[1].text = uiText('dashboardSourceCron');
-        dfs.options[2].text = uiText('dashboardSourceThread');
-        dfs.options[3].text = uiText('dashboardSourceManual');
-      }
-      const drs = document.getElementById('dashboardRunStatusFilter');
-      if (drs && drs.options && drs.options.length >= 3) {
-        drs.options[0].text = uiText('dashboardStatusAll');
-        drs.options[1].text = uiText('dashboardStatusCompleted');
-        drs.options[2].text = uiText('dashboardStatusError');
-      }
-      const daf = document.getElementById('dashboardActionStatusFilter');
-      if (daf && daf.options && daf.options.length >= 4) {
-        daf.options[0].text = uiText('dashboardActionStatusAll');
-        daf.options[1].text = uiText('dashboardActionStatusNotStarted');
-        daf.options[2].text = uiText('dashboardActionStatusInProgress');
-        daf.options[3].text = uiText('dashboardActionStatusCompleted');
-      }
-      const dpf = document.getElementById('dashboardPriorityFilter');
-      if (dpf && dpf.options && dpf.options.length >= 5) {
-        dpf.options[0].text = uiText('dashboardPriorityAll');
-        dpf.options[1].text = uiText('dashboardPriorityUrgent');
-        dpf.options[2].text = uiText('dashboardPriorityHigh');
-        dpf.options[3].text = uiText('dashboardPriorityMedium');
-        dpf.options[4].text = uiText('dashboardPriorityLow');
-      }
-      const dcf = document.getElementById('dashboardCategoryFilter');
-      if (dcf && dcf.options && dcf.options.length >= 4) {
-        dcf.options[0].text = uiText('dashboardCategoryAll');
-        dcf.options[1].text = uiText('dashCatClientTechnical');
-        dcf.options[2].text = uiText('dashCatClientNonTechnical');
-        dcf.options[3].text = uiText('dashCatInternal');
-      }
+      buildAllDashboardFilterPills();
       const das = document.getElementById('dashboardActionSort');
       if (das && das.options && das.options.length >= 5) {
         das.options[0].text = uiText('dashboardSortUpdatedDesc');
@@ -3584,6 +3667,133 @@
     const _selectedThreadIds = new Set();
     let _dashboardOffset = 0;
     let _dashboardProbeRows = [];
+    let _dashFiltSource = new Set();
+    let _dashFiltRunStatus = new Set();
+    let _dashFiltActionStatus = new Set();
+    let _dashFiltPriority = new Set();
+    let _dashFiltCategory = new Set();
+    const _DASH_SRC_KEYS = ['cron', 'thread_probe', 'manual_probe'];
+    const _DASH_RUN_ST_KEYS = ['completed', 'error'];
+    const _DASH_ACT_ST_KEYS = ['not_started', 'in_progress', 'completed'];
+    const _DASH_PRIO_KEYS = ['urgent', 'high', 'medium', 'low'];
+    const _DASH_CAT_KEYS = ['client_technical', 'client_non_technical', 'internal'];
+    let _dashPillDelegationBound = false;
+
+    function bindDashboardFilterPillDelegation() {
+      if (_dashPillDelegationBound) return;
+      const zone = document.querySelector('.dashboard-controls__left.dashboard-filters');
+      if (!zone) return;
+      zone.addEventListener('click', (ev) => {
+        const b = ev.target.closest('button[data-dash-kind]');
+        if (!b || !zone.contains(b)) return;
+        ev.preventDefault();
+        dashFiltApplyClick(b.getAttribute('data-dash-kind'), b.getAttribute('data-dash-val'));
+      });
+      _dashPillDelegationBound = true;
+    }
+
+    function dashFiltApplyClick(kind, val) {
+      function applyPick(set, allKeys) {
+        if (val === '__all__') {
+          set.clear();
+          return;
+        }
+        if (set.has(val)) set.delete(val);
+        else {
+          set.add(val);
+          if (set.size === allKeys.length) set.clear();
+        }
+      }
+      if (kind === 'src') {
+        applyPick(_dashFiltSource, _DASH_SRC_KEYS);
+        buildAllDashboardFilterPills();
+        loadActionBoard(true);
+      } else if (kind === 'run') {
+        applyPick(_dashFiltRunStatus, _DASH_RUN_ST_KEYS);
+        buildAllDashboardFilterPills();
+        loadActionBoard(true);
+      } else if (kind === 'act') {
+        applyPick(_dashFiltActionStatus, _DASH_ACT_ST_KEYS);
+        buildAllDashboardFilterPills();
+        rerenderActionBoardFromCache();
+      } else if (kind === 'prio') {
+        applyPick(_dashFiltPriority, _DASH_PRIO_KEYS);
+        buildAllDashboardFilterPills();
+        rerenderActionBoardFromCache();
+      } else if (kind === 'cat') {
+        applyPick(_dashFiltCategory, _DASH_CAT_KEYS);
+        buildAllDashboardFilterPills();
+        rerenderActionBoardFromCache();
+      }
+    }
+
+    function _dashRenderPillRow(hostId, kind, allKeys, keyToLabelFn) {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      let sel;
+      if (kind === 'src') sel = _dashFiltSource;
+      else if (kind === 'run') sel = _dashFiltRunStatus;
+      else if (kind === 'act') sel = _dashFiltActionStatus;
+      else if (kind === 'prio') sel = _dashFiltPriority;
+      else sel = _dashFiltCategory;
+      const allActive = sel.size === 0 || sel.size === allKeys.length;
+      const parts = [
+        `<button type="button" class="dashboard-pill${allActive ? ' active' : ''}" data-dash-kind="${kind}" data-dash-val="__all__">${escapeHtml(uiText('dashboardPillAll'))}</button>`,
+      ];
+      for (const k of allKeys) {
+        const on = !allActive && sel.has(k);
+        parts.push(
+          `<button type="button" class="dashboard-pill${on ? ' active' : ''}" data-dash-kind="${kind}" data-dash-val="${escapeHtml(k)}">${escapeHtml(keyToLabelFn(k))}</button>`
+        );
+      }
+      host.innerHTML = parts.join('');
+    }
+
+    function buildAllDashboardFilterPills() {
+      bindDashboardFilterPillDelegation();
+      _dashRenderPillRow('dashPillsSource', 'src', _DASH_SRC_KEYS, (k) =>
+        k === 'cron'
+          ? uiText('dashboardSourceCron')
+          : k === 'thread_probe'
+            ? uiText('dashboardSourceThread')
+            : uiText('dashboardSourceManual')
+      );
+      _dashRenderPillRow('dashPillsRunStatus', 'run', _DASH_RUN_ST_KEYS, (k) =>
+        k === 'completed' ? uiText('dashboardStatusCompleted') : uiText('dashboardStatusError')
+      );
+      _dashRenderPillRow('dashPillsActionStatus', 'act', _DASH_ACT_ST_KEYS, (k) =>
+        k === 'not_started'
+          ? uiText('dashboardActionStatusNotStarted')
+          : k === 'in_progress'
+            ? uiText('dashboardActionStatusInProgress')
+            : uiText('dashboardActionStatusCompleted')
+      );
+      _dashRenderPillRow('dashPillsPriority', 'prio', _DASH_PRIO_KEYS, (k) =>
+        uiText(
+          { urgent: 'dashboardPriorityUrgent', high: 'dashboardPriorityHigh', medium: 'dashboardPriorityMedium', low: 'dashboardPriorityLow' }[k] || 'dashboardPriorityMedium'
+        )
+      );
+      _dashRenderPillRow('dashPillsCategory', 'cat', _DASH_CAT_KEYS, (k) =>
+        uiText(
+          k === 'client_technical'
+            ? 'dashCatClientTechnical'
+            : k === 'client_non_technical'
+              ? 'dashCatClientNonTechnical'
+              : 'dashCatInternal'
+        )
+      );
+    }
+
+    function dashboardSourceQueryParam() {
+      if (_dashFiltSource.size === 0 || _dashFiltSource.size === _DASH_SRC_KEYS.length) return 'all';
+      return Array.from(_dashFiltSource).sort().join(',');
+    }
+
+    function dashboardRunStatusQueryParam() {
+      if (_dashFiltRunStatus.size === 0 || _dashFiltRunStatus.size === _DASH_RUN_ST_KEYS.length) return 'all';
+      return Array.from(_dashFiltRunStatus).sort().join(',');
+    }
+
     let _dashboardDomainFilterTimer = null;
     let _dashboardPollTimer = null;
     const DASHBOARD_TAB_ID = 'tab-action-dashboard';
@@ -4521,6 +4731,7 @@
     }
 
     let _lastRuntimePayload = null;
+    let _cfgLastLlmPreset = null;
 
     function _fillDatalist(id, options) {
       const dl = document.getElementById(id);
@@ -4761,7 +4972,43 @@
       }
     }
 
+    /** Strip `vendor/model` → `model` for OpenAI preset; prefix bare OpenAI-style ids for OpenRouter presets. */
+    function normalizeLlmModelFieldForPreset(toPreset, fieldId) {
+      const el = document.getElementById(fieldId);
+      if (!el) return;
+      let v = String(el.value || '').trim();
+      if (!v) return;
+      if (toPreset === 'openai') {
+        const m = v.match(/^[a-z0-9._-]+\/(.+)$/i);
+        if (m && m[1]) el.value = m[1];
+        return;
+      }
+      if (toPreset === 'openrouter' || toPreset === 'gemini_openrouter') {
+        if (!v.includes('/') && /^(gpt-|o[0-9]|chatgpt-)/i.test(v)) {
+          el.value = `openai/${v}`;
+        }
+      }
+    }
+
+    function normalizeAllLlmModelFieldsForPreset(toPreset) {
+      [
+        'cfg_llm_model',
+        'cfg_llm_model_main',
+        'cfg_llm_model_search_json',
+        'cfg_llm_model_kb_web_gate',
+        'cfg_llm_model_search_rerank',
+        'cfg_llm_model_memory',
+      ].forEach((id) => normalizeLlmModelFieldForPreset(toPreset, id));
+    }
+
     function onConfigurePresetChange() {
+      const sel = document.getElementById('cfg_llm_provider_preset');
+      const newP = sel ? String(sel.value || 'openrouter') : 'openrouter';
+      const oldP = _cfgLastLlmPreset;
+      if (oldP != null && oldP !== newP) {
+        normalizeAllLlmModelFieldsForPreset(newP);
+      }
+      _cfgLastLlmPreset = newP;
       updateConfigureProviderDependentUi();
     }
 
@@ -4984,6 +5231,7 @@
         void loadThreads();
         void loadThreadMessages();
         updateConfigureProviderDependentUi();
+        _cfgLastLlmPreset = document.getElementById('cfg_llm_provider_preset')?.value || 'openrouter';
         renderConfigureEnvTable(data);
         renderGogSetupStatus(data);
         renderPromptEffectiveByMode(data.prompt_effective_by_mode);
@@ -5187,6 +5435,7 @@
       }
       _stopDashboardPolling();
       if (tabId === DASHBOARD_TAB_ID) {
+        buildAllDashboardFilterPills();
         void loadActionBoard(true);
         _startDashboardPolling();
       }
@@ -5452,6 +5701,7 @@
     }
 
     function renderCsmActionCard(row, action, md, actionIndex) {
+      const catCanon = canonicalDashboardActionCategory(action.category);
       const cat = escapeHtml(formatActionCategoryLabel(action.category));
       const rawCardTitle = String(action.title || '').trim();
       const threadTitle = String(action.thread_title || '').trim();
@@ -5485,6 +5735,15 @@
         : '';
       const foot = dashboardCardFoot(row, md, { actionIndex });
       const actionStatus = normalizeActionStatus(action && action.status);
+      const statusLabelHead =
+        actionStatus === 'completed'
+          ? uiText('dashboardActionStatusCompleted')
+          : actionStatus === 'in_progress'
+            ? uiText('dashboardActionStatusInProgress')
+            : uiText('dashboardActionStatusNotStarted');
+      const statusPillHtml = `<span class="csm-action-card__status-pill csm-action-card__status-pill--${escapeHtml(
+        actionStatus
+      )}">${escapeHtml(statusLabelHead)}</span>`;
       const statusOptions = [
         ['not_started', uiText('dashboardActionStatusNotStarted')],
         ['in_progress', uiText('dashboardActionStatusInProgress')],
@@ -5493,7 +5752,6 @@
       const statusControl = Number.isFinite(iid)
         ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionStatusLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionStatus(${iid}, ${Number(actionIndex)}, this.value)">${statusOptions}</select></div>`
         : '';
-      const catCanon = canonicalDashboardActionCategory(action.category);
       const categoryOptions = [
         ['client_technical', uiText('dashCatClientTechnical')],
         ['client_non_technical', uiText('dashCatClientNonTechnical')],
@@ -5507,11 +5765,27 @@
       const categoryControl = Number.isFinite(iid)
         ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionCategoryLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionCategory(${iid}, ${Number(actionIndex)}, this.value)">${categoryOptions}</select></div>`
         : '';
+      const prioNorm = normalizeDashboardPriority(action.priority);
+      const priorityHeadLabel = formatPriorityOrConfidenceLabel(prioNorm);
+      const priorityPillHtml = `<span class="csm-action-card__priority-pill csm-action-card__priority-pill--${escapeHtml(
+        prioNorm
+      )}" title="${escapeHtml(uiText('dashboardPriority'))}">${escapeHtml(priorityHeadLabel)}</span>`;
+      const priorityOptions = ['urgent', 'high', 'medium', 'low']
+        .map(
+          (v) =>
+            `<option value="${escapeHtml(v)}"${v === prioNorm ? ' selected' : ''}>${escapeHtml(
+              formatPriorityOrConfidenceLabel(v)
+            )}</option>`
+        )
+        .join('');
+      const priorityControl = Number.isFinite(iid)
+        ? `<div class="csm-action-card__meta"><span>${escapeHtml(uiText('dashboardActionPriorityLabel'))}: </span><select class="btn-compact" onchange="setDashboardActionPriority(${iid}, ${Number(actionIndex)}, this.value)">${priorityOptions}</select></div>`
+        : '';
       const gmailTid = String(action.gmail_thread_id || '').trim();
       const subj = String(action.email_subject || '').trim();
       const from = String(action.email_from || '').trim();
       const customerEmail = String(action.customer_email || '').trim();
-      const metaLine = `${statusControl}${categoryControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
+      const metaLine = `${statusControl}${categoryControl}${priorityControl}<div class="csm-action-card__meta">#${escapeHtml(String(iid))} · ${escapeHtml(dashboardProbeMetaLine(row))}</div>`;
 
       const clientId = String(action.customer_identifier || '').trim();
       const clientDomain =
@@ -5546,20 +5820,23 @@
       const identityExpanded = identityParts.length
         ? `<div class="csm-action-card__identity csm-action-card__meta-expanded">${identityParts.join('')}</div>`
         : '';
-      const prio = String(action.priority || '').trim().toLowerCase();
+      const prio = prioNorm;
       const conf = String(action.confidence_label || '').trim().toLowerCase();
       const relOut = String(action.relevance_outcome || '').trim();
       const relWhy = String(action.relevance_reason || '').trim();
       const relevanceHuman = formatRelevanceLineHuman(relOut, relWhy);
+      const showPriorityFactsPills = !Number.isFinite(iid);
 
       const factsParts = [];
       if (prio && conf && prio === conf) {
-        const pcLabel = formatPriorityOrConfidenceLabel(prio);
-        factsParts.push(
-          `<span class="csm-action-card__pill" title="${escapeHtml(uiText('relPrioConfCombinedTitle'))}: ${escapeHtml(pcLabel)}">${escapeHtml(pcLabel)}</span>`
-        );
+        if (showPriorityFactsPills) {
+          const pcLabel = formatPriorityOrConfidenceLabel(prio);
+          factsParts.push(
+            `<span class="csm-action-card__pill" title="${escapeHtml(uiText('relPrioConfCombinedTitle'))}: ${escapeHtml(pcLabel)}">${escapeHtml(pcLabel)}</span>`
+          );
+        }
       } else {
-        if (prio) {
+        if (prio && showPriorityFactsPills) {
           const pl = formatPriorityOrConfidenceLabel(prio);
           factsParts.push(
             `<span class="csm-action-card__pill" title="${escapeHtml(uiText('dashboardPriority'))}">${escapeHtml(pl)}</span>`
@@ -5612,7 +5889,9 @@
         <div class="csm-action-card__head">
           ${cb}
           <div class="csm-action-card__head-body">
-            <div class="csm-action-card__top"><span class="csm-action-card__cat">${cat}</span></div>
+            <div class="csm-action-card__top"><span class="csm-action-card__cat csm-action-card__cat--${escapeHtml(
+              catCanon
+            )}">${cat}</span>${priorityPillHtml}${statusPillHtml}</div>
           </div>
         </div>
         <details class="csm-action-card__main">
@@ -5658,27 +5937,9 @@
       return 2;
     }
 
-    function getDashboardPriorityFilter() {
-      const el = document.getElementById('dashboardPriorityFilter');
-      const v = (el && el.value) || 'all';
-      return ['all', 'urgent', 'high', 'medium', 'low'].includes(v) ? v : 'all';
-    }
-
     function getDashboardDomainFilter() {
       const el = document.getElementById('dashboardDomainFilter');
       return (el && el.value ? String(el.value) : '').trim().toLowerCase();
-    }
-
-    function getDashboardActionStatusFilter() {
-      const el = document.getElementById('dashboardActionStatusFilter');
-      const v = (el && el.value) || 'all';
-      return ['all', 'not_started', 'in_progress', 'completed'].includes(v) ? v : 'all';
-    }
-
-    function getDashboardCategoryFilter() {
-      const el = document.getElementById('dashboardCategoryFilter');
-      const v = (el && el.value) || 'all';
-      return ['all', 'client_technical', 'client_non_technical', 'internal'].includes(v) ? v : 'all';
     }
 
     function getDashboardActionSortMode() {
@@ -5689,9 +5950,18 @@
         : 'updated_desc';
     }
 
+    /** Bucket for per-thread dedup: same Gmail thread from cron vs thread probe stays as two cards when both sources are shown. */
+    function dashboardActionDedupSourceKey(row) {
+      const t = String((row && row.trigger_type) || '').trim().toLowerCase();
+      if (t.startsWith('cron:')) return 'cron';
+      if (t === 'thread_probe') return 'thread_probe';
+      if (t === 'manual_probe' || t.startsWith('manual_probe')) return 'manual_probe';
+      return 'other';
+    }
+
     function flattenDedupDashboardActions(rows) {
       const out = [];
-      const byThread = new Map();
+      const byDedupKey = new Map();
       for (const row of (rows || [])) {
         const md = parseInteractionMetadata(row.metadata);
         const actions = Array.isArray(md.csm_actions) ? md.csm_actions : [];
@@ -5702,25 +5972,33 @@
           const gid = String(a.gmail_thread_id || '').trim();
           const subj = String(a.email_subject || '').trim().toLowerCase();
           const from = String(a.email_from || '').trim().toLowerCase();
-          const key = gid ? ('gid:' + gid) : (subj && from ? ('fs:' + from + '||' + subj) : '');
-          if (!key) { out.push(item); continue; }
-          const prev = byThread.get(key);
+          const threadKey = gid ? ('gid:' + gid) : subj && from ? 'fs:' + from + '||' + subj : '';
+          if (!threadKey) {
+            out.push(item);
+            continue;
+          }
+          const src = dashboardActionDedupSourceKey(row);
+          const dedupeKey = src + '|' + threadKey;
+          const prev = byDedupKey.get(dedupeKey);
           if (!prev) {
-            byThread.set(key, item);
+            byDedupKey.set(dedupeKey, item);
             continue;
           }
           const tPrev = _parseUtcMs(prev.row.created_at || '');
           const tNow = _parseUtcMs(row.created_at || '');
-          if (tNow >= tPrev) byThread.set(key, item);
+          if (tNow >= tPrev) byDedupKey.set(dedupeKey, item);
         }
       }
-      out.push(...Array.from(byThread.values()));
-      const stFilter = getDashboardActionStatusFilter();
-      let filtered = out.filter((x) => stFilter === 'all' || normalizeActionStatus(x.action.status) === stFilter);
-      const pr = getDashboardPriorityFilter();
-      if (pr !== 'all') {
-        filtered = filtered.filter(
-          (x) => normalizeDashboardPriority(x.action && x.action.priority) === pr
+      out.push(...Array.from(byDedupKey.values()));
+      let filtered = out;
+      if (_dashFiltActionStatus.size > 0) {
+        filtered = filtered.filter((x) =>
+          _dashFiltActionStatus.has(normalizeActionStatus(x.action.status))
+        );
+      }
+      if (_dashFiltPriority.size > 0) {
+        filtered = filtered.filter((x) =>
+          _dashFiltPriority.has(normalizeDashboardPriority(x.action && x.action.priority))
         );
       }
       const domQ = getDashboardDomainFilter();
@@ -5735,10 +6013,9 @@
           );
         });
       }
-      const catF = getDashboardCategoryFilter();
-      if (catF !== 'all') {
-        filtered = filtered.filter(
-          (x) => canonicalDashboardActionCategory(x.action && x.action.category) === catF
+      if (_dashFiltCategory.size > 0) {
+        filtered = filtered.filter((x) =>
+          _dashFiltCategory.has(canonicalDashboardActionCategory(x.action && x.action.category))
         );
       }
       const sortMode = getDashboardActionSortMode();
@@ -5856,6 +6133,23 @@
         await loadActionBoard(true);
       } catch (e) {
         alert(`${uiText('dashboardCategoryUpdateFail')}: ${e.message}`);
+      }
+    }
+
+    async function setDashboardActionPriority(interactionId, actionIndex, priority) {
+      const id = Number(interactionId);
+      const idx = Number(actionIndex);
+      if (!id || !Number.isFinite(idx) || idx < 0) return;
+      try {
+        const r = await fetch(`/dashboard/probe-runs/${id}/actions/${idx}/priority`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ priority: String(priority || '') }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        await loadActionBoard(true);
+      } catch (e) {
+        alert(`${uiText('dashboardPriorityUpdateFail')}: ${e.message}`);
       }
     }
 
@@ -6114,10 +6408,8 @@
       }
       applyDashboardFeedLayoutClass();
       syncDashboardLayoutButtons();
-      const srcEl = document.getElementById('dashboardFilterSource');
-      const stEl = document.getElementById('dashboardRunStatusFilter');
-      const source = (srcEl && srcEl.value) || 'all';
-      const status = (stEl && stEl.value) || 'all';
+      const source = dashboardSourceQueryParam();
+      const status = dashboardRunStatusQueryParam();
       try {
         const qs = new URLSearchParams({
           limit: String(limit),
