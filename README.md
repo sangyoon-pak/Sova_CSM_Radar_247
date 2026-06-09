@@ -76,6 +76,7 @@ Each row is **what you want in the workflow** paired with **how Sova implements 
 The full **request routing**, **Workbench vs probe**, **API surface**, **Configure map**, and **mermaid** diagrams live in one place so they do not drift from the code:
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (canonical runtime architecture, including the **Configure tab runtime diagram** that matches the web UI)
+- **[docs/API.md](docs/API.md)** (HTTP API reference: routes, use cases, async polling)
 
 Related deep dives:
 
