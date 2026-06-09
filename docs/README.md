@@ -10,7 +10,8 @@ This index is the canonical map for implementing and operating **Sova - CSM Rada
 
 ## Build And Architecture
 
-- **Runtime flow, API routes, Workbench vs probe, and Configure map:** [ARCHITECTURE.md](ARCHITECTURE.md)
+- **HTTP API reference (routes, use cases, async polling):** [API.md](API.md)
+- **Runtime flow, Workbench vs probe, and Configure map:** [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Prompts (code vs `app_settings` DB, seeding, upgrades):** [PROMPTS.md](PROMPTS.md)
 - Agent guardrails and behavior boundaries: [AGENT_GUARDRAILS.md](AGENT_GUARDRAILS.md)
 - Action card data/UX contract: [ACTION_CARD_SPEC.md](ACTION_CARD_SPEC.md)

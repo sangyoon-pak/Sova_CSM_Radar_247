@@ -45,17 +45,7 @@ flowchart TD
 
 ## API request paths (what the server runs)
 
-Common entrypoints (not exhaustive; see `src/api/routes.py`):
-
-| Route / area | Role |
-|--------------|------|
-| `POST /threads/send` | Workbench message or implicit full probe (see below); persists messages and `agent_interactions` |
-| `POST /threads/bulk-delete` | Deletes many threads + messages + linked run rows (Workbench cleanup) |
-| `POST /agent/run` | Manual agent or probe from API / older clients |
-| `GET/POST` cron + scheduler | Scheduled inbox probes and job management |
-| `POST /memory/feedback`, `GET /memory/learning`, `DELETE /memory/learning`, `/memory/refresh`, `/memory/compact` | Feedback, read/clear distilled rules, learning refresh, compaction |
-| `PATCH /dashboard/probe-runs/{id}/actions/{i}/category` | Operator override for one action’s `category` on the current probe row |
-| `PATCH /settings/runtime` | **Configure** saves overrides into `app_settings` (via runtime config) |
+Full route reference, use-case map, request bodies, and async polling contract: **[API.md](API.md)** (source: `src/api/routes.py`, `src/api/cron_routes.py`).
 
 ## Workbench threads vs full inbox probe
 
