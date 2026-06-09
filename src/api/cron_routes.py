@@ -21,6 +21,7 @@ class CronJobToggle(BaseModel):
 
 @router.get("/cron")
 def list_cron_jobs():
+    cron_manager.migrate_cron_expressions_in_db()
     jobs = database.get_cron_jobs()
     out: list[dict] = []
     for j in jobs:

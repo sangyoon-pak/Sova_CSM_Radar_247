@@ -325,7 +325,7 @@ def _extract_cron_expr(text: str) -> str | None:
     if every_h:
         n = int(every_h.group(1))
         if 1 <= n <= 23:
-            dow = "1-5" if re.search(r"week\s*days?|weekdays?", low) else "*"
+            dow = "mon-fri" if re.search(r"week\s*days?|weekdays?", low) else "*"
             return f"0 */{n} * * {dow}"
 
     if re.search(r"\bdaily\b", low):
@@ -342,7 +342,7 @@ def _extract_cron_expr(text: str) -> str | None:
                 hh = 0
             hh = max(0, min(23, hh))
             mm = max(0, min(59, mm))
-        dow = "1-5" if re.search(r"week\s*days?|weekdays?", low) else "*"
+        dow = "mon-fri" if re.search(r"week\s*days?|weekdays?", low) else "*"
         return f"{mm} {hh} * * {dow}"
     return None
 
